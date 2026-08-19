@@ -6,3 +6,6 @@ const rand=(a,b)=>a+Math.random()*(b-a);
 const TAU=Math.PI*2;
 function angDamp(a,b,l,dt){let d=b-a;while(d>Math.PI)d-=TAU;while(d<-Math.PI)d+=TAU;return a+d*(1-Math.exp(-l*dt));}
 function smooth(t){t=clamp(t,0,1);return t*t*(3-2*t);}
+const isTouch=!!(window.matchMedia&&matchMedia('(pointer:coarse)').matches);
+if(isTouch)document.body.classList.add('touch');
+let started=false,time=0,rescued=0,gotNotes=0;
