@@ -63,6 +63,7 @@ body.touch .tbtn{display:flex}
 const $=id=>document.getElementById(id);
 if(!window.THREE){$('ctlText').textContent='Three.js did not load. Check the connection and reload.';return;}
 
+// ---- BUILD:START ----
 // ---------- utils ----------
 const clamp=(v,a,b)=>Math.max(a,Math.min(b,v));
 const lerp=(a,b,t)=>a+(b-a)*t;
@@ -839,6 +840,7 @@ function frame(now){requestAnimationFrame(frame);let dt=(now-last)/1000;last=now
   IN.jump=IN.b=IN.y=false;IN.jumpHeld=IN.bHeld=false;IN.camDX=IN.camDY=0;IN.mx=IN.mz=0;
   renderer.render(scene,camera);}
 requestAnimationFrame(frame);
+// ---- BUILD:END ----
 })();
 </script>
 </body>
