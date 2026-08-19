@@ -64,15 +64,7 @@ const $=id=>document.getElementById(id);
 if(!window.THREE){$('ctlText').textContent='Three.js did not load. Check the connection and reload.';return;}
 
 // ---- BUILD:START ----
-// ---------- utils ----------
-const clamp=(v,a,b)=>Math.max(a,Math.min(b,v));
-const lerp=(a,b,t)=>a+(b-a)*t;
-const damp=(a,b,l,dt)=>a+(b-a)*(1-Math.exp(-l*dt));
-const moveTo=(a,b,d)=>a<b?Math.min(a+d,b):Math.max(a-d,b);
-const rand=(a,b)=>a+Math.random()*(b-a);
-const TAU=Math.PI*2;
-function angDamp(a,b,l,dt){let d=b-a;while(d>Math.PI)d-=TAU;while(d<-Math.PI)d+=TAU;return a+d*(1-Math.exp(-l*dt));}
-function smooth(t){t=clamp(t,0,1);return t*t*(3-2*t);}
+
 const isTouch=!!(window.matchMedia&&matchMedia('(pointer:coarse)').matches);
 if(isTouch)document.body.classList.add('touch');
 let started=false,time=0,rescued=0,gotNotes=0;
@@ -490,6 +482,7 @@ function buildLevel(){
   addSnoozle(-28,0,-60.6,homes[3],false);
 }
 buildLevel();
+window.__W={solids,gloops,goos,hearts,crates,powers,fires,checks,snoozles,notes,dust,puddles,get won(){return won;},get WM(){return WM;},get RAINBOW(){return RAINBOW;}};
 
 // ---------- particles ----------
 const PGEO=new THREE.SphereGeometry(1,7,5);const PART=[];let pIdx=0;
@@ -535,7 +528,7 @@ player=buildPlayer();scene.add(player);
 (function(){const f=new THREE.Group();f.add(mesh(CONE,new THREE.MeshBasicMaterial({color:0xff7a1f}),0,0.14,0,0.13,0.4,0.13));f.add(mesh(CONE,new THREE.MeshBasicMaterial({color:0xffe36b}),0,0.1,0,0.07,0.24,0.07));f.position.y=0.92;f.visible=false;player.userData.head.add(f);player.userData.flame=f;})();
 shadow=new THREE.Mesh(new THREE.CircleGeometry(0.5,20),new THREE.MeshBasicMaterial({color:0x000000,transparent:true,opacity:0.28,depthWrite:false}));shadow.rotation.x=-Math.PI/2;scene.add(shadow);
 
-const P={spawn:{x:0,y:0,z:10},pos:new THREE.Vector3(0,0,10),vel:new THREE.Vector3(),yaw:Math.PI,grounded:false,wasGrounded:false,lastGround:-9,jumpBuf:-9,jumping:false,puff:true,slam:0,hangT:0,gustCD:0,bonkCD:0,bonkT:0,sq:1,sqV:0,sqT:1,footT:0,surf:'grass',run:0,mouthT:0,blinkT:2,blinkAnim:0,inFan:false,splT:0,puffAir:0,hover:false,hovT:0,hoverS:null,hp:4,maxHp:4,inv:0,dead:false,deadT:0,inGoo:false,fire:false,jetT:0,jetP:0,jetHits:[]};
+const P=window.__P={spawn:{x:0,y:0,z:10},pos:new THREE.Vector3(0,0,10),vel:new THREE.Vector3(),yaw:Math.PI,grounded:false,wasGrounded:false,lastGround:-9,jumpBuf:-9,jumping:false,puff:true,slam:0,hangT:0,gustCD:0,bonkCD:0,bonkT:0,sq:1,sqV:0,sqT:1,footT:0,surf:'grass',run:0,mouthT:0,blinkT:2,blinkAnim:0,inFan:false,splT:0,puffAir:0,hover:false,hovT:0,hoverS:null,hp:4,maxHp:4,inv:0,dead:false,deadT:0,inGoo:false,fire:false,jetT:0,jetP:0,jetHits:[]};
 const R=0.36,H=1.15,SPEED=6.8,ACC=44,DEC=60,AIRACC=20,GRAV=-30,JUMPV=10.5,PUFFV=9.4,MAXFALL=-32,COYOTE=0.12,BUFFER=0.15,STEP=0.42;
 function hOverlap(s){const p=P.pos;return p.x+R>s.min.x&&p.x-R<s.max.x&&p.z+R>s.min.z&&p.z-R<s.max.z;}
 function pushOutXZ(s){const p=P.pos;const px1=(p.x+R)-s.min.x,px2=s.max.x-(p.x-R),pz1=(p.z+R)-s.min.z,pz2=s.max.z-(p.z-R);const m=Math.min(px1,px2,pz1,pz2);if(m===px1)p.x=s.min.x-R-0.001;else if(m===px2)p.x=s.max.x+R+0.001;else if(m===pz1)p.z=s.min.z-R-0.001;else p.z=s.max.z+R+0.001;}
@@ -800,7 +793,7 @@ function updateHearts(dt){for(const h of hearts){if(h.got)continue;h.t+=dt;h.g.p
   if(!P.dead){tmpV.set(P.pos.x,P.pos.y+0.6,P.pos.z);if(h.g.position.distanceTo(tmpV)<1.05){h.got=true;h.g.visible=false;P.hp=Math.min(P.maxHp,P.hp+1);SFX.heal();for(let i=0;i<12;i++)spawnP(h.g.position.x,h.g.position.y,h.g.position.z,rand(-2,2),rand(1,4),rand(-2,2),0.07,0xff8fa8,0.7,0.3,-5,1);updateHUD();}}}}
 
 // ---------- camera ----------
-const CAM={yaw:0,pitch:0.42,dist:8.5,pos:new THREE.Vector3(0,5,19),look:new THREE.Vector3(0,1,10),shake:0,fovKick:0,lastManual:-9};
+const CAM=window.__CAM={yaw:0,pitch:0.42,dist:8.5,pos:new THREE.Vector3(0,5,19),look:new THREE.Vector3(0,1,10),shake:0,fovKick:0,lastManual:-9};
 function updateCamera(dt){
   if(Math.abs(IN.camDX)>1e-4||Math.abs(IN.camDY)>1e-4){CAM.yaw+=IN.camDX;CAM.pitch=clamp(CAM.pitch+IN.camDY,0.08,1.05);CAM.lastManual=time;}
   const sp=Math.hypot(P.vel.x,P.vel.z);
@@ -840,6 +833,7 @@ function frame(now){requestAnimationFrame(frame);let dt=(now-last)/1000;last=now
   IN.jump=IN.b=IN.y=false;IN.jumpHeld=IN.bHeld=false;IN.camDX=IN.camDY=0;IN.mx=IN.mz=0;
   renderer.render(scene,camera);}
 requestAnimationFrame(frame);
+
 // ---- BUILD:END ----
 })();
 </script>
