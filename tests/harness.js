@@ -17,6 +17,7 @@
 const fs = require('fs');
 const path = require('path');
 const vm = require('vm');
+const { loadGameScript } = require('../tools/load-game.js');
 
 const GAME_HTML = path.join(__dirname, '..', 'index.html');
 
@@ -64,26 +65,12 @@ const THREE = new Proxy({}, {
   }
 });
 
-// --- test hooks
-//
-// The game is one IIFE with everything in closure scope, so we inject three
-// hooks by string replacement before evaluating it. These are the only lines
-// coupling the tests to the source text, and they are the first thing to fix
-// when the source is split into modules: each module should export its state
-// and the harness should require it instead of patching strings.
-const HOOKS = [
-  ['const P={spawn:', 'const P=window.__P={spawn:'],
-  ['const CAM={', 'const CAM=window.__CAM={'],
-  ['buildLevel();',
-   'buildLevel();window.__W={solids,gloops,goos,hearts,crates,powers,fires,checks,snoozles,notes,dust,puddles,' +
-   'get won(){return won;},get WM(){return WM;},get RAINBOW(){return RAINBOW;}};']
-];
+// --- test hooks (game exports P, CAM, and W on window — see player.js and game.js)
+const HOOKS = [];
 
 module.exports = function boot() {
   const html = fs.readFileSync(GAME_HTML, 'utf8');
-  const m = html.match(/<script>\n([\s\S]*?)<\/script>\s*<\/body>/);
-  if (!m) throw new Error('could not find the game script inside index.html');
-  let src = m[1];
+  let src = loadGameScript(html);
   for (const [from, to] of HOOKS) {
     if (!src.includes(from)) throw new Error(`test hook not found in source: ${from}`);
     src = src.replace(from, to);
