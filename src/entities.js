@@ -136,116 +136,38 @@ function updateWin(dt){if(!won)return;winT+=dt;
     spawnP(WM.x+Math.cos(a)*r,rand(13,21),WM.z+Math.sin(a)*r,rand(-1.2,1.2),rand(-3,-1),rand(-1.2,1.2),rand(0.09,0.18),CONF[Math.floor(Math.random()*CONF.length)],rand(1.8,2.8),0,-2.2,1);}
   if(winT>9){const w=$('win');w.style.opacity=Math.max(0,1-(winT-9)/2.5);if(winT>11.7)w.style.display='none';}}
 
-function buildLevel(){
-  const fence=0x9c6b3c;
-  addSolid(-6,0,26,84,0.7,0.5,fence);addSolid(-6,0,-84,84,0.7,0.5,fence);
-  addSolid(-48,0,-29,0.5,0.7,112,fence);addSolid(36,0,-29,0.5,0.7,112,fence);
-
-  // --- the path floor ---
-  pathTile(-3,12,3,-20); pathTile(-3,-24,11,-21); pathTile(7,-38,11,-24);
-  pathTile(6,-48,10,-38); pathTile(6,-60,10,-48); pathTile(-3,-62,10,-58);
-  pathTile(-19,-62,-3,-58); pathTile(-32,-62,-19,-58); pathTile(-34,-68,-22,-56);
-
-  // --- hedges: room A (start meadow) ---
-  hedge(-11,14,11,14); hedge(-11,-6,-11,14); hedge(11,-6,11,14);
-  hedge(-11,-6,-4,-6); hedge(4,-6,11,-6);
-  // corridor 1
-  hedge(-4,-20,-4,-6); hedge(4,-20,4,-6);
-  // room B (pond garden)
-  hedge(-14,-20,-4,-20); hedge(4,-20,14,-20); hedge(-14,-38,-14,-20); hedge(14,-38,14,-20);
-  hedge(-14,-38,4,-38); hedge(12,-38,14,-38);
-  // corridor 2
-  hedge(4,-48,4,-38); hedge(12,-48,12,-38);
-  // room C (tower yard)
-  hedge(-4,-48,4,-48); hedge(12,-48,22,-48); hedge(22,-66,22,-48); hedge(-4,-66,22,-66);
-  hedge(-4,-56,-4,-48); hedge(-4,-66,-4,-64);
-  // corridor 3
-  hedge(-20,-64,-4,-64); hedge(-20,-56,-4,-56);
-  // room D (windmill plaza)
-  hedge(-20,-56,-20,-52); hedge(-20,-72,-20,-64); hedge(-36,-72,-20,-72);
-  hedge(-36,-72,-36,-52); hedge(-36,-52,-20,-52);
-
-  // --- room A: learn to move ---
-  addCheck(0,11);
-  addSolid(3,0,7,1.3,0.4,1.3,0xb07a3f);addSolid(4.6,0,7,1.3,1.0,1.3,0xb07a3f);addSolid(6.2,0,7,1.3,2.0,1.3,0xb07a3f);
-  addNote(6.2,2.7,7,false);addNote(0,1.5,3,false);
-  addCrate(-3,0,6,'fire');addCrate(-8,0,-3,'heart');
-  for(let i=0;i<7;i++)addPinwheel(-8+i*0.9,9-i*2.2,0.3);
-  addCupPyramid(-7,2,false);
-  addDust(8,-2);
-  for(let i=0;i<34;i++){const a=rand(0,TAU),r=Math.sqrt(Math.random())*7;addWobbler(-5+Math.cos(a)*r,4+Math.sin(a)*r,'flower');}
-  for(let i=0;i<12;i++){const a=rand(0,TAU),r=Math.sqrt(Math.random())*7;addWobbler(-5+Math.cos(a)*r,4+Math.sin(a)*r,'grass');}
-  for(let i=0;i<5;i++)addWobbler(rand(-9,9),rand(-4,12),'shroom');
-  addHeart(8,0.7,4);
-
-  // --- corridor 1: first Gloop ---
-  addGloop(0,-13,'small');
-  addCupPyramid(-2,-9,true);
-  addNote(0,1.4,-17,false);
-  for(let i=0;i<4;i++)addPinwheel(i%2?-2.6:2.6,-8-i*3,0.3);
-
-  // --- room B: the pond ---
-  addCheck(0,-21);
-  buildBoat(0,-29);
-  for(let i=0;i<12;i++){const t=i/12;const x=POND.x0-0.6+t*(POND.x1-POND.x0+1.2);addWobbler(x,i%2?POND.z0-0.8:POND.z1+0.8,'reed');}
-  addGloop(-9,-24,'mid');addGloop(10,-34,'big');
-  addCrate(-11,0,-30,'heart');
-  addDust(12,-22);
-  addNote(-11,1.4,-36,false);addNote(11,1.4,-28,false);
-  addHeart(-12,0.7,-22);
-  for(let i=0;i<20;i++){const a=rand(0,TAU),r=rand(1,5);addWobbler(-10+Math.cos(a)*r,-33+Math.sin(a)*r,'flower');}
-  for(let i=0;i<4;i++)addWobbler(rand(-13,13),rand(-37,-21),'shroom');
-
-  // --- corridor 2 ---
-  addCheck(8,-39);
-  addGloop(8,-44,'small');
-  addCupPyramid(7,-41,true);addCrate(6,0,-44,'fire');
-  addNote(8,1.4,-46,false);
-
-  // --- room C: the tower ---
-  addCheck(8,-49);
-  const TX=12,TZ=-58;
-  addSolid(TX,0,TZ,3.6,12,3.6,0x9aa4ad,{surf:'stone'});addSolid(TX,12,TZ,6,0.5,6,0xc98a4b,{surf:'wood'});
-  for(let i=0;i<10;i++){const a=-Math.PI/2+i*0.56;const y=1.1*(i+1);
-    const sl=addSolid(TX+Math.cos(a)*4.3,y-0.4,TZ+Math.sin(a)*4.3,2.4,0.4,2.4,i%2?0xc98a4b:0xd9a262,{surf:'wood'});
-    if(i===3||i===7)addNote(sl.mesh.position.x,y+0.7,sl.mesh.position.z,false);}
-  addNote(TX,13.2,TZ,false);
-  addFan(19,-52,1.8,9.5);
-  addSolid(19,6.5,-56,3.4,0.5,3.4,0xc98a4b);addNote(19,8.2,-56,false);
-  addSolid(16,9.1,-61,3.2,0.5,3.2,0xc98a4b);addCrate(16,9.6,-61,'fire');
-  addGloop(2,-56,'big');addGloop(18,-62,'mid');
-  addCrate(-1,0,-52,'heart');
-  addDust(4,-64);
-  addHeart(0,0.7,-62);
-  for(let i=0;i<14;i++)addWobbler(rand(-3,21),rand(-65,-49),'flower');
-
-  // --- corridor 3 ---
-  addCheck(-6,-60);
-  addGloop(-14,-60,'small');
-  addCrate(-18,0,-58,'heart');
-  addNote(-11,1.4,-61,false);
-  for(let i=0;i<3;i++)addPinwheel(-8-i*4,i%2?-57:-63,0.3);
-
-  // --- room D: the windmill ---
-  addCheck(-21,-60);
-  buildWindmill(-28,-64);
-  RAINBOW=buildRainbow(-28,-70);
-  addCupPyramid(-24,-55,false);addCrate(-25,0,-54,'heart');
-  addNote(-24,1.4,-57,false);
-  addHeart(-33,0.7,-56);
-  for(let i=0;i<26;i++){const a=rand(0,TAU),r=rand(1,7);addWobbler(-28+Math.cos(a)*r,-57+Math.sin(a)*r,'flower');}
-  for(let i=0;i<6;i++)addPinwheel(-34+i*2.4,-54,Math.PI);
-
-  // --- scenery outside the hedges ---
-  [[-20,18],[18,16],[-26,4],[24,2],[-22,-30],[24,-28],[-30,-40],[26,-44],[-42,-16],[30,-70],[-42,-64],[-14,-78],[10,-76],[28,-14],[-38,20],[6,20]].forEach(t=>addTree(t[0],t[1]));
-  for(let i=0;i<22;i++){const x=rand(-46,34),z=rand(-82,24);if(x>-38&&x<24&&z>-74&&z<16)continue;scene.add(mesh(SPH,lam(0x4f9f3f),x,0.35,z,rand(0.9,1.6),rand(0.6,1.0),rand(0.9,1.6)));}
-  for(let i=0;i<10;i++)addCloud(rand(-44,32),rand(22,30),rand(-80,20),rand(1.5,3));
-
-  // --- the four Snoozles ---
-  const homes=[[-30.2,-60.4],[-28.6,-59.4],[-26.4,-60.4],[-28.4,-61.4]];
-  addSnoozle(-7,0,-1,homes[0],false);
-  addSnoozle(0,0.28,-29,homes[1],true);
-  addSnoozle(TX,12.5,TZ,homes[2],false);
-  addSnoozle(-28,0,-60.6,homes[3],false);
+function loadLevel(L){
+  const fence=L.fence;
+  for(const s of L.fenceSolids)addSolid(s[0],s[1],s[2],s[3],s[4],s[5],fence);
+  for(const p of L.pathTiles)pathTile(p[0],p[1],p[2],p[3]);
+  for(const h of L.hedges)hedge(h[0],h[1],h[2],h[3]);
+  for(const c of L.checks)addCheck(c[0],c[1]);
+  const TX=L.tower.tx,TZ=L.tower.tz,homes=L.snoozleHomes;
+  for(const step of L.steps){
+    const k=step[0];
+    if(k==='solid')addSolid(step[1],step[2],step[3],step[4],step[5],step[6],step[7],step[8]||undefined);
+    else if(k==='note')addNote(step[1],step[2],step[3],step[4]);
+    else if(k==='crate')addCrate(step[1],step[2],step[3],step[4]);
+    else if(k==='cupPyramid')addCupPyramid(step[1],step[2],step[3]);
+    else if(k==='dust')addDust(step[1],step[2]);
+    else if(k==='heart')addHeart(step[1],step[2],step[3]);
+    else if(k==='gloop')addGloop(step[1],step[2],step[3]);
+    else if(k==='boat')buildBoat(step[1],step[2]);
+    else if(k==='fan')addFan(step[1],step[2],step[3],step[4]);
+    else if(k==='windmill')buildWindmill(step[1],step[2]);
+    else if(k==='rainbow')RAINBOW=buildRainbow(step[1],step[2]);
+    else if(k==='pinwheelRow'){for(let i=0;i<step[4];i++)addPinwheel(step[1]+i*step[5],step[2]+i*step[6],step[3]);}
+    else if(k==='pinwheelAlt'){for(let i=0;i<step[1];i++)addPinwheel(i%2?step[2]:step[3],step[4]-i*step[5],step[6]);}
+    else if(k==='wobblerScatter'){for(let i=0;i<step[1];i++){const a=rand(0,TAU),r=step[6]?Math.sqrt(Math.random())*step[4]:rand(1,step[4]);addWobbler(step[2]+Math.cos(a)*r,step[3]+Math.sin(a)*r,step[5]);}}
+    else if(k==='wobblerRand'){for(let i=0;i<step[1];i++)addWobbler(rand(step[2],step[3]),rand(step[4],step[5]),step[6]);}
+    else if(k==='pondReeds'){for(let i=0;i<step[1];i++){const t=i/step[1];const x=POND.x0-0.6+t*(POND.x1-POND.x0+1.2);addWobbler(x,i%2?POND.z0-0.8:POND.z1+0.8,'reed');}}
+    else if(k==='towerCore'){addSolid(TX,0,TZ,3.6,12,3.6,0x9aa4ad,{surf:'stone'});addSolid(TX,12,TZ,6,0.5,6,0xc98a4b,{surf:'wood'});}
+    else if(k==='towerSteps'){for(let i=0;i<step[1];i++){const a=-Math.PI/2+i*0.56;const y=1.1*(i+1);const sl=addSolid(TX+Math.cos(a)*4.3,y-0.4,TZ+Math.sin(a)*4.3,2.4,0.4,2.4,i%2?0xc98a4b:0xd9a262,{surf:'wood'});if(step[2].indexOf(i)>=0)addNote(sl.mesh.position.x,y+0.7,sl.mesh.position.z,false);}}
+    else if(k==='bushScatter'){for(let i=0;i<step[1];i++){const x=rand(-46,34),z=rand(-82,24);if(x>-38&&x<24&&z>-74&&z<16)continue;scene.add(mesh(SPH,lam(0x4f9f3f),x,0.35,z,rand(0.9,1.6),rand(0.6,1.0),rand(0.9,1.6)));}}
+    else if(k==='cloudScatter'){for(let i=0;i<step[1];i++)addCloud(rand(-44,32),rand(22,30),rand(-80,20),rand(1.5,3));}
+  }
+  for(const t of L.trees)addTree(t[0],t[1]);
+  for(const s of L.snoozles){const x=s[0]!=null?s[0]:TX,y=s[1],z=s[2]!=null?s[2]:TZ;addSnoozle(x,y,z,homes[s[3]],s[4]);}
 }
+function buildLevel(){loadLevel(LEVEL1);}
 

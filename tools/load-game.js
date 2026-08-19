@@ -4,6 +4,7 @@ const path = require('path');
 
 const ORDER = ['util.js','audio.js','input.js','render.js','fx.js','entities.js','player.js','enemies.js','hud.js','game.js'];
 const SRC = path.join(__dirname, '..', 'src');
+const LEVELS = path.join(__dirname, '..', 'levels');
 
 function loadGameScript(html) {
   const m = html.match(/<script>\n([\s\S]*?)<\/script>\s*<\/body>/);
@@ -15,7 +16,13 @@ function loadGameScript(html) {
   const before = shell.slice(0, si + START.length) + '\n';
   const after = '\n' + shell.slice(ei);
   const remainder = shell.slice(si + START.length, ei);
+  if (remainder.trim()) return shell;
   const parts = [];
+  if (fs.existsSync(LEVELS)) {
+    for (const f of fs.readdirSync(LEVELS).sort()) {
+      parts.push(fs.readFileSync(path.join(LEVELS, f), 'utf8'));
+    }
+  }
   for (const f of ORDER) {
     const p = path.join(SRC, f);
     if (fs.existsSync(p)) parts.push(fs.readFileSync(p, 'utf8'));
