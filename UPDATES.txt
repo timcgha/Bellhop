@@ -1,0 +1,105 @@
+Bellhop — session updates (Aug 19, 2026)
+=========================================
+
+This file summarizes the work done in this development session.
+
+
+Testing infrastructure
+----------------------
+- Pulled test harness and six test suites from the repo root into tests/.
+- Confirmed node tests/run.js runs 76 assertions (6 suites, 0 failures).
+- Committed and merged the tests/ layout to main.
+
+
+Documentation and project config
+--------------------------------
+- Updated Bellhop_claude.md: localStorage is allowed over HTTPS on GitHub
+  Pages, but must stay optional (mute setting and notes collected are good
+  candidates; mid-level checkpoint persistence is low value).
+- Copied the full Bellhop_claude.md contents to .cursorrules for automatic
+  loading in Cursor sessions.
+- README.md and .github/workflows/test.yml were not in the repo during this
+  session; those items were not applied.
+
+
+Module split (refactor/modules → merged to main)
+------------------------------------------------
+Split the monolithic index.html game script into src/ modules plus level
+data, following Bellhop_claude.md sequencing. Pure move — no gameplay or
+physics changes.
+
+Structure:
+  src/util.js       clamp, lerp, damp, moveTo, rand, TAU, angDamp, smooth;
+                    isTouch bootstrap; started flag
+  src/audio.js      WebAudio, SFX, music scheduler
+  src/input.js      keyboard, touch, gamepad → IN struct
+  src/render.js     renderer, scene, camera, lights, shared materials/geometries
+  src/fx.js         particle pool, rings, floating Z sprites
+  src/entities.js   world arrays, ground, entity builders, loadLevel(),
+                    updateChecks, triggerWin, updateWin
+  src/player.js     buildPlayer, P struct, movement, abilities; window.__P
+  src/enemies.js    world updates (gloops, goo, items, snoozles, etc.)
+  src/hud.js        HUD, toasts, start screen wiring
+  src/game.js       camera, main loop, buildLevel() call, window.__W
+  levels/level1.js  LEVEL1 placement data (hedges, path, spawns, steps)
+  build.js          concatenates levels/*.js + src/*.js into index.html
+  tools/load-game.js  test helper: load built marker content or concat src/
+
+Build markers in index.html:
+  // ---- BUILD:START ----
+  // ---- BUILD:END ----
+
+Harness changes:
+- Removed string-replacement hooks for P, CAM, and W.
+- Game exports window.__P, window.__CAM, and window.__W directly from source.
+- load-game.js uses built index.html content when markers are populated;
+  otherwise concatenates levels/ + src/ for development.
+
+index.html size after build.js: 86,201 bytes (was 85,409 before split;
++792 bytes from build comment headers).
+
+Verified: with src/ and levels/ temporarily renamed, tests still pass using
+the built marker content in index.html.
+
+
+Version stamp
+-------------
+Start card updated from "v6 · blue jet · fire that lasts" to
+"v7 · split build · src modules" so cached browsers show the new build.
+
+
+Post-merge cleanups (main)
+--------------------------
+1. Moved time, rescued, and gotNotes from util.js to game.js where they
+   belong. hud.js had been calling updateHUD() at parse time; that call
+   moved to the end of game.js after state vars are declared.
+
+2. Deleted one-off split helpers (never tracked in git):
+   tools/extract.js, tools/extract-entities.js, tools/extract-game.js.
+   tests/ and build.js depend only on tools/load-game.js (committed).
+
+
+Git commits on main (chronological, key ones)
+---------------------------------------------
+- Move test harness and suites into tests/
+- Update localStorage convention and add .cursorrules
+- Add BUILD markers; extract util, audio, input, render, fx, entities,
+  player, enemies, hud, game modules; extract level1.js; harness fix
+- Merge refactor/modules (fast-forward)
+- Bump start-card version to v7 after module split
+- Move time, rescued, and gotNotes from util.js to game.js
+
+
+Current state
+-------------
+- Branch: main, pushed to origin
+- Tests: node tests/run.js → 76 passed, 0 failed
+- Build: node build.js regenerates index.html; node build.js --check passes
+- Play: open index.html or GitHub Pages; start card shows v7
+
+Not done in this session
+------------------------
+- README.md CLAUDE.md → Bellhop_claude.md rename (no README in repo)
+- .github/workflows/test.yml CI workflow (not in repo)
+- build.js error message still references CLAUDE.md instead of Bellhop_claude.md
+- level2 authoring (level1.js pattern is ready)
