@@ -1,4 +1,5 @@
 let time=0,rescued=0,gotNotes=0;
+let started=false;
 buildLevel();
 window.__W={solids,gloops,goos,hearts,crates,powers,fires,checks,snoozles,notes,dust,puddles,get won(){return won;},get WM(){return WM;},get RAINBOW(){return RAINBOW;}};
 

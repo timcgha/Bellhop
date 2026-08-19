@@ -109,7 +109,7 @@ function angDamp(a,b,l,dt){let d=b-a;while(d>Math.PI)d-=TAU;while(d<-Math.PI)d+=
 function smooth(t){t=clamp(t,0,1);return t*t*(3-2*t);}
 const isTouch=!!(window.matchMedia&&matchMedia('(pointer:coarse)').matches);
 if(isTouch)document.body.classList.add('touch');
-let started=false;
+
 
 // ===== src/audio.js =====
 const AU={ctx:null,master:null,muted:false,noise:null,layers:0,step:0,next:0,bpm:112,win:false};
@@ -781,6 +781,7 @@ $('start').addEventListener('pointerdown',e=>{startGame();});
 
 // ===== src/game.js =====
 let time=0,rescued=0,gotNotes=0;
+let started=false;
 buildLevel();
 window.__W={solids,gloops,goos,hearts,crates,powers,fires,checks,snoozles,notes,dust,puddles,get won(){return won;},get WM(){return WM;},get RAINBOW(){return RAINBOW;}};
 

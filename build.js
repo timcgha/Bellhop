@@ -18,7 +18,7 @@ const START='// ---- BUILD:START ----',END='// ---- BUILD:END ----';
 
 if(!fs.existsSync(SRC)){
   console.error('No src/ directory yet — index.html is still the single source of truth.');
-  console.error('Once the split is done, this script takes over. See CLAUDE.md.');
+  console.error('Once the split is done, this script takes over. See Bellhop_claude.md.');
   process.exit(1);
 }
 const parts=[];
