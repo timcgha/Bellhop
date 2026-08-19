@@ -109,8 +109,7 @@ function angDamp(a,b,l,dt){let d=b-a;while(d>Math.PI)d-=TAU;while(d<-Math.PI)d+=
 function smooth(t){t=clamp(t,0,1);return t*t*(3-2*t);}
 const isTouch=!!(window.matchMedia&&matchMedia('(pointer:coarse)').matches);
 if(isTouch)document.body.classList.add('touch');
-let started=false,time=0,rescued=0,gotNotes=0;
-
+let started=false;
 
 // ===== src/audio.js =====
 const AU={ctx:null,master:null,muted:false,noise:null,layers:0,step:0,next:0,bpm:112,win:false};
@@ -777,11 +776,11 @@ function startGame(){if(started)return;started=true;$('start').style.display='no
   setTimeout(()=>showToast('Follow the path. Wake all four Snoozles!'),600);setTimeout(()=>{$('hint').style.opacity=0;},12000);}
 $('go').addEventListener('pointerdown',e=>{e.stopPropagation();e.preventDefault();startGame();});
 $('start').addEventListener('pointerdown',e=>{startGame();});
-updateHUD();
 
 
 
 // ===== src/game.js =====
+let time=0,rescued=0,gotNotes=0;
 buildLevel();
 window.__W={solids,gloops,goos,hearts,crates,powers,fires,checks,snoozles,notes,dust,puddles,get won(){return won;},get WM(){return WM;},get RAINBOW(){return RAINBOW;}};
 
@@ -815,6 +814,7 @@ function frame(now){requestAnimationFrame(frame);let dt=(now-last)/1000;last=now
   IN.jump=IN.b=IN.y=false;IN.jumpHeld=IN.bHeld=false;IN.camDX=IN.camDY=0;IN.mx=IN.mz=0;
   renderer.render(scene,camera);}
 requestAnimationFrame(frame);
+updateHUD();
 
 // ---- BUILD:END ----
 })();

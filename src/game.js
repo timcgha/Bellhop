@@ -1,3 +1,4 @@
+let time=0,rescued=0,gotNotes=0;
 buildLevel();
 window.__W={solids,gloops,goos,hearts,crates,powers,fires,checks,snoozles,notes,dust,puddles,get won(){return won;},get WM(){return WM;},get RAINBOW(){return RAINBOW;}};
 
@@ -31,3 +32,4 @@ function frame(now){requestAnimationFrame(frame);let dt=(now-last)/1000;last=now
   IN.jump=IN.b=IN.y=false;IN.jumpHeld=IN.bHeld=false;IN.camDX=IN.camDY=0;IN.mx=IN.mz=0;
   renderer.render(scene,camera);}
 requestAnimationFrame(frame);
+updateHUD();

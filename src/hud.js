@@ -6,5 +6,4 @@ function startGame(){if(started)return;started=true;$('start').style.display='no
   setTimeout(()=>showToast('Follow the path. Wake all four Snoozles!'),600);setTimeout(()=>{$('hint').style.opacity=0;},12000);}
 $('go').addEventListener('pointerdown',e=>{e.stopPropagation();e.preventDefault();startGame();});
 $('start').addEventListener('pointerdown',e=>{startGame();});
-updateHUD();
 
