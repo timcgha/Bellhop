@@ -1,0 +1,176 @@
+# Bellhop
+
+A 3D platformer for a six-year-old and his dad. Runs in a browser, no install,
+no build tooling beyond node. Playable on a phone in landscape, on a laptop with
+a keyboard, or with a gamepad.
+
+You are the second developer on this. Read this file before changing anything.
+
+## Who it is for
+
+One six-year-old, playing on a tablet or laptop, usually with his dad nearby.
+Every design decision resolves in his favour. When a change would make the game
+more interesting for an adult and more frustrating for him, it does not ship.
+
+Practical consequences:
+
+- No reading required. Toasts exist, but nothing important is only in text.
+- No fail state harsher than losing a heart and restarting at a checkpoint.
+- Nothing is timed. He can stand still and blow on a pinwheel for five minutes.
+- No menus, inventories, skill trees, crafting, or dialogue trees.
+- Every button does something visible and audible every single time it is pressed.
+
+## The character
+
+A teal enamel bellows-robot with a brass whistle-spout on his head, brass-rimmed
+goggle eyes, a silver concertina torso that squashes and stretches, and stubby
+limbs. He jets air from his feet. His name is not settled. The game's title is
+not settled either — "Bellhop" is a working title and has not been checked for
+conflicts. Do not put either name on anything public without asking.
+
+## Controls (this contract does not change without asking)
+
+| Input | Action |
+|---|---|
+| Left stick / WASD / arrows | Move |
+| Right stick / drag / Q,E | Camera |
+| A / Space | Jump. Again in the air for an air-puff. Hold after the puff to float. Every jump fires a blue foot-jet that burns enemies directly underneath. |
+| B / J / Shift | In the air: air-slam (ground pound). On the ground: gust from the mouth. |
+| Y / K | Spin attack — a full turn with arms outstretched, hits everything within ~2m in any direction. |
+
+The gust is the character's signature move and should stay useful. It spins
+pinwheels, pushes the boat, clears dust piles, wakes Snoozles, stuns Gloops, and
+blows enemy goo back at them.
+
+## Level shape
+
+One level exists. It runs along a hedged path with the windmill at the end, in
+five areas: start meadow, corridor, pond garden, tower yard, windmill plaza.
+
+Rules for any new level:
+
+- Something interesting every 20 to 30 seconds.
+- 8 to 15 minutes to finish.
+- An opening moment that shows the place off.
+- One new mechanic, taught somewhere safe, then varied three or four ways.
+- 3 to 5 Snoozles hidden along the route.
+- One clever secret and one optional hard challenge.
+- A climax, then a finish.
+- Checkpoints often enough that dying never costs more than a minute.
+
+## Physics constants — do not tune these without a playtest
+
+These were arrived at by feel and verified by tests. Changing them changes how
+the game feels in ways that are not obvious from reading the diff.
+
+```
+SPEED 6.8      ACC 44        DEC 60       AIRACC 20
+GRAV -30       MAXFALL -32   JUMPV 10.5   PUFFV 9.4
+COYOTE 0.12    BUFFER 0.15   STEP 0.42    R 0.36   H 1.15
+hover: 1.0s held / 0.5s released, drifts to -1.6 vertical
+slam: 0.14s hang, then -34, rebound to +8
+jet: 0.38s, one damage tick per jump, reaches ~0.7 below him
+spin: 0.45s, radius 2.05, cooldown 0.5
+```
+
+Resulting feel, asserted in tests: jump apex 1.75, jump+puff apex 3.20,
+fan updraft lifts to ~11.
+
+## Enemies and items
+
+- **Gloops** come in three sizes: small green (1 hp, quick), mid purple (2 hp),
+  big orange (3 hp, slow). They hop around a home spot, wind up visibly for half
+  a second, then lob goo. Goo costs one heart and leaves a slippery puddle.
+- Gloops die to: two spins, one air-slam, a head stomp, a jump-jet burn, a
+  reflected goo ball, or a fireball. Gust stuns them but does no damage.
+- **Crates** are solid until smashed by a spin, a slam, or a fireball. Each holds
+  a heart or the fire power-up.
+- **Fire power-up** is kept until a Gloop hits you, not spent. While held, every
+  ground pound throws ten fireballs outward in a full circle.
+- **Hearts** restore one of four. Dying returns you to the last checkpoint with
+  full hearts, keeping every Snoozle and note already collected.
+
+## Current architecture, and where it should go
+
+Right now `index.html` is a single file: CSS, markup, and about 820 lines of JS
+in one IIFE with everything in closure scope. It got here honestly — it was built
+in a chat window where one file was the only sane option — but it is now the main
+obstacle to adding levels.
+
+**Target:**
+
+```
+src/
+  util.js      clamp, lerp, damp, rand, TAU, angDamp, smooth
+  audio.js     AU, tone(), noise(), the step sequencer, SFX
+  input.js     keyboard, touch, gamepad -> the IN struct
+  render.js    renderer, scene, camera, lights, shared materials and geometries
+  fx.js        particle pool, rings, floating Z sprites
+  entities.js  builders: gloop, crate, snoozle, checkpoint, pinwheel, note, ...
+  player.js    buildPlayer, the P struct, movement, abilities
+  enemies.js   gloop AI, goo, puddles, fireballs
+  hud.js       HUD, toasts, the win banner
+  game.js      the loop, state, wiring
+levels/
+  level1.js    pure data: hedges, path tiles, spawns, enemy and item placement
+build.js       concatenates src/ into index.html
+```
+
+The point of the split is `levels/`. A level should be data that a person can
+author, not code inside a `buildLevel()` function. Once level1 is data, adding
+level2 is authoring rather than programming, and a six-year-old can describe a
+level and watch it appear.
+
+**Sequencing.** Do the split in small commits, running the tests after each one.
+Move one module at a time. Do not refactor and add features in the same commit.
+
+**Why the build step.** `index.html` must stay a single self-contained file:
+GitHub Pages serves it at the project URL, and double-clicking it locally must
+still work. Browsers refuse ES module imports over `file://`, so the modules get
+concatenated rather than imported. `node build.js` regenerates `index.html` from
+`src/`. Commit the generated file — Pages serves it directly with no CI needed.
+
+## Testing
+
+```
+node tests/run.js
+```
+
+76 assertions across six suites, each in its own process against a fresh game.
+There is no browser: `tests/harness.js` stubs THREE and the DOM, boots the game,
+and drives it one frame at a time with scripted input, so tests assert on real
+positions, velocities, hit points, and HUD text.
+
+**Run the tests before every commit.** They exist because this game cannot be
+verified by reading it — the bugs are in emergent behaviour, and the only
+previous release-blocking bug (a stray unit cube covering the character's face)
+was a one-line scale error that read perfectly fine.
+
+When you add a mechanic, add assertions for it. When a test fails, first work out
+whether the game broke or the test's assumption did — several existing tests had
+to be rewritten because they were sampling mid-flight or placing an enemy inside
+the player. A test that fails for a stale reason is worth fixing properly, not
+deleting.
+
+`tests/harness.js` injects three hooks by string replacement, listed in `HOOKS`.
+Those are the only lines coupled to the source text. When you split into modules,
+replace them with real exports.
+
+## Conventions
+
+- Three.js r128 from cdnjs. `THREE.OrbitControls` and `CapsuleGeometry` do not
+  exist in r128. Do not reach for them.
+- No `localStorage` or `sessionStorage`.
+- Update the version stamp on the start card (`<div class="sub">`) with every
+  release. It is how we tell which build is actually loaded when a browser serves
+  a cached one.
+- Prefer procedural geometry from primitives over asset files. The whole game is
+  one file with no downloads, and that is worth protecting.
+- Audio is generated with WebAudio, no samples. Every new mechanic gets a sound.
+
+## Writing style for anything with prose in it
+
+README, release notes, in-game text, commit messages. Plain and specific. No
+marketing cadence. Avoid "isn't just X, it's Y" constructions, three-part lists
+that exist for rhythm, and manufactured profundity. Say the thing directly.
+In-game text is read aloud to a six-year-old — short sentences, concrete words.
