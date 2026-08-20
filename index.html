@@ -1959,7 +1959,7 @@ const CTLTEXT=isTouch?'Left thumb moves · right thumb looks · A jump — blue 
 const PICKHINT=isTouch?'Tap a picture · tap it again to play':'← → choose a level · Space or A to start';
 $('ctlText').textContent=CTLTEXT;$('hint').textContent=CTLTEXT;$('pickHint').textContent=PICKHINT;
 
-let pickerIdx=0;
+let pickerIdx=0,touchArmed=false;
 function updatePickerUI(pulse){
   for(let i=0;i<LEVELS.length;i++){
     const el=$('lvl'+i);if(!el)continue;
@@ -1973,14 +1973,21 @@ function setPickerIdx(i){
   const next=clamp(i,0,LEVELS.length-1);
   const changed=next!==pickerIdx;
   pickerIdx=next;
+  // Keyboard/gamepad navigation is not a touch arm — first card tap still only selects.
+  if(changed)touchArmed=false;
   updatePickerUI(changed);
 }
 function tapLevelCard(i){
   if(started)return;
-  if(i===pickerIdx){startGame();return;}
-  setPickerIdx(i);
+  // Touch needs two physical taps on the same card. Default Meadow highlight does not count.
+  if(i===pickerIdx&&touchArmed){startGame();return;}
+  const changed=i!==pickerIdx;
+  pickerIdx=clamp(i,0,LEVELS.length-1);
+  touchArmed=true;
+  updatePickerUI(true);
 }
 window.__pickerIdx=()=>pickerIdx;
+window.__touchArmed=()=>touchArmed;
 window.__setPickerIdx=setPickerIdx;
 
 function drawLevelArt(){

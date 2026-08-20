@@ -201,6 +201,7 @@ module.exports = function boot(opts = {}) {
     getPhys: () => window.__PHYS && window.__PHYS(),
     isStarted: () => window.__started && window.__started(),
     pickerIdx: () => window.__pickerIdx && window.__pickerIdx(),
+    touchArmed: () => !!(window.__touchArmed && window.__touchArmed()),
     AU: () => window.__AU,
     SONGS: () => window.__SONGS,
     test: window.__TEST

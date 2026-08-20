@@ -79,15 +79,26 @@ function boot(opts){return require('./harness.js')(Object.assign({autostart:fals
   ok(H.getLevel()&&H.getLevel().id==='level2','touch: confirmed Level 2 boots LEVEL2');
 }
 
-// ---- touch: tap selected card again to start (no A required) ----
+// ---- touch: two physical taps required; default Meadow highlight does not count ----
 {
   const H=boot();
-  ok(H.pickerIdx()===0,'double-tap: default is Level 1');
+  ok(H.pickerIdx()===0,'fresh: default highlight is Level 1');
+  ok(!H.touchArmed(),'fresh: default highlight is not touch-armed');
+  H.tapCard(0);
+  ok(!H.isStarted(),'fresh: first tap on default-highlighted Meadow does NOT start');
+  ok(H.pickerIdx()===0&&H.touchArmed(),'fresh: first Meadow tap arms selection only');
+  H.tapCard(0);
+  ok(H.isStarted(),'fresh: second Meadow tap starts');
+  ok(H.getLevel()&&H.getLevel().id==='level1','fresh: Level 1 loads after two Meadow taps');
+}
+{
+  const H=boot();
   H.tapCard(1);
-  ok(H.pickerIdx()===1&&!H.isStarted(),'double-tap: first tap on Level 2 selects only');
+  ok(H.pickerIdx()===1&&!H.isStarted(),'deep: first tap on The Deep selects only');
+  ok(H.touchArmed(),'deep: first Deep tap arms it');
   H.tapCard(1);
-  ok(H.isStarted(),'double-tap: second tap on selected Level 2 starts');
-  ok(H.getLevel()&&H.getLevel().id==='level2','double-tap: Level 2 loads through tap-again flow');
+  ok(H.isStarted(),'deep: second Deep tap starts');
+  ok(H.getLevel()&&H.getLevel().id==='level2','deep: Level 2 loads through tap-again flow');
 }
 {
   const H=boot();
@@ -95,16 +106,19 @@ function boot(opts){return require('./harness.js')(Object.assign({autostart:fals
   ok(H.pickerIdx()===1&&!H.isStarted(),'switch: first tap selects Level 2');
   H.tapCard(0);
   ok(H.pickerIdx()===0&&!H.isStarted(),'switch: tapping the other card changes selection without starting');
+  ok(H.touchArmed(),'switch: newly selected card is armed, prior confirm reset');
   H.tapCard(0);
   ok(H.isStarted(),'switch: tapping newly selected Level 1 again starts it');
-  ok(H.getLevel()&&H.getLevel().id==='level1','switch: Level 1 loads through the new double-tap flow');
+  ok(H.getLevel()&&H.getLevel().id==='level1','switch: Level 1 loads after re-arming');
 }
 {
   const H=boot();
-  // default card is already selected — one tap starts Level 1
   H.tapCard(0);
-  ok(H.isStarted(),'default: tapping the already-selected Level 1 card starts it');
-  ok(H.getLevel()&&H.getLevel().id==='level1','default: Level 1 loads from selected-card tap');
+  ok(!H.isStarted(),'rearm: Meadow armed after first tap');
+  H.tapCard(1);
+  ok(H.pickerIdx()===1&&!H.isStarted(),'rearm: switching to Deep resets confirm (no start)');
+  H.tapCard(1);
+  ok(H.isStarted()&&H.getLevel().id==='level2','rearm: Deep needs a fresh second tap to start');
 }
 
 // ---- keyboard confirm still works after the touch UX change ----
@@ -112,6 +126,7 @@ function boot(opts){return require('./harness.js')(Object.assign({autostart:fals
   const H=boot();
   H.selectLevel(1);
   ok(!H.isStarted(),'keyboard: selecting a card alone does not start');
+  ok(!H.touchArmed(),'keyboard: arrow/select does not touch-arm');
   H.confirmStart();
   ok(H.isStarted()&&H.getLevel().id==='level2','keyboard: Space still confirms the highlighted level');
 }
