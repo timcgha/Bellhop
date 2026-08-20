@@ -691,20 +691,34 @@ function buildConch(cx,cz){
     g.add(ring);
     if(i%2===0)g.add(mesh(SPH,rib,Math.sin(ang)*0.6,y+0.15,z-0.1,r*1.22,r*0.35,r*1.12));
   }
-  // mouth frame: always-solid looking rim around the intended doorway
-  g.add(mesh(SPH,lip,0,2.3,4.35,3.6,2.8,1.7));
-  g.add(mesh(SPH,inner,0,2.15,3.5,2.7,2.1,1.55));
-  // left / right / top mouth cheeks (visual + collision below) so the opening reads as a door
-  g.add(mesh(BOXG,lip,-(DOOR_W*0.5+0.85),2.2,DOOR_Z,1.5,4.2,1.1));
-  g.add(mesh(BOXG,lip,DOOR_W*0.5+0.85,2.2,DOOR_Z,1.5,4.2,1.1));
-  g.add(mesh(BOXG,lip,0,DOOR_Y+DOOR_H+0.55,DOOR_Z,DOOR_W+2.6,1.0,1.0));
-  // closed door plate — fills the aperture; hidden when open
-  const doorVis=mesh(BOXG,dark,0,DOOR_Y+DOOR_H*0.5,DOOR_Z,DOOR_W,DOOR_H,DOOR_D*0.7);
+  // Organic shell mouth — aperture faces +z. Collision boxes below stay unchanged.
+  // Large beige rectangular cheeks/lintel removed; opening reads as a hole in the shell.
+  g.add(mesh(SPH,lip,0,2.35,4.2,4.0,3.1,2.0));
+  g.add(mesh(SPH,inner,0,2.2,3.55,2.9,2.3,1.7));
+  // Side lobes flare around the mouth (asymmetric, shell-like)
+  g.add(mesh(SPH,shell,-2.55,2.0,4.55,1.9,2.6,1.55));
+  g.add(mesh(SPH,shell,2.65,2.15,4.5,2.05,2.75,1.65));
+  g.add(mesh(SPH,rib,-2.7,2.35,4.35,1.55,1.1,1.2));
+  g.add(mesh(SPH,rib,2.85,2.5,4.3,1.7,1.2,1.25));
+  // Upper lip / hood arching over the aperture
+  g.add(mesh(SPH,lip,0,4.15,4.7,3.4,1.35,1.5));
+  g.add(mesh(SPH,shell,0,4.55,4.35,2.6,1.0,1.2));
+  // Lower lip / sill under the opening
+  g.add(mesh(SPH,lip,0,0.55,4.85,3.2,0.85,1.35));
+  g.add(mesh(SPH,rib,-1.1,0.7,5.0,1.1,0.55,0.85));
+  g.add(mesh(SPH,rib,1.2,0.65,4.95,1.2,0.5,0.9));
+  // Stepped rim beads ringing the mouth (no flat frame)
+  for(let i=0;i<7;i++){
+    const a=(-0.95+i*0.32),cy=2.15+Math.sin(a)*1.55,cxo=Math.cos(a)*2.15;
+    g.add(mesh(SPH,lip,cxo,cy,DOOR_Z-0.15+Math.abs(Math.cos(a))*0.15,0.55,0.48,0.5));
+  }
+  // Closed door plate — fills the aperture; slightly rounded so it sits in the shell mouth
+  const doorVis=mesh(SPH,dark,0,DOOR_Y+DOOR_H*0.5,DOOR_Z,DOOR_W*0.55,DOOR_H*0.52,DOOR_D*0.55);
   g.add(doorVis);CONCH.doorVis=doorVis;
-  const closedSeam=mesh(BOXG,lam(0x3a2010),0,DOOR_Y+DOOR_H*0.5,DOOR_Z+0.28,0.12,DOOR_H*0.92,0.08);
+  const closedSeam=mesh(BOXG,lam(0x3a2010),0,DOOR_Y+DOOR_H*0.5,DOOR_Z+0.22,0.1,DOOR_H*0.72,0.06);
   g.add(closedSeam);CONCH.closedSeam=closedSeam;
-  // open mouth glow — only visible when the doorway is passable
-  const openMouth=mesh(BOXG,new THREE.MeshBasicMaterial({color:0xfff2d0,transparent:true,opacity:0.5,depthWrite:false}),0,DOOR_Y+DOOR_H*0.5,DOOR_Z-0.05,DOOR_W*0.95,DOOR_H*0.92,0.2);
+  // Open mouth glow — soft oval wash, not a rectangular panel
+  const openMouth=mesh(SPH,new THREE.MeshBasicMaterial({color:0xfff2d0,transparent:true,opacity:0.5,depthWrite:false}),0,DOOR_Y+DOOR_H*0.5,DOOR_Z-0.05,DOOR_W*0.5,DOOR_H*0.48,0.35);
   openMouth.visible=false;g.add(openMouth);CONCH.openMouth=openMouth;
   // --- collision proxies (simple boxes; ridges stay decorative) ---
   // Removable front door — matches visible closed plate
