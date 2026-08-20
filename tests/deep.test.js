@@ -99,6 +99,26 @@ const AX=35,AZ=35;
   ok(aliveBubbles(H)===0,'unpowered underwater gust does not create a bubble');
 }
 
+// ---- bubble range at real level coordinates (no coordinate cull) ----
+function bubbleRangeAt(H,x,z,tx,tz){
+  H.P.bubble=true;
+  H.P.pos.set(x,1.5,z);H.P.vel.set(0,0,0);
+  aim(H,tx,tz);H.frames(2);
+  gust(H);
+  const b=H.W.bubbleShots.find(q=>q.alive);
+  if(!b)return 0;
+  const sx=b.pos.x,sz=b.pos.z;let maxD=0;
+  for(let i=0;i<160;i++){H.frames(1);if(!b.alive)break;maxD=Math.max(maxD,Math.hypot(b.pos.x-sx,b.pos.z-sz));}
+  return maxD;
+}
+{
+  const H=boot();H.startLevel(1);H.frames(4);
+  const dShoal=bubbleRangeAt(H,-8,-95,-8,-80);
+  ok(dShoal>10,`bubble travels full range in the Shoal (got ${dShoal.toFixed(1)}m)`);
+  const dWreck=bubbleRangeAt(H,0,-160,0,-148);
+  ok(dWreck>10,`bubble travels full range on the Wreck approach (got ${dWreck.toFixed(1)}m)`);
+}
+
 // ---- counted-note model (test-spawned note fish) ----
 {
   const H=boot();startMechanic(H);
