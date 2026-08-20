@@ -1051,10 +1051,11 @@ function buildShark(){
   g.add(mesh(SPH,lam(0x111111),0.16,0.1,0.42,0.06));
   return g;
 }
+const SHARK_AGGRO=7,SHARK_LEASH=9;
 function addShark(x,y,z,withNote,role){
   const g=buildShark();g.position.set(x,y,z);scene.add(g);
   const note=withNote?addNote(x,y+0.6,z,true):null;
-  sharks.push({g,x,y,z,yBase:y,note,alive:true,state:'swim',trapT:0,hurtT:0,ph:rand(0,TAU),face:0,bubble:null,role:role||null});
+  sharks.push({g,x,y,z,hx:x,hz:z,yBase:y,note,alive:true,state:'swim',trapT:0,hurtT:0,backT:0,ph:rand(0,TAU),face:0,bubble:null,role:role||null});
 }
 function buildFish(col,gold){
   const g=new THREE.Group();
@@ -1186,14 +1187,27 @@ function updateSharks(dt){
     }
     s.y=s.yBase+Math.sin(time*1.1+s.ph)*0.28;
     const dx=P.pos.x-s.x,dz=P.pos.z-s.z,d=Math.hypot(dx,dz)||0.01;
-    s.face=Math.atan2(dx,dz);
+    const hx=s.hx-s.x,hz=s.hz-s.z,dHome=Math.hypot(hx,hz)||0.001;
+    if(s.backT>0)s.backT-=dt;
+    let mx=0,mz=0,sp=0;
+    if(s.backT>0){
+      // just bit: retreat toward home instead of chain-biting
+      if(dHome>1){mx=hx/dHome;mz=hz/dHome;sp=2.4;s.face=Math.atan2(mx,mz);}
+      else s.face=Math.atan2(-dx,-dz);
+    }else if(!P.dead&&d<SHARK_AGGRO&&dHome<SHARK_LEASH){
+      s.face=Math.atan2(dx,dz);
+      if(d>0.8){mx=dx/d;mz=dz/d;sp=2.4;}
+    }else if(dHome>0.6){
+      mx=hx/dHome;mz=hz/dHome;sp=2.0;s.face=Math.atan2(mx,mz);
+    }else{
+      s.face=s.ph+Math.sin(time*0.35+s.ph)*0.9;
+    }
+    if(sp>0){s.x+=mx*sp*dt;s.z+=mz*sp*dt;}
     s.g.rotation.y=angDamp(s.g.rotation.y,s.face,4,dt);
-    const sp=2.4;
-    if(d>0.8){s.x+=dx/d*sp*dt;s.z+=dz/d*sp*dt;}
     s.g.position.set(s.x,s.y,s.z);
     if(s.hurtT>0)s.hurtT-=dt;
-    if(!P.dead&&P.inv<=0&&d<0.85&&Math.abs(P.pos.y-s.y)<1.1){
-      hurtPlayer(dx/d*4,dz/d*4,0x6a7a8a);SFX.sharkBite();
+    if(!P.dead&&P.inv<=0&&s.backT<=0&&d<0.85&&Math.abs(P.pos.y-s.y)<1.1){
+      hurtPlayer(dx/d*4,dz/d*4,0x6a7a8a);SFX.sharkBite();s.backT=2.2;
     }
   }
 }

@@ -262,6 +262,64 @@ testSharkNoteReveal((H,s)=>{bubbleShark(H,s,AX+2,AZ);},'bubble defeat');
   ok(grantBubble(H,AX,AZ+30),'same clam grants bubble power again after loss');
 }
 
+// ---- shark leash, return home, and bite backoff ----
+{
+  const H=boot();startMechanic(H);
+  const s=H.test.addShark(AX,1.8,AZ,false);
+  H.P.pos.set(AX+5,1.5,AZ);H.P.vel.set(0,0,0);H.frames(90);
+  ok(Math.hypot(s.x-AX,s.z-AZ)>1,'shark chases a nearby player away from home');
+  H.P.pos.set(AX+40,1.5,AZ);H.P.vel.set(0,0,0);H.frames(500);
+  ok(Math.hypot(s.x-AX,s.z-AZ)<1.5,'shark returns home when the player leaves');
+}
+function dragShark(H,s,homeX,homeZ,frames,stopAt){
+  H.P.pos.set(homeX+6,1.5,homeZ);H.P.vel.set(0,0,0);
+  let maxHome=0;
+  for(let i=0;i<frames;i++){
+    if(Math.hypot(s.x-H.P.pos.x,s.z-H.P.pos.z)<3)H.P.pos.x+=0.06;
+    H.P.vel.set(0,0,0);H.P.inv=999;
+    H.frames(1);
+    maxHome=Math.max(maxHome,Math.hypot(s.x-homeX,s.z-homeZ));
+    if(stopAt&&Math.hypot(s.x-homeX,s.z-homeZ)>stopAt)break;
+  }
+  return maxHome;
+}
+{
+  const H=boot();startMechanic(H);
+  const s=H.test.addShark(AX,1.8,AZ,false);
+  ok(Math.hypot(s.hx-AX,s.hz-AZ)<0.01,'shark stores its home position');
+  H.P.pos.set(AX+8.5,1.5,AZ);H.P.vel.set(0,0,0);H.frames(200);
+  ok(Math.hypot(s.x-AX,s.z-AZ)<0.7,'player outside aggro radius does not draw the shark');
+  const maxHome=dragShark(H,s,AX,AZ,600);
+  ok(maxHome<9.6,'shark never chases beyond its leash ('+maxHome.toFixed(1)+'m)');
+}
+{
+  const H=boot();startMechanic(H);
+  const s=H.test.addShark(AX,1.8,AZ,false);
+  H.P.hp=4;H.P.inv=0;
+  const bites=[];
+  for(let i=0;i<600;i++){
+    H.P.pos.set(AX,1.6,AZ);H.P.vel.set(0,0,0);
+    const hp=H.P.hp;H.frames(1);
+    if(H.P.hp<hp)bites.push(i);
+    if(bites.length>=2)break;
+  }
+  ok(bites.length>=2,'shark can bite again after backing off');
+  const gap=bites.length>1?(bites[1]-bites[0])*0.01667:0;
+  ok(gap>1.8,'post-bite backoff prevents chain-bites on invulnerability expiry ('+gap.toFixed(2)+'s)');
+}
+{
+  const H=boot();startMechanic(H);
+  const s=H.test.addShark(AX,1.8,AZ,true);
+  dragShark(H,s,AX,AZ,300,7.5);
+  const killX=s.x,killZ=s.z;
+  H.P.pos.set(s.x,s.y,s.z-0.6);H.P.vel.set(0,0,0);H.P.inv=999;H.frames(2);
+  H.tap('KeyK',2);H.frames(5);
+  ok(!s.alive,'dragged shark dies to a spin near the leash edge');
+  ok(revealed(s.note),'leash-edge kill reveals the held note');
+  const nd=Math.hypot(s.note.x-killX,s.note.z-killZ);
+  ok(nd<=10,'revealed note stays sensibly close to the encounter ('+nd.toFixed(1)+'m)');
+}
+
 // ---- Level 1 fire power unchanged ----
 {
   const H=boot({autostart:true,level:0});

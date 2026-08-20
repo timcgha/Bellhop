@@ -190,7 +190,8 @@ function push(H,x,y,z,vx,vz,n){
   const H=boot();startL2(H);
   const legs=[[0,10],[0,0],[0,-8],[0,-20],[0,-35],[0,-52],[0,-62],[0,-74],[-4,-78],[-4,-88],[0,-102]];
   let stuck=[];
-  for(const L of legs){if(!canStand(H,L[0],L[1],55))stuck.push(L.join(','));}
+  // route sampling checks geometry, not combat: ignore enemy knockback
+  for(const L of legs){H.P.inv=999;if(!canStand(H,L[0],L[1],55))stuck.push(L.join(','));}
   ok(stuck.length===0,'Areas 1–3 route samples are traversable ('+(stuck.join(' | ')||'all clear')+')');
 }
 
