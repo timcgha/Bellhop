@@ -200,6 +200,7 @@ module.exports = function boot(opts = {}) {
     getLevel: () => window.__LEVEL && window.__LEVEL(),
     getPhys: () => window.__PHYS && window.__PHYS(),
     isStarted: () => window.__started && window.__started(),
-    pickerIdx: () => window.__pickerIdx && window.__pickerIdx()
+    pickerIdx: () => window.__pickerIdx && window.__pickerIdx(),
+    test: window.__TEST
   };
 };

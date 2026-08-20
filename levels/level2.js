@@ -36,15 +36,6 @@ steps:[
   ['snoozleShell',0,0,-8],
   ['coralScatter',8,0,-4,4],
   ['sandPath',-3,-2,3,-14],
-  // deep-test alcove clam (renewable)
-  ['clam',2,0,3,null],
-  // stage-3 fixture alcoves (off main teaching order)
-  ['fishSchool',-5,1.5,4,5],
-  ['noteFish',6,1.2,2],
-  ['shark',-7,1.8,6,true],
-  ['shark',9,1.5,-2,false],
-  ['spikefish',0,2,7,5,2,7,true,null],
-  ['spikefish',-3,2.5,-6,-3,3,-4,false,null],
   // --- Area 2: Kelp Forest ---
   ['kelpCurtain','curtain',0,-22,5,4.5,false],
   ['sandPath',-3,-18,3,-66],

@@ -17,9 +17,14 @@ function grantBubble(H){
   if(c){H.P.pos.set(c.x+0.8,c.y,c.z);H.P.vel.set(0,0,0);H.frames(4);H.tap('KeyK',2);H.frames(8);
     const w=H.W.powers.find(p=>!p.got&&p.kind==='bubble');
     if(w){H.P.pos.set(w.x,w.y-0.5,w.z);H.P.vel.set(0,0,0);H.frames(6);}}
-  else{H.P.pos.set(2,0,3);H.P.vel.set(0,0,0);H.frames(12);}
+  else{
+    const safety=H.W.clams.find(c=>c.role==='safety');
+    H.P.pos.set(safety.x,safety.y,safety.z);H.P.vel.set(0,0,0);H.frames(12);
+  }
   return H.P.bubble;
 }
+const SHALLOWS_Z=-18;
+const SHOAL_Z=-66;
 function canStand(H,x,z,frames){
   H.P.pos.set(x,3,z);H.P.vel.set(0,0,0);H.frames(frames||50);
   return H.P.pos.y<1.5&&Math.hypot(H.P.pos.x-x,H.P.pos.z-z)<1.5;
@@ -56,7 +61,7 @@ function canStand(H,x,z,frames){
   const H=boot();startL2(H);
   const s=kelp(H,'secret');
   const n0=H.W.notes.length;
-  ok(s&&!s.secret===false,'secret kelp wall exists');
+  ok(s&&s.secret,'secret kelp wall exists');
   ok(H.W.notes.length>=n0,'secret alcove notes already count in notes.length from build');
   H.P.pos.set(s.cx,s.h*0.5,s.cz+3);H.P.yaw=Math.PI;H.frames(4);
   gust(H);H.frames(25);
@@ -70,6 +75,30 @@ function canStand(H,x,z,frames){
   ok(crate&&crate.z<-25&&crate.z>-35,'Kelp Forest has the first bubble-power crate');
   ok(H.W.fish.filter(f=>f.kind==='ordinary').length>=10,'teaching area has a large ordinary fish school');
   ok(H.W.fish.some(f=>f.kind==='note'),'teaching school includes a golden note fish');
+}
+
+// ---- teaching order regression ----
+{
+  const H=boot();startL2(H);
+  const shallows=(z)=>z>SHALLOWS_Z;
+  const beforeShoal=(z)=>z>SHOAL_Z;
+  ok(!H.W.clams.some(c=>shallows(c.z)),'no clam bubble source in The Shallows');
+  ok(!H.W.crates.some(c=>c.item==='bubble'&&shallows(c.z)),'no bubble crate in The Shallows');
+  ok(!H.W.sharks.some(s=>shallows(s.z)),'no shark in The Shallows');
+  ok(!H.W.spikefish.some(s=>beforeShoal(s.z1)),'no spikefish before the Shoal introduction');
+  const intro=H.W.crates.find(c=>c.item==='bubble');
+  ok(intro&&intro.z<-25&&intro.z>-35,'first production bubble-power source is the Kelp Forest crate');
+  ok(H.W.clams.filter(c=>c.role==='safety').length===1,'only one safety clam for progression');
+  ok(H.W.clams.every(c=>c.role==='safety'||!c.role),'no extra production clams besides the safety clam');
+}
+{
+  const H=boot();startL2(H);
+  ok(H.W.notes.length===3,'production Level 2 has three counted notes after fixture removal');
+  const hidden=H.W.notes.filter(n=>n.hidden).length;
+  const visible=H.W.notes.filter(n=>!n.hidden).length;
+  ok(hidden===1&&visible===2,'note breakdown: one hidden held note fish + two secret alcove notes');
+  const noteFish=H.W.fish.find(f=>f.kind==='note');
+  ok(noteFish&&noteFish.note&&noteFish.note.hidden,'held note fish note counts from build time');
 }
 
 // ---- Shoal spikefish teaching ----

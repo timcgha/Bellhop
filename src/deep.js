@@ -274,3 +274,10 @@ function updateKelp(dt){
       if(kp.parted){kp.partT+=dt;const k=smooth(Math.min(kp.partT/0.55,1));st.rotation.y=kp.openSide*(0.9+i*0.08)*k;}});
     if(kp.parted&&kp.partT>0.15){const k=smooth(Math.min(kp.partT/0.7,1));kp.g.position.x=lerp(kp.cx,kp.cx+kp.openSide*2.0,k);}}
 }
+window.__TEST={
+  addClam:(x,y,z,r)=>{addClam(x,y,z,r);return clams[clams.length-1];},
+  addShark:(x,y,z,n)=>{addShark(x,y,z,n);return sharks[sharks.length-1];},
+  addFishSchool:(x,y,z,n)=>{addFishSchool(x,y,z,n);return fish.slice(-n);},
+  addNoteFish:(x,y,z)=>{addNoteFish(x,y,z);return fish[fish.length-1];},
+  addSpikefish:(x1,y1,z1,x2,y2,z2,n,r)=>{addSpikefish(x1,y1,z1,x2,y2,z2,n,r);return spikefish[spikefish.length-1];}
+};
