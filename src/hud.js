@@ -34,7 +34,6 @@ function tapLevelCard(i){
   if(started)return;
   // Touch needs two physical taps on the same card. Default Meadow highlight does not count.
   if(i===pickerIdx&&touchArmed){startGame();return;}
-  const changed=i!==pickerIdx;
   pickerIdx=clamp(i,0,LEVELS.length-1);
   touchArmed=true;
   updatePickerUI(true);
