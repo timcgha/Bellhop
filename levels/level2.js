@@ -20,4 +20,12 @@ tower:{tx:0,tz:0},
 snoozleHomes:[],
 snoozles:[],
 trees:[],
-steps:[]};
+steps:[
+  ['clam',2,0,3],
+  ['fishSchool',-5,1.5,4,5],
+  ['noteFish',6,1.2,2],
+  ['shark',-7,1.8,6,true],
+  ['shark',9,1.5,-2,false],
+  ['spikefish',0,2,7,5,2,7,true],
+  ['spikefish',-3,2.5,-6,-3,3,-4,false]
+]};

@@ -1,4 +1,5 @@
 const solids=[],wobblers=[],pinwheels=[],toss=[],notes=[],dust=[],snoozles=[],fans=[],clouds=[],gloops=[],goos=[],puddles=[],hearts=[],crates=[],powers=[],fires=[];
+const sharks=[],fish=[],spikefish=[],clams=[],bubbleShots=[];
 let seenGloop=false,seenCrate=false;
 let BOAT=null,WM=null,player=null,shadow=null,RAINBOW=null;
 const checks=[];let won=false,winT=0,confT=0;
@@ -171,6 +172,11 @@ function loadLevel(L){
     else if(k==='towerSteps'){for(let i=0;i<step[1];i++){const a=-Math.PI/2+i*0.56;const y=1.1*(i+1);const sl=addSolid(TX+Math.cos(a)*4.3,y-0.4,TZ+Math.sin(a)*4.3,2.4,0.4,2.4,i%2?0xc98a4b:0xd9a262,{surf:'wood'});if(step[2].indexOf(i)>=0)addNote(sl.mesh.position.x,y+0.7,sl.mesh.position.z,false);}}
     else if(k==='bushScatter'){for(let i=0;i<step[1];i++){const x=rand(-46,34),z=rand(-82,24);if(x>-38&&x<24&&z>-74&&z<16)continue;scene.add(mesh(SPH,lam(0x4f9f3f),x,0.35,z,rand(0.9,1.6),rand(0.6,1.0),rand(0.9,1.6)));}}
     else if(k==='cloudScatter'){for(let i=0;i<step[1];i++)addCloud(rand(-44,32),rand(22,30),rand(-80,20),rand(1.5,3));}
+    else if(k==='clam')addClam(step[1],step[2],step[3]);
+    else if(k==='shark')addShark(step[1],step[2],step[3],step[4]);
+    else if(k==='fishSchool')addFishSchool(step[1],step[2],step[3],step[4]);
+    else if(k==='noteFish')addNoteFish(step[1],step[2],step[3]);
+    else if(k==='spikefish')addSpikefish(step[1],step[2],step[3],step[4],step[5],step[6],step[7]);
   }
   for(const t of L.trees)addTree(t[0],t[1]);
   for(const s of L.snoozles){const x=s[0]!=null?s[0]:TX,y=s[1],z=s[2]!=null?s[2]:TZ;addSnoozle(x,y,z,homes[s[3]],s[4]);}

@@ -15,6 +15,11 @@ function updateToss(dt){for(const t of toss){
   if(t.pos.y<=gy){t.pos.y=gy;if(t.vel.y<-1.5){t.vel.y=-t.vel.y*0.35;t.vel.x*=0.6;t.vel.z*=0.6;if(t.vel.y>1&&d<25)SFX.clatter();}else{t.vel.y=0;t.vel.x=damp(t.vel.x,0,7,dt);t.vel.z=damp(t.vel.z,0,7,dt);if(Math.hypot(t.vel.x,t.vel.z)<0.08){t.vel.set(0,0,0);t.rest=true;}}}
   t.pos.x=clamp(t.pos.x,-40,40);t.pos.z=clamp(t.pos.z,-40,40);
   t.m.position.copy(t.pos);t.m.rotation.z=-t.vel.x*0.06;t.m.rotation.x=t.vel.z*0.06;}}
+function revealHeldNote(n){
+  if(!n||n.got||!n.hidden)return;
+  n.hidden=false;n.g.visible=true;SFX.reveal();
+  for(let i=0;i<12;i++)spawnP(n.x,n.y,n.z,rand(-2,2),rand(1,4),rand(-2,2),0.07,0xffe36b,0.7,0.3,-6,1);
+}
 function collectNote(n){n.got=true;n.g.visible=false;gotNotes++;SFX.note();for(let i=0;i<10;i++)spawnP(n.g.position.x,n.g.position.y,n.g.position.z,rand(-2,2),rand(1,4),rand(-2,2),0.07,0xffe36b,0.6,0.3,-6,1);updateHUD();}
 function updateNotes(dt){for(const n of notes){if(n.got||n.hidden)continue;n.g.position.y=n.y+Math.sin(time*3+n.ph)*0.12;n.g.rotation.y+=dt*2.5;
   tmpV.set(P.pos.x,P.pos.y+0.6,P.pos.z);if(n.g.position.distanceTo(tmpV)<1.1)collectNote(n);}}

@@ -26,7 +26,7 @@ player=buildPlayer();scene.add(player);
 (function(){const f=new THREE.Group();f.add(mesh(CONE,new THREE.MeshBasicMaterial({color:0xff7a1f}),0,0.14,0,0.13,0.4,0.13));f.add(mesh(CONE,new THREE.MeshBasicMaterial({color:0xffe36b}),0,0.1,0,0.07,0.24,0.07));f.position.y=0.92;f.visible=false;player.userData.head.add(f);player.userData.flame=f;})();
 shadow=new THREE.Mesh(new THREE.CircleGeometry(0.5,20),new THREE.MeshBasicMaterial({color:0x000000,transparent:true,opacity:0.28,depthWrite:false}));shadow.rotation.x=-Math.PI/2;scene.add(shadow);
 
-const P=window.__P={spawn:{x:0,y:0,z:10},pos:new THREE.Vector3(0,0,10),vel:new THREE.Vector3(),yaw:Math.PI,grounded:false,wasGrounded:false,lastGround:-9,jumpBuf:-9,jumping:false,puff:true,slam:0,hangT:0,gustCD:0,bonkCD:0,bonkT:0,sq:1,sqV:0,sqT:1,footT:0,surf:'grass',run:0,mouthT:0,blinkT:2,blinkAnim:0,inFan:false,splT:0,puffAir:0,hover:false,hovT:0,hoverS:null,hp:4,maxHp:4,inv:0,dead:false,deadT:0,inGoo:false,fire:false,jetT:0,jetP:0,jetHits:[]};
+const P=window.__P={spawn:{x:0,y:0,z:10},pos:new THREE.Vector3(0,0,10),vel:new THREE.Vector3(),yaw:Math.PI,grounded:false,wasGrounded:false,lastGround:-9,jumpBuf:-9,jumping:false,puff:true,slam:0,hangT:0,gustCD:0,bonkCD:0,bonkT:0,sq:1,sqV:0,sqT:1,footT:0,surf:'grass',run:0,mouthT:0,blinkT:2,blinkAnim:0,inFan:false,splT:0,puffAir:0,hover:false,hovT:0,hoverS:null,hp:4,maxHp:4,inv:0,dead:false,deadT:0,inGoo:false,fire:false,bubble:false,jetT:0,jetP:0,jetHits:[]};
 let R=0.36,H=1.15,SPEED=6.8,ACC=44,DEC=60,AIRACC=20,GRAV=-30,JUMPV=10.5,PUFFV=9.4,MAXFALL=-32,COYOTE=0.12,BUFFER=0.15,STEP=0.42;
 let HOVER_HELD=1.0,HOVER_REL=0.5,HOVER_DRIFT=-1.6,SLAM_HANG=0.14,SLAM_FALL=-34,SLAM_REBOUND=8,JET_T=0.38,BONKR=2.05,BONK_CD=0.5;
 function applyPhysics(ph){
@@ -53,7 +53,11 @@ function jetDamage(){for(const e of gloops){if(!e.alive||e.state==='dying')conti
   if(e.y>P.pos.y+0.15||e.y+0.85*e.size<P.pos.y-0.7)continue;
   P.jetHits.push(e);const n=d||0.01;hitGloop(e,1,dx/n*4.5,dz/n*4.5);
   spawnRing(e.x,e.y+0.15,e.z,0x9fe4ff,0.25,4,0.3);
-  for(let i=0;i<6;i++)spawnP(e.x,e.y+0.4,e.z,rand(-2,2),rand(1,3),rand(-2,2),0.09,0x9fe4ff,0.4,0.4,-5,0.9);}}
+  for(let i=0;i<6;i++)spawnP(e.x,e.y+0.4,e.z,rand(-2,2),rand(1,3),rand(-2,2),0.09,0x9fe4ff,0.4,0.4,-5,0.9);}
+  for(const s of sharks){if(!s.alive||P.jetHits.indexOf(s)>=0)continue;
+  const dx=s.x-P.pos.x,dz=s.z-P.pos.z,d=Math.hypot(dx,dz);if(d>0.55)continue;
+  if(s.y>P.pos.y+0.15||s.y+0.5<P.pos.y-0.7)continue;
+  P.jetHits.push(s);hitSharkSpinJet(s,1);}}
 function endHover(){P.hover=false;if(P.hoverS){SFX.hoverStop(P.hoverS);P.hoverS=null;}}
 function hoverPuffFX(){const c=Math.cos(P.yaw),s=Math.sin(P.yaw);for(let sg=-1;sg<=1;sg+=2){spawnP(P.pos.x+sg*0.12*c+rand(-0.05,0.05),P.pos.y+0.04,P.pos.z-sg*0.12*s+rand(-0.05,0.05),rand(-0.4,0.4),rand(-2.5,-1.2),rand(-0.4,0.4),rand(0.07,0.11),0xffffff,rand(0.3,0.45),1.2,0,0.7);}}
 function onLand(fall,surf){if(!P.puff){P.puff=true;refillFX();}P.sq=clamp(1-fall*0.045,0.55,0.9);SFX.land(fall);
@@ -74,7 +78,9 @@ function doGust(){const yaw=P.yaw,fx=Math.sin(yaw),fz=Math.cos(yaw);const mx=P.p
   for(const q of goos){if(!q.alive||q.ref||Math.abs(q.pos.y-P.pos.y)>3)continue;const s=k(q.pos.x,q.pos.z);if(s>0){q.ref=true;q.vel.x=fx*12;q.vel.z=fz*12;q.vel.y=Math.max(q.vel.y,3);q.life=3;q.m.material.color.setHex(0xd8ff9a);spawnRing(q.pos.x,q.pos.y,q.pos.z,0xd8ff9a,0.2,3,0.25);}}
   {if(WM){const s=k(WM.sailX,WM.sailZ);if(s>0)WM.spin+=s*7;}}
   {if(BOAT){const s=k(BOAT.pos.x,BOAT.pos.z);if(s>0){BOAT.vel.x+=fx*s*6;BOAT.vel.z+=fz*s*6;}}}
-  rumble(60,0.2,0.4);}
+  rumble(60,0.2,0.4);
+  if(isUnderwater()&&P.bubble)fireBubble();
+}
 function doBonk(){const px=P.pos.x,pz=P.pos.z;SFX.bonk();SFX.spin();
   const k=(x,z)=>{const d=Math.hypot(x-px,z-pz);return d>BONKR?0:1-d/BONKR;};
   const nx=(x,z)=>{const d=Math.hypot(x-px,z-pz)||0.01;return [(x-px)/d,(z-pz)/d];};
@@ -85,6 +91,7 @@ function doBonk(){const px=P.pos.x,pz=P.pos.z;SFX.bonk();SFX.spin();
   for(const w of wobblers){if(Math.abs(w.y-P.pos.y)>1.5)continue;const s=k(w.x,w.z);if(s>0){const n=nx(w.x,w.z);w.vx+=n[0]*s*9;w.vz+=n[1]*s*9;}}
   for(const d of dust){if(d.amt<=0)continue;const s=k(d.x,d.z);if(s>0){dustHit(d,0.7);hit=true;}}
   for(const e of gloops){if(!e.alive||e.state==='dying'||Math.abs(e.y-P.pos.y)>1.5)continue;const s=k(e.x,e.z);if(s>0){const n=nx(e.x,e.z);hitGloop(e,1,n[0]*6,n[1]*6);hit=true;}}
+  for(const s of sharks){if(!s.alive)continue;const s2=k(s.x,s.z);if(s2>0&&Math.abs(s.y-P.pos.y)<1.5){hitSharkSpinJet(s,1);hit=true;}}
   for(const c of crates){if(c.broken)continue;if(Math.hypot(c.x-px,c.z-pz)<BONKR&&Math.abs(c.y-P.pos.y)<1.4){breakCrate(c);hit=true;}}
   spawnRing(px,P.pos.y+0.45,pz,0xffe9b0,0.55,5,0.3);
   for(let i=0;i<7;i++){const a=i/7*TAU;spawnP(px+Math.cos(a)*0.7,P.pos.y+0.55,pz+Math.sin(a)*0.7,Math.cos(a)*3,rand(0.5,1.5),Math.sin(a)*3,0.09,0xfff0b8,0.3,0.8,0,0.8);}
@@ -107,9 +114,12 @@ function slamImpact(){const px=P.pos.x,py=P.pos.y,pz=P.pos.z;SFX.slam();CAM.shak
 function hurtPlayer(kx,kz,col){if(P.inv>0||P.dead)return;P.hp--;P.inv=1.4;const l=Math.hypot(kx,kz)||1;P.vel.x=kx/l*5;P.vel.z=kz/l*5;P.vel.y=Math.max(P.vel.y,5);P.grounded=false;P.slam=0;P.puffAir=0;endHover();P.sq=0.6;SFX.hurt();CAM.shake=0.45;rumble(150,0.7,0.3);
   for(let i=0;i<10;i++)spawnP(P.pos.x,P.pos.y+0.6,P.pos.z,rand(-3,3),rand(1,4),rand(-3,3),rand(0.06,0.12),col||GOOC,rand(0.3,0.5),0.3,-8,0.9);
   const lostFire=P.fire;
+  const lostBubble=P.bubble&&isUnderwater();
   if(P.fire){P.fire=false;SFX.fireOut();spoutWorld(tmpV);for(let i=0;i<12;i++)spawnP(tmpV.x,tmpV.y,tmpV.z,rand(-1.2,1.2),rand(0.5,2.2),rand(-1.2,1.2),rand(0.08,0.15),0x8a8a8a,rand(0.5,0.9),0.9,-1,0.55);}
+  if(lostBubble){P.bubble=false;SFX.bubbleOut();spoutWorld(tmpV);for(let i=0;i<10;i++)spawnP(tmpV.x,tmpV.y,tmpV.z,rand(-1,1),rand(0.5,2),rand(-1,1),0.07,0xc8f0ff,rand(0.4,0.7),0.8,-1,0.7);}
   updateHUD();if(P.hp<=0){P.dead=true;P.deadT=1.8;SFX.deflate();showToast('Out of puff! Back to the last checkpoint…');spoutWorld(tmpV);for(let i=0;i<8;i++)spawnP(tmpV.x,tmpV.y,tmpV.z,rand(-0.5,0.5),rand(1,2),rand(-0.5,0.5),0.08,0xffffff,0.8,1.2,0,0.7);}
-  else if(lostFire)showToast('The fire went out!');}
+  else if(lostFire)showToast('The fire went out!');
+  else if(lostBubble)showToast('The bubbles went away!');}
 function respawn(){P.pos.set(P.spawn.x,P.spawn.y,P.spawn.z);P.vel.set(0,0,0);P.hp=P.maxHp;P.dead=false;P.inv=1.5;P.puff=true;P.puffAir=0;endHover();P.slam=0;P.sq=1.3;P.yaw=Math.PI;CAM.yaw=0;CAM.pos.set(P.spawn.x,P.spawn.y+5,P.spawn.z+9);CAM.look.set(P.spawn.x,P.spawn.y+1,P.spawn.z);CAM.lastManual=-9;SFX.refill();puffJumpFX();showToast('Back on your feet!');updateHUD();}
 function hitGloop(e,dmg,kx,kz){if(!e.alive||e.state==='dying')return;e.hp-=dmg;e.hurtT=0.3;e.vx+=kx;e.vz+=kz;e.wind=0;SFX.blorp();
   for(let i=0;i<8;i++)spawnP(e.x,e.y+0.5,e.z,rand(-3,3),rand(1,4),rand(-3,3),rand(0.06,0.12),e.col,rand(0.3,0.5),0.3,-8,0.9);
