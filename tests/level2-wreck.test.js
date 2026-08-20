@@ -61,7 +61,7 @@ const DECK_H=2.8;
   ok(H.W.wreck&&H.W.wreck.g,'The Wreck visual exists after Areas 1–3');
   ok(H.W.checks.some(c=>c.z<-155&&c.z>-165),'entrance checkpoint exists near the keel');
   ok(H.W.checks.some(c=>c.z<-175&&c.z>-185),'midway Wreck checkpoint exists in the upper climb');
-  ok(H.W.snoozles.length===3,'Snoozle 3 exists');
+  ok(H.W.snoozles.length===4,'Snoozle 3 exists among four Level 2 Snoozles');
   ok(H.W.snoozles[2].g.position.y>12&&H.W.snoozles[2].g.position.z<-175,'Snoozle 3 sits in the crow\'s nest');
 }
 
@@ -169,7 +169,7 @@ function push(H,x,y,z,vx,vz,n){
   const H=boot();startL2(H);
   wakeSnoozle(H,2);
   ok(H.W.snoozles[2].state!=='sleep','Snoozle 3 wakes with existing behavior');
-  ok(H.el('snz').textContent==='😴 1/3','Snoozle 3 increments rescued count');
+  ok(H.el('snz').textContent==='😴 1/4','Snoozle 3 increments rescued count');
   ok(!H.W.won,'waking Snoozle 3 does not set Level 2 to won');
   ok(H.el('win').style.display!=='flex','no congratulations banner after Snoozle 3');
   ok(!H.W.WM||!H.W.WM.party,'no windmill party after Snoozle 3');

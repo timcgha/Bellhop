@@ -42,12 +42,13 @@ function canStand(H,x,z,frames){
 // ---- snoozles in correct areas ----
 {
   const H=boot();startL2(H);
-  ok(H.W.snoozles.length===3,'Stage 5 has three snoozles');
+  ok(H.W.snoozles.length===4,'Stage 6A has four snoozles');
   ok(H.W.snoozles[0].g.position.z>-16,'Snoozle 1 is in The Shallows');
   ok(H.W.snoozles[1].g.position.z<-40&&H.W.snoozles[1].g.position.z>-70,'Snoozle 2 is in the Kelp Forest');
   ok(H.W.snoozles[1].g.position.y>2,'Snoozle 2 sits on a raised shelf');
   ok(H.W.snoozles[2].g.position.y>12,'Snoozle 3 is in the crow\'s nest');
   ok(H.W.snoozles[2].g.position.z<-175,'Snoozle 3 is in The Wreck');
+  ok(H.W.snoozles[3].g.position.z<-250,'Snoozle 4 is in The Trench');
 }
 
 // ---- kelp curtain and secret wall ----
@@ -74,7 +75,7 @@ function canStand(H,x,z,frames){
 {
   const H=boot();startL2(H);
   const s=kelp(H,'secret');
-  const alcove=H.W.notes.filter(n=>!n.hidden);
+  const alcove=H.W.notes.filter(n=>!n.hidden&&n.z<-66&&n.z>-74);
   ok(alcove.length===2,'two visible notes sit in the secret alcove');
   push(H,0,0.5,-64.5,0,-5);ok(H.P.pos.z>-67.6,'closed curtain blocks the alcove entrance');
   push(H,-6,0.5,-70.5,5,0);ok(H.P.pos.x<-3.6,'west flank of the alcove is enclosed');
@@ -111,14 +112,16 @@ function canStand(H,x,z,frames){
   ok(intro&&intro.z<-25&&intro.z>-35,'first production bubble-power source is the Kelp Forest crate');
   ok(H.W.clams.filter(c=>c.role==='safety').length===1,'only one safety clam for progression');
   ok(H.W.clams.filter(c=>c.role==='wreck_entrance').length===1,'one optional wreck entrance clam after the Shoal');
-  ok(H.W.clams.every(c=>c.role==='safety'||c.role==='wreck_entrance'||!c.role),'no extra production clams besides safety and wreck entrance');
+  ok(H.W.clams.filter(c=>c.role==='trench_alcove').length===1,'one renewable clam for the optional Trench alcove');
+  ok(H.W.clams.every(c=>c.role==='safety'||c.role==='wreck_entrance'||c.role==='trench_alcove'||!c.role),
+    'no extra production clams besides safety, wreck entrance, and trench alcove');
 }
 {
   const H=boot();startL2(H);
-  ok(H.W.notes.length===3,'production Level 2 has three counted notes after fixture removal');
+  ok(H.W.notes.length===6,'production Level 2 has six counted notes through The Trench');
   const hidden=H.W.notes.filter(n=>n.hidden).length;
   const visible=H.W.notes.filter(n=>!n.hidden).length;
-  ok(hidden===1&&visible===2,'note breakdown: one hidden held note fish + two secret alcove notes');
+  ok(hidden===1&&visible===5,'note breakdown: one hidden held note fish + two secret alcove + three trench alcove');
   const noteFish=H.W.fish.find(f=>f.kind==='note');
   ok(noteFish&&noteFish.note&&noteFish.note.hidden,'held note fish note counts from build time');
 }
@@ -198,7 +201,7 @@ function pushFly(H,x,y,z,vx,vy,vz,n){
   // from the crow's nest (highest reachable geometry), no direction leaks out
   ok(pushFly(H,0,14.7,-184,5,1.5,0).x<14.2,'crow\'s-nest east escape is contained');
   ok(pushFly(H,0,14.7,-184,-5,1.5,0).x>-14.2,'crow\'s-nest west escape is contained');
-  ok(pushFly(H,0,14.7,-184,0,1.5,-5).z>-205.5,'crow\'s-nest south escape is contained');
+  ok(pushFly(H,0,2,-288,0,1.5,-5).z>-295.5,'south fence contains the future Conch staging');
   ok(pushFly(H,0,14.7,-184,0,1.5,5,400).z<14.2,'crow\'s-nest north escape is contained');
 }
 
@@ -224,7 +227,7 @@ function wakeSnoozle(H,i){
   ok(!H.W.won,'Level 2 does not start in won state');
   ok(H.el('win').style.display!=='flex','win banner hidden at Level 2 start');
   for(let i=0;i<H.W.snoozles.length;i++)wakeSnoozle(H,i);
-  ok(H.el('snz').textContent==='😴 3/3','all three Level 2 snoozles can be woken');
+  ok(H.el('snz').textContent==='😴 4/4','all four Level 2 snoozles can be woken');
   ok(!H.W.won,'waking all Level 2 snoozles does not set won');
   ok(H.el('win').style.display!=='flex','Level 1 congratulations banner never shown on Level 2');
   ok(!H.W.WM||!H.W.WM.party,'windmill party mode not invoked on Level 2');
@@ -233,8 +236,8 @@ function wakeSnoozle(H,i){
 {
   const H=boot();startL2(H);
   H.P.pos.set(0,1,-200);H.P.vel.set(0,0,0);H.frames(120);
-  ok(!H.W.won,'reaching the Stage 5 end-cap toward The Trench does not win the game');
-  ok(H.el('win').style.display!=='flex','end-cap traversal does not show win banner');
+  ok(!H.W.won,'reaching the Wreck→Trench transition does not win the game');
+  ok(H.el('win').style.display!=='flex','transition traversal does not show win banner');
 }
 
 // ---- Level 2 touch B label ----

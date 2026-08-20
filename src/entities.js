@@ -215,6 +215,11 @@ function loadLevel(L){
     else if(k==='seabedScatter')addSeabedScatter(step[1],step[2],step[3],step[4]);
     else if(k==='dressPlatform')dressPlatform(step[1],step[2],step[3],step[4],step[5],step[6]);
     else if(k==='suspendMotes')addSuspendMotes(step[1]);
+    else if(k==='trenchFloor')addTrenchFloor(step[1],step[2],step[3],step[4]);
+    else if(k==='trenchRock')addTrenchRock(step[1],step[2],step[3],step[4],step[5],step[6]);
+    else if(k==='biolumCluster')addBiolumCluster(step[1],step[2],step[3]);
+    else if(k==='glowPool')addGlowPool(step[1],step[2],step[3],step[4]);
+    else if(k==='trenchMotes')addTrenchMotes(step[1],step[2],step[3],step[4]);
     else if(k==='wreck')buildWreck(step[1],step[2]);
     else if(k==='wreckDeck')wreckDeck(step[1],step[2],step[3],step[4],step[5],step[6]||0,step[7]||0,step[8]||0);
     else if(k==='wreckLedge')wreckLedge(step[1],step[2],step[3],step[4],step[5],step[6]||'');

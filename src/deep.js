@@ -264,15 +264,16 @@ function hitSharkSpinJet(s,dmg){
 }
 
 const kelps=[];let underwaterGroup=null;
-const decorKelps=[],suspendMotes=[];
+const decorKelps=[],suspendMotes=[],biolumGlows=[];
 const CORALC=[0xff6b81,0xff8a65,0xffb347,0xf48fb1,0xce93d8,0x80cbc4,0xffee58];
 const SANDC=[0xf5ecd7,0xe8dcc0,0xd9c08a,0xc8b898,0xf0e4c8];
+const BIOLUMC=[0x66ffe0,0x88aaff,0xc48cff,0x6ef0a8];
 function ugrp(){return underwaterGroup||scene;}
 function beginLandLevel(){if(landGround)landGround.visible=true;if(underwaterGroup)underwaterGroup.visible=false;scene.background=new THREE.Color(0x9fdcff);scene.fog=new THREE.Fog(0x9fdcff,45,120);}
 function beginUnderwaterLevel(L){
   if(landGround)landGround.visible=false;
   scene.background=new THREE.Color(0x4ab8d8);scene.fog=new THREE.Fog(0x52b8d4,20,92);
-  decorKelps.length=0;suspendMotes.length=0;
+  decorKelps.length=0;suspendMotes.length=0;biolumGlows.length=0;
   if(!underwaterGroup){underwaterGroup=new THREE.Group();scene.add(underwaterGroup);}
   underwaterGroup.visible=true;while(underwaterGroup.children.length)underwaterGroup.remove(underwaterGroup.children[0]);
   for(let i=0;i<5;i++){const c=SANDC[i%SANDC.length];const px=rand(-55,55),pz=rand(-105,18);
@@ -398,7 +399,8 @@ function dressPlatform(x,y,z,w,h,d){
 }
 function addDistantSilhouettes(){
   const rock=lam(0x3a6a7a);
-  [[-22,-30,1.2],[-26,-55,1.5],[-20,-82,1.3],[22,-35,1.1],[24,-68,1.4],[18,-95,1.6],[-16,-108,1.2],[24,-120,1.8],[-18,-145,1.4],[18,-150,1.5],[-26,-178,2.2]].forEach(([x,z,s])=>{
+  [[-22,-30,1.2],[-26,-55,1.5],[-20,-82,1.3],[22,-35,1.1],[24,-68,1.4],[18,-95,1.6],[-16,-108,1.2],[24,-120,1.8],[-18,-145,1.4],[18,-150,1.5],[-26,-178,2.2],
+   [-20,-220,1.8],[20,-235,2.0],[-22,-255,1.6],[18,-270,2.1],[-16,-285,1.7],[22,-288,1.9]].forEach(([x,z,s])=>{
     ugrp().add(mesh(SPH,rock,x,1.2*s,z,s*2.2,s*1.4,s*1.6));
     ugrp().add(mesh(CONE,rock,x+rand(-1,1),0.4*s,z,rand(0.5,0.9)*s,rand(1.2,2)*s,rand(0.5,0.9)*s));});
 }
@@ -406,6 +408,61 @@ function addSuspendMotes(n){
   for(let i=0;i<n;i++){const m=new THREE.Mesh(new THREE.SphereGeometry(1,6,5),new THREE.MeshBasicMaterial({color:0xd8f8ff,transparent:true,opacity:rand(0.08,0.22),depthWrite:false}));
     const x=rand(-12,12),y=rand(0.5,8),z=rand(-105,14);m.position.set(x,y,z);m.scale.setScalar(rand(0.03,0.09));ugrp().add(m);
     suspendMotes.push({m,x,y,z,ph:rand(0,TAU),sp:rand(0.2,0.7)});}
+}
+function addTrenchFloor(cx,cz,w,d){
+  const dark=lam(0x3a4a58),mid=lam(0x4a5a68);
+  ugrp().add(mesh(BOXG,dark,cx,-0.52,cz,w,0.08,d));
+  ugrp().add(mesh(BOXG,mid,cx,-0.46,cz,w*0.72,0.05,d*0.88));
+}
+function addTrenchRock(x,y,z,w,h,d){
+  const sol=addSolid(x,y,z,w,h,d,0x2a3540,{surf:'stone'});sol.mesh.visible=false;
+  const rock=lam(0x2f3d4c),dark=lam(0x1e2834),edge=lam(0x3a4e62);
+  ugrp().add(mesh(BOXG,rock,x,y+h*0.48,z,w*0.96,h*0.92,d*0.96));
+  ugrp().add(mesh(BOXG,dark,x+(w>d?0:w*0.08),y+h*0.55,z+(d>w?0:d*0.08),w*0.7,h*0.7,d*0.7));
+  ugrp().add(mesh(SPH,edge,x+w*0.28,y+h*0.7,z-d*0.2,Math.min(w,d)*0.22,h*0.18,Math.min(w,d)*0.22));
+  ugrp().add(mesh(SPH,dark,x-w*0.25,y+h*0.45,z+d*0.22,Math.min(w,d)*0.28,h*0.22,Math.min(w,d)*0.28));
+}
+function addBiolumCluster(cx,cz,n){
+  const count=n||4;
+  for(let i=0;i<count;i++){
+    const a=i/count*TAU+rand(-0.2,0.2),r=0.4+rand(0,1.1);
+    const x=cx+Math.cos(a)*r,z=cz+Math.sin(a)*r,col=BIOLUMC[i%BIOLUMC.length];
+    const stemH=0.45+rand(0,0.55);
+    ugrp().add(mesh(CYL,lam(0x2a4a3a),x,stemH*0.45,z,0.04,stemH,0.04));
+    const bulb=new THREE.Mesh(SPH,new THREE.MeshBasicMaterial({color:col,transparent:true,opacity:0.85,depthWrite:false}));
+    bulb.position.set(x,stemH+0.12,z);bulb.scale.setScalar(0.12+rand(0,0.08));ugrp().add(bulb);
+    const halo=new THREE.Mesh(SPH,new THREE.MeshBasicMaterial({color:col,transparent:true,opacity:0.22,depthWrite:false}));
+    halo.position.set(x,stemH+0.12,z);halo.scale.setScalar(0.28+rand(0,0.1));ugrp().add(halo);
+    biolumGlows.push({m:halo,base:0.18,ph:rand(0,TAU)});
+    if(i%2===0){
+      const shell=new THREE.Mesh(SPH,new THREE.MeshBasicMaterial({color:col,transparent:true,opacity:0.55,depthWrite:false}));
+      shell.position.set(x+0.2,0.12,z-0.15);shell.scale.set(0.14,0.07,0.16);ugrp().add(shell);
+      biolumGlows.push({m:shell,base:0.4,ph:rand(0,TAU)});
+    }
+  }
+}
+function addGlowPool(x,z,col,size){
+  const s=size||2.4;
+  const pool=new THREE.Mesh(new THREE.PlaneGeometry(s,s*0.7),new THREE.MeshBasicMaterial({color:col||0x66ffe0,transparent:true,opacity:0.16,depthWrite:false}));
+  pool.rotation.x=-Math.PI/2;pool.position.set(x,0.02,z);ugrp().add(pool);
+  biolumGlows.push({m:pool,base:0.14,ph:rand(0,TAU)});
+  const moteN=3;
+  for(let i=0;i<moteN;i++){
+    const m=new THREE.Mesh(new THREE.SphereGeometry(1,5,4),new THREE.MeshBasicMaterial({color:col||0x66ffe0,transparent:true,opacity:0.2,depthWrite:false}));
+    const mx=x+rand(-s*0.3,s*0.3),my=0.4+rand(0,1.6),mz=z+rand(-s*0.25,s*0.25);
+    m.position.set(mx,my,mz);m.scale.setScalar(rand(0.04,0.08));ugrp().add(m);
+    suspendMotes.push({m,x:mx,y:my,z:mz,ph:rand(0,TAU),sp:rand(0.25,0.6)});
+  }
+}
+function addTrenchMotes(n,cx,cz,spread){
+  const r=spread||5;
+  for(let i=0;i<n;i++){
+    const col=BIOLUMC[i%BIOLUMC.length];
+    const m=new THREE.Mesh(new THREE.SphereGeometry(1,5,4),new THREE.MeshBasicMaterial({color:col,transparent:true,opacity:rand(0.1,0.22),depthWrite:false}));
+    const x=cx+rand(-r,r),y=rand(0.4,5.5),z=cz+rand(-r,r);
+    m.position.set(x,y,z);m.scale.setScalar(rand(0.03,0.08));ugrp().add(m);
+    suspendMotes.push({m,x,y,z,ph:rand(0,TAU),sp:rand(0.2,0.55)});
+  }
 }
 function addSnoozleShell(x,y,z){
   const g=new THREE.Group();g.position.set(x,y,z);
@@ -434,6 +491,7 @@ function updateDecorKelp(dt){
   for(const kp of decorKelps){kp.strands.forEach((st,i)=>{st.rotation.z=Math.sin(time*(1.2+kp.ph*0.1)+i*0.7)*0.12;st.rotation.x=Math.sin(time*0.9+i*0.5+kp.ph)*0.06;});}}
 function updateSuspendMotes(dt){
   for(const p of suspendMotes){p.m.position.y=p.y+Math.sin(time*p.sp+p.ph)*0.35;p.m.position.x=p.x+Math.sin(time*0.4+p.ph)*0.15;p.m.position.z=p.z+Math.cos(time*0.35+p.ph)*0.12;}
+  for(const g of biolumGlows){if(g.m&&g.m.material)g.m.material.opacity=g.base+Math.sin(time*1.4+g.ph)*0.06;}
   updateWreckVisuals();}
 
 let WRECK=null;
