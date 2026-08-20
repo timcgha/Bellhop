@@ -1,0 +1,358 @@
+// Stage 3: Level 2 creature mechanics (test-only fixtures, not production coords).
+let failures=0;
+function ok(cond,msg){
+  if(!cond) failures++;
+  console.log((cond?'PASS ':'FAIL ')+msg);
+}
+function report(){
+  if(failures){console.log(`\n${failures} FAILED`);process.exit(1);}
+  console.log('\nall passed');
+}
+function boot(opts){return require('./harness.js')(Object.assign({autostart:false},opts));}
+function startMechanic(H){H.startLevel(1);H.P.pos.set(0,0,12);H.P.vel.set(0,0,0);H.frames(4);}
+function aim(H,x,z){H.P.yaw=Math.atan2(x-H.P.pos.x,z-H.P.pos.z);}
+function gust(H){H.P.gustCD=0;H.tap('KeyJ',2);}
+function grantBubble(H,x,z){
+  H.test.addClam(x,0,z);
+  H.P.pos.set(x,0,z);H.P.vel.set(0,0,0);H.frames(12);
+  return H.P.bubble;
+}
+function revealed(n){return !n.hidden;}
+function aliveBubbles(H){return H.W.bubbleShots.filter(b=>b.alive).length;}
+function bubbleTarget(H,target,clamX,clamZ){
+  grantBubble(H,clamX,clamZ);
+  aim(H,target.x,target.z);
+  H.P.pos.set(target.x-2*Math.sin(H.P.yaw),(target.y||1)-0.5,target.z-2*Math.cos(H.P.yaw));
+  aim(H,target.x,target.z);
+  const fx=Math.sin(H.P.yaw),fz=Math.cos(H.P.yaw);
+  const mx=H.P.pos.x+fx*0.35,my=H.P.pos.y+0.85,mz=H.P.pos.z+fz*0.35;
+  target.x=mx;target.y=my;target.z=mz;
+  if(target.hy!=null)target.hy=my;
+  if(target.yBase!=null)target.yBase=my;
+  if(target.vx!=null)target.vx=target.vy=target.vz=0;
+  H.frames(2);gust(H);
+}
+function bubbleShark(H,s,clamX,clamZ){
+  grantBubble(H,clamX,clamZ);
+  aim(H,s.x,s.z);
+  H.P.pos.set(s.x-2*Math.sin(H.P.yaw),s.y-0.5,s.z-2*Math.cos(H.P.yaw));
+  aim(H,s.x,s.z);
+  const fx=Math.sin(H.P.yaw),fz=Math.cos(H.P.yaw);
+  const mx=H.P.pos.x+fx*0.35,my=H.P.pos.y+0.85,mz=H.P.pos.z+fz*0.35;
+  H.P.gustCD=0;
+  H.kd({code:'KeyJ',preventDefault(){},repeat:false});
+  for(let i=0;i<240;i++){
+    s.x=mx;s.y=my;s.z=mz;s.yBase=my;
+    H.frames(1);
+    if(revealed(s.note))break;
+    if(i===3)H.ku({code:'KeyJ'});
+  }
+}
+function bubbleSharkUntilTrapped(H,s,clamX,clamZ){
+  grantBubble(H,clamX,clamZ);
+  aim(H,s.x,s.z);
+  H.P.pos.set(s.x-2*Math.sin(H.P.yaw),s.y-0.5,s.z-2*Math.cos(H.P.yaw));
+  aim(H,s.x,s.z);
+  const fx=Math.sin(H.P.yaw),fz=Math.cos(H.P.yaw);
+  const mx=H.P.pos.x+fx*0.35,my=H.P.pos.y+0.85,mz=H.P.pos.z+fz*0.35;
+  H.P.gustCD=0;
+  H.kd({code:'KeyJ',preventDefault(){},repeat:false});
+  for(let i=0;i<240;i++){
+    s.x=mx;s.y=my;s.z=mz;s.yBase=my;
+    H.frames(1);
+    if(s.state==='trapped')return true;
+    if(i===3)H.ku({code:'KeyJ'});
+  }
+  return false;
+}
+function bubbleSpikefish(H,sp,clamX,clamZ){
+  grantBubble(H,clamX,clamZ);
+  aim(H,sp.x,sp.z);
+  H.P.pos.set(sp.x-2*Math.sin(H.P.yaw),sp.y-0.5,sp.z-2*Math.cos(H.P.yaw));
+  aim(H,sp.x,sp.z);
+  const fx=Math.sin(H.P.yaw),fz=Math.cos(H.P.yaw);
+  const mx=H.P.pos.x+fx*0.35,my=H.P.pos.y+0.85,mz=H.P.pos.z+fz*0.35;
+  H.P.gustCD=0;
+  H.kd({code:'KeyJ',preventDefault(){},repeat:false});
+  for(let i=0;i<240;i++){
+    sp.x1=sp.x2=mx;sp.y1=sp.y2=my;sp.z1=sp.z2=mz;sp.pathT=0;
+    sp.x=mx;sp.y=my;sp.z=mz;
+    H.frames(1);
+    if(!sp.alive||(sp.note&&revealed(sp.note)))return;
+    if(i===3)H.ku({code:'KeyJ'});
+  }
+}
+
+const AX=35,AZ=35;
+
+// ---- powered / unpowered underwater gust ----
+{
+  const H=boot();startMechanic(H);
+  H.P.pos.set(AX,1.5,AZ);H.P.vel.set(0,0,0);H.P.bubble=true;H.frames(2);
+  gust(H);H.frames(3);
+  ok(aliveBubbles(H)>0,'powered underwater gust creates a bubble');
+}
+{
+  const H=boot();startMechanic(H);
+  H.P.pos.set(AX,1.5,AZ);H.P.vel.set(0,0,0);H.P.bubble=false;H.frames(2);
+  gust(H);H.frames(3);
+  ok(aliveBubbles(H)===0,'unpowered underwater gust does not create a bubble');
+}
+
+// ---- bubble range at real level coordinates (no coordinate cull) ----
+function bubbleRangeAt(H,x,z,tx,tz){
+  H.P.bubble=true;
+  H.P.pos.set(x,1.5,z);H.P.vel.set(0,0,0);
+  aim(H,tx,tz);H.frames(2);
+  gust(H);
+  const b=H.W.bubbleShots.find(q=>q.alive);
+  if(!b)return 0;
+  const sx=b.pos.x,sz=b.pos.z;let maxD=0;
+  for(let i=0;i<160;i++){H.frames(1);if(!b.alive)break;maxD=Math.max(maxD,Math.hypot(b.pos.x-sx,b.pos.z-sz));}
+  return maxD;
+}
+{
+  const H=boot();H.startLevel(1);H.frames(4);
+  const dShoal=bubbleRangeAt(H,-8,-95,-8,-80);
+  ok(dShoal>10,`bubble travels full range in the Shoal (got ${dShoal.toFixed(1)}m)`);
+  const dWreck=bubbleRangeAt(H,0,-160,0,-148);
+  ok(dWreck>10,`bubble travels full range on the Wreck approach (got ${dWreck.toFixed(1)}m)`);
+}
+
+// ---- counted-note model (test-spawned note fish) ----
+{
+  const H=boot();startMechanic(H);
+  const n0=H.W.notes.length;
+  const fish=H.test.addNoteFish(AX,1.2,AZ);
+  ok(H.W.notes.length===n0+1,'spawned note fish adds one counted note at build time');
+  ok(fish.note.hidden&&!fish.note.got,'note fish holds a hidden note at build time');
+  ok(H.W.notes.indexOf(fish.note)>=0,'held note is in notes array from build time');
+  bubbleTarget(H,fish,AX+2,AZ);
+  for(let i=0;i<120;i++){H.frames(1);if(!fish.alive||revealed(fish.note))break;}
+  ok(revealed(fish.note),'bubbling note fish reveals its existing held note');
+  ok(H.W.notes.length===n0+1,'revealing held note did not append to notes.length');
+}
+
+// ---- held note only revealed once ----
+{
+  const H=boot();startMechanic(H);
+  const fish=H.test.addNoteFish(AX,1.2,AZ+2);
+  bubbleTarget(H,fish,AX+2,AZ+2);
+  for(let i=0;i<120;i++){H.frames(1);if(revealed(fish.note))break;}
+  const n0=H.W.notes.length;
+  fish.alive=true;fish.g.visible=true;
+  ok(revealed(fish.note),'revealed held note stays revealed if creature respawns');
+  ok(H.W.notes.filter(n=>n===fish.note).length===1,'held note exists only once in notes array');
+  ok(H.W.notes.length===n0,'respawn did not append another counted note');
+}
+
+// ---- shark note: same note for spin, jet, bubble ----
+function testSharkNoteReveal(defeatFn,label){
+  const H=boot();startMechanic(H);
+  const shark=H.test.addShark(AX,1.8,AZ,true);
+  const n0=H.W.notes.length;
+  const ref=shark.note;
+  ok(ref&&ref.hidden,'shark holds hidden note before defeat');
+  defeatFn(H,shark);
+  ok(revealed(ref),label+' reveals the held note');
+  ok(H.W.notes.length===n0,label+' did not change notes.length');
+  ok(shark.note===ref,label+' reveals the same note object');
+}
+testSharkNoteReveal((H,s)=>{
+  H.P.pos.set(s.x,s.y,s.z-2);H.P.vel.set(0,0,0);H.frames(3);
+  H.tap('KeyK',2);H.frames(3);
+},'spin defeat');
+testSharkNoteReveal((H,s)=>{
+  const jx=s.x,jy=s.y-0.85,jz=s.z;
+  H.P.pos.set(jx,jy,jz);H.P.vel.set(0,0,0);H.P.puff=true;H.frames(3);
+  H.kd({code:'Space',preventDefault(){},repeat:false});
+  for(let i=0;i<30;i++){s.x=jx;s.y=jy+0.85;s.z=jz;s.yBase=jy+0.85;H.frames(1);}
+  H.ku({code:'Space'});
+},'jump-jet defeat');
+testSharkNoteReveal((H,s)=>{bubbleShark(H,s,AX+2,AZ);},'bubble defeat');
+
+// ---- bubble shark trap sequence ----
+{
+  const H=boot();startMechanic(H);
+  const s=H.test.addShark(AX,1.8,AZ+4,false);
+  ok(bubbleSharkUntilTrapped(H,s,AX+2,AZ+4),'bubble-hit shark enters trapped state before pop/removal');
+  ok(s.alive&&s.state==='trapped','shark stays alive in trapped state before float/pop');
+}
+
+// ---- shark combat ----
+{
+  const H=boot();startMechanic(H);
+  const s=H.test.addShark(AX,1.8,AZ+6,false);
+  H.P.pos.set(s.x,s.y,s.z-0.6);H.P.vel.set(0,0,0);H.P.inv=999;H.frames(3);
+  H.tap('KeyK',2);H.frames(5);
+  ok(!s.alive,'spin defeats a shark');
+}
+{
+  const H=boot();startMechanic(H);
+  const s=H.test.addShark(AX,1.8,AZ+8,false);
+  const jx=s.x,jy=s.y-0.85,jz=s.z;
+  H.P.pos.set(jx,jy,jz);H.P.vel.set(0,0,0);H.P.puff=true;H.frames(3);
+  H.kd({code:'Space',preventDefault(){},repeat:false});
+  for(let i=0;i<30;i++){s.x=jx;s.y=jy+0.85;s.z=jz;s.yBase=jy+0.85;H.frames(1);}
+  H.ku({code:'Space'});
+  ok(!s.alive,'jump-jet defeats a shark');
+}
+
+// ---- ordinary fish harmless ----
+{
+  const H=boot();startMechanic(H);
+  const school=H.test.addFishSchool(AX,1.5,AZ+10,5);
+  const f=school[0];
+  const hp=H.P.hp,n0=H.W.notes.length,g0=parseInt(H.el('nts').textContent.split('/')[0].replace('♪ ',''),10);
+  H.P.pos.set(f.x,f.y,f.z);H.P.vel.set(0,0,0);H.P.inv=999;
+  for(let i=0;i<90;i++)H.frames(1);
+  ok(H.P.hp===hp,'ordinary fish contact costs no heart');
+  bubbleTarget(H,f,AX+2,AZ+10);
+  for(let i=0;i<120;i++){H.frames(1);if(!f.alive)break;}
+  ok(!f.alive,'bubbling ordinary fish pops it');
+  ok(H.W.notes.length===n0,'bubbling ordinary fish did not change notes.length');
+  ok(parseInt(H.el('nts').textContent.split('/')[0].replace('♪ ',''),10)===g0,'bubbling ordinary fish did not increase gotNotes');
+}
+
+// ---- spikefish ----
+{
+  const H=boot();startMechanic(H);
+  const sp=H.test.addSpikefish(AX,2,AZ+12,AX,2,AZ+14,false,null);
+  H.P.pos.set(sp.x,sp.y,sp.z-0.5);H.P.vel.set(0,0,0);H.P.inv=999;H.frames(3);
+  H.tap('KeyK',2);H.frames(5);
+  ok(sp.alive,'spin does not defeat a spikefish');
+}
+{
+  const H=boot();startMechanic(H);
+  const sp=H.test.addSpikefish(AX,2,AZ+16,AX,2,AZ+18,false,null);
+  H.P.pos.set(sp.x,sp.y+0.9,sp.z);H.P.vel.set(0,0,0);H.P.puff=true;H.frames(3);
+  H.kd({code:'Space',preventDefault(){},repeat:false});H.frames(2);H.ku({code:'Space'});H.frames(25);
+  ok(sp.alive,'jump-jet does not defeat a spikefish');
+}
+{
+  const H=boot();startMechanic(H);
+  const sp=H.test.addSpikefish(AX,2,AZ+20,AX,2,AZ+22,false,null);
+  H.P.pos.set(sp.x,sp.y,sp.z);H.P.vel.set(0,0,0);H.P.hp=4;H.P.inv=0;
+  for(let i=0;i<120;i++){H.frames(1);if(H.P.hp<4)break;}
+  ok(H.P.hp===3,'spikefish contact costs one heart');
+}
+{
+  const H=boot();startMechanic(H);
+  const sp=H.test.addSpikefish(AX,2,AZ+24,AX,2,AZ+26,true,null);
+  const ref=sp.note;
+  bubbleSpikefish(H,sp,AX+2,AZ+24);
+  ok(!sp.alive,'bubble removes/defeats a spikefish');
+  ok(revealed(ref),'note-bearing spikefish reveals held note when bubbled');
+}
+
+// ---- renewable clam and bubble power loss ----
+{
+  const H=boot();startMechanic(H);
+  ok(grantBubble(H,AX,AZ+28),'renewable clam grants bubble power');
+  ok(H.P.bubble&&H.el('bubble').style.display!=='none','bubble HUD shown with power');
+}
+{
+  const H=boot();startMechanic(H);
+  grantBubble(H,AX,AZ+30);
+  const sp=H.test.addSpikefish(AX,2,AZ+30,AX,2,AZ+32,false,null);
+  H.P.pos.set(sp.x,sp.y,sp.z);H.P.vel.set(0,0,0);H.P.hp=4;H.P.inv=0;
+  for(let i=0;i<120;i++){H.frames(1);if(H.P.hp<4)break;}
+  ok(!H.P.bubble,'player damage removes bubble power');
+  H.frames(100);
+  ok(grantBubble(H,AX,AZ+30),'same clam grants bubble power again after loss');
+}
+
+// ---- fish return home after fleeing ----
+{
+  const H=boot();startMechanic(H);
+  const school=H.test.addFishSchool(AX,1.2,AZ+14,4);
+  const f=school[0];
+  H.P.pos.set(f.x+0.8,1.2,f.z);H.P.vel.set(0,0,0);H.frames(120);
+  const fled=Math.hypot(f.x-f.hx,f.z-f.hz);
+  ok(fled>0.4,'fish flees from the player ('+fled.toFixed(1)+'m)');
+  H.P.pos.set(AX+30,1.2,AZ);H.P.vel.set(0,0,0);H.frames(500);
+  ok(Math.hypot(f.x-f.hx,f.z-f.hz)<1.2,'scared fish drifts back to its home spot');
+}
+
+// ---- clam cooldown only starts when a grant occurs ----
+{
+  const H=boot();startMechanic(H);
+  const c=H.test.addClam(AX,0,AZ+40);
+  H.P.bubble=true;
+  H.P.pos.set(AX,0,AZ+40);H.P.vel.set(0,0,0);H.frames(60);
+  ok(c.open,'clam stays open while the player already has bubble power');
+  H.P.bubble=false;H.frames(10);
+  ok(H.P.bubble,'open clam regrants right away after a loss, no phantom cooldown');
+}
+
+// ---- shark leash, return home, and bite backoff ----
+{
+  const H=boot();startMechanic(H);
+  const s=H.test.addShark(AX,1.8,AZ,false);
+  H.P.pos.set(AX+5,1.5,AZ);H.P.vel.set(0,0,0);H.frames(90);
+  ok(Math.hypot(s.x-AX,s.z-AZ)>1,'shark chases a nearby player away from home');
+  H.P.pos.set(AX+40,1.5,AZ);H.P.vel.set(0,0,0);H.frames(500);
+  ok(Math.hypot(s.x-AX,s.z-AZ)<1.5,'shark returns home when the player leaves');
+}
+function dragShark(H,s,homeX,homeZ,frames,stopAt){
+  H.P.pos.set(homeX+6,1.5,homeZ);H.P.vel.set(0,0,0);
+  let maxHome=0;
+  for(let i=0;i<frames;i++){
+    if(Math.hypot(s.x-H.P.pos.x,s.z-H.P.pos.z)<3)H.P.pos.x+=0.06;
+    H.P.vel.set(0,0,0);H.P.inv=999;
+    H.frames(1);
+    maxHome=Math.max(maxHome,Math.hypot(s.x-homeX,s.z-homeZ));
+    if(stopAt&&Math.hypot(s.x-homeX,s.z-homeZ)>stopAt)break;
+  }
+  return maxHome;
+}
+{
+  const H=boot();startMechanic(H);
+  const s=H.test.addShark(AX,1.8,AZ,false);
+  ok(Math.hypot(s.hx-AX,s.hz-AZ)<0.01,'shark stores its home position');
+  H.P.pos.set(AX+8.5,1.5,AZ);H.P.vel.set(0,0,0);H.frames(200);
+  ok(Math.hypot(s.x-AX,s.z-AZ)<0.7,'player outside aggro radius does not draw the shark');
+  const maxHome=dragShark(H,s,AX,AZ,600);
+  ok(maxHome<9.6,'shark never chases beyond its leash ('+maxHome.toFixed(1)+'m)');
+}
+{
+  const H=boot();startMechanic(H);
+  const s=H.test.addShark(AX,1.8,AZ,false);
+  H.P.hp=4;H.P.inv=0;
+  const bites=[];
+  for(let i=0;i<600;i++){
+    H.P.pos.set(AX,1.6,AZ);H.P.vel.set(0,0,0);
+    const hp=H.P.hp;H.frames(1);
+    if(H.P.hp<hp)bites.push(i);
+    if(bites.length>=2)break;
+  }
+  ok(bites.length>=2,'shark can bite again after backing off');
+  const gap=bites.length>1?(bites[1]-bites[0])*0.01667:0;
+  ok(gap>1.8,'post-bite backoff prevents chain-bites on invulnerability expiry ('+gap.toFixed(2)+'s)');
+}
+{
+  const H=boot();startMechanic(H);
+  const s=H.test.addShark(AX,1.8,AZ,true);
+  dragShark(H,s,AX,AZ,300,7.5);
+  const killX=s.x,killZ=s.z;
+  H.P.pos.set(s.x,s.y,s.z-0.6);H.P.vel.set(0,0,0);H.P.inv=999;H.frames(2);
+  H.tap('KeyK',2);H.frames(5);
+  ok(!s.alive,'dragged shark dies to a spin near the leash edge');
+  ok(revealed(s.note),'leash-edge kill reveals the held note');
+  const nd=Math.hypot(s.note.x-killX,s.note.z-killZ);
+  ok(nd<=10,'revealed note stays sensibly close to the encounter ('+nd.toFixed(1)+'m)');
+}
+
+// ---- Level 1 fire power unchanged ----
+{
+  const H=boot({autostart:true,level:0});
+  const c=H.W.crates.find(x=>x.item==='fire');
+  H.P.pos.set(c.x+1.2,0,c.z);H.P.vel.set(0,0,0);H.frames(2);H.tap('KeyK',2);H.frames(4);
+  const w=H.W.powers[0];
+  H.P.pos.set(w.x,w.y-0.6,w.z);H.P.vel.set(0,0,0);H.frames(4);
+  ok(H.P.fire===true,'Level 1 fire power still works');
+  H.P.pos.set(0,4,10);H.P.vel.set(0,0,0);H.frames(2);H.tap('KeyJ',2);
+  ok(H.P.slam>0,'Level 1 air B still slams');
+}
+
+report();

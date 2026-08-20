@@ -26,8 +26,18 @@ player=buildPlayer();scene.add(player);
 (function(){const f=new THREE.Group();f.add(mesh(CONE,new THREE.MeshBasicMaterial({color:0xff7a1f}),0,0.14,0,0.13,0.4,0.13));f.add(mesh(CONE,new THREE.MeshBasicMaterial({color:0xffe36b}),0,0.1,0,0.07,0.24,0.07));f.position.y=0.92;f.visible=false;player.userData.head.add(f);player.userData.flame=f;})();
 shadow=new THREE.Mesh(new THREE.CircleGeometry(0.5,20),new THREE.MeshBasicMaterial({color:0x000000,transparent:true,opacity:0.28,depthWrite:false}));shadow.rotation.x=-Math.PI/2;scene.add(shadow);
 
-const P=window.__P={spawn:{x:0,y:0,z:10},pos:new THREE.Vector3(0,0,10),vel:new THREE.Vector3(),yaw:Math.PI,grounded:false,wasGrounded:false,lastGround:-9,jumpBuf:-9,jumping:false,puff:true,slam:0,hangT:0,gustCD:0,bonkCD:0,bonkT:0,sq:1,sqV:0,sqT:1,footT:0,surf:'grass',run:0,mouthT:0,blinkT:2,blinkAnim:0,inFan:false,splT:0,puffAir:0,hover:false,hovT:0,hoverS:null,hp:4,maxHp:4,inv:0,dead:false,deadT:0,inGoo:false,fire:false,jetT:0,jetP:0,jetHits:[]};
-const R=0.36,H=1.15,SPEED=6.8,ACC=44,DEC=60,AIRACC=20,GRAV=-30,JUMPV=10.5,PUFFV=9.4,MAXFALL=-32,COYOTE=0.12,BUFFER=0.15,STEP=0.42;
+const P=window.__P={spawn:{x:0,y:0,z:10},pos:new THREE.Vector3(0,0,10),vel:new THREE.Vector3(),yaw:Math.PI,grounded:false,wasGrounded:false,lastGround:-9,jumpBuf:-9,jumping:false,puff:true,slam:0,hangT:0,gustCD:0,bonkCD:0,bonkT:0,sq:1,sqV:0,sqT:1,footT:0,surf:'grass',run:0,mouthT:0,blinkT:2,blinkAnim:0,inFan:false,splT:0,puffAir:0,hover:false,hovT:0,hoverS:null,hp:4,maxHp:4,inv:0,dead:false,deadT:0,inGoo:false,fire:false,bubble:false,jetT:0,jetP:0,jetHits:[]};
+let R=0.36,H=1.15,SPEED=6.8,ACC=44,DEC=60,AIRACC=20,GRAV=-30,JUMPV=10.5,PUFFV=9.4,MAXFALL=-32,COYOTE=0.12,BUFFER=0.15,STEP=0.42;
+let HOVER_HELD=1.0,HOVER_REL=0.5,HOVER_DRIFT=-1.6,SLAM_HANG=0.14,SLAM_FALL=-34,SLAM_REBOUND=8,JET_T=0.38,BONKR=2.05,BONK_CD=0.5;
+function applyPhysics(ph){
+  R=ph.r;H=ph.h;SPEED=ph.speed;ACC=ph.acc;DEC=ph.dec;AIRACC=ph.airAcc;
+  GRAV=ph.grav;JUMPV=ph.jumpV;PUFFV=ph.puffV;MAXFALL=ph.maxFall;
+  COYOTE=ph.coyote;BUFFER=ph.buffer;STEP=ph.step;
+  HOVER_HELD=ph.hoverHeld;HOVER_REL=ph.hoverReleased;HOVER_DRIFT=ph.hoverDrift;
+  SLAM_HANG=ph.slamHang;SLAM_FALL=ph.slamFall;SLAM_REBOUND=ph.slamRebound;
+  JET_T=ph.jetTime;BONKR=ph.bonkR;BONK_CD=ph.bonkCD;
+}
+window.__PHYS=()=>({speed:SPEED,acc:ACC,dec:DEC,airAcc:AIRACC,grav:GRAV,jumpV:JUMPV,puffV:PUFFV,maxFall:MAXFALL,coyote:COYOTE,buffer:BUFFER,step:STEP,r:R,h:H});
 function hOverlap(s){const p=P.pos;return p.x+R>s.min.x&&p.x-R<s.max.x&&p.z+R>s.min.z&&p.z-R<s.max.z;}
 function pushOutXZ(s){const p=P.pos;const px1=(p.x+R)-s.min.x,px2=s.max.x-(p.x-R),pz1=(p.z+R)-s.min.z,pz2=s.max.z-(p.z-R);const m=Math.min(px1,px2,pz1,pz2);if(m===px1)p.x=s.min.x-R-0.001;else if(m===px2)p.x=s.max.x+R+0.001;else if(m===pz1)p.z=s.min.z-R-0.001;else p.z=s.max.z+R+0.001;}
 function collideAxis(ax){const p=P.pos,v=P.vel;for(const s of solids){if(!hOverlap(s))continue;if(p.y+H<=s.min.y+0.001||p.y>=s.max.y-0.001)continue;
@@ -37,13 +47,17 @@ function collideAxis(ax){const p=P.pos,v=P.vel;for(const s of solids){if(!hOverl
 function spoutWorld(out){const y=(0.3+0.57*P.sq+0.9)*0.72;out.set(P.pos.x,P.pos.y+y,P.pos.z);return out;}
 function refillFX(){SFX.refill();spoutWorld(tmpV);for(let i=0;i<4;i++)spawnP(tmpV.x,tmpV.y,tmpV.z,rand(-0.6,0.6),rand(1.5,3),rand(-0.6,0.6),rand(0.06,0.1),0xffffff,rand(0.4,0.6),1.5,0,0.8);}
 function puffJumpFX(){const c=Math.cos(P.yaw),s=Math.sin(P.yaw);for(let sg=-1;sg<=1;sg+=2){const fx=P.pos.x+sg*0.12*c,fz=P.pos.z-sg*0.12*s;for(let i=0;i<7;i++)spawnP(fx+rand(-0.08,0.08),P.pos.y+0.05,fz+rand(-0.08,0.08),rand(-1.2,1.2),rand(-4,-1.5),rand(-1.2,1.2),rand(0.12,0.2),0xffffff,rand(0.35,0.6),1.4,0,0.9);}spawnRing(P.pos.x,P.pos.y+0.03,P.pos.z,0xffffff,0.3,3.5,0.35);}
-function fireJet(){P.jetT=0.38;P.jetP=0;P.jetHits.length=0;SFX.jet();}
+function fireJet(){P.jetT=JET_T;P.jetP=0;P.jetHits.length=0;SFX.jet();}
 function jetDamage(){for(const e of gloops){if(!e.alive||e.state==='dying')continue;if(P.jetHits.indexOf(e)>=0)continue;
   const dx=e.x-P.pos.x,dz=e.z-P.pos.z,d=Math.hypot(dx,dz);if(d>0.55+e.size*0.5)continue;
   if(e.y>P.pos.y+0.15||e.y+0.85*e.size<P.pos.y-0.7)continue;
   P.jetHits.push(e);const n=d||0.01;hitGloop(e,1,dx/n*4.5,dz/n*4.5);
   spawnRing(e.x,e.y+0.15,e.z,0x9fe4ff,0.25,4,0.3);
-  for(let i=0;i<6;i++)spawnP(e.x,e.y+0.4,e.z,rand(-2,2),rand(1,3),rand(-2,2),0.09,0x9fe4ff,0.4,0.4,-5,0.9);}}
+  for(let i=0;i<6;i++)spawnP(e.x,e.y+0.4,e.z,rand(-2,2),rand(1,3),rand(-2,2),0.09,0x9fe4ff,0.4,0.4,-5,0.9);}
+  for(const s of sharks){if(!s.alive||P.jetHits.indexOf(s)>=0)continue;
+  const dx=s.x-P.pos.x,dz=s.z-P.pos.z,d=Math.hypot(dx,dz);if(d>0.55)continue;
+  if(s.y>P.pos.y+0.15||s.y+0.5<P.pos.y-0.7)continue;
+  P.jetHits.push(s);hitSharkSpinJet(s,1);}}
 function endHover(){P.hover=false;if(P.hoverS){SFX.hoverStop(P.hoverS);P.hoverS=null;}}
 function hoverPuffFX(){const c=Math.cos(P.yaw),s=Math.sin(P.yaw);for(let sg=-1;sg<=1;sg+=2){spawnP(P.pos.x+sg*0.12*c+rand(-0.05,0.05),P.pos.y+0.04,P.pos.z-sg*0.12*s+rand(-0.05,0.05),rand(-0.4,0.4),rand(-2.5,-1.2),rand(-0.4,0.4),rand(0.07,0.11),0xffffff,rand(0.3,0.45),1.2,0,0.7);}}
 function onLand(fall,surf){if(!P.puff){P.puff=true;refillFX();}P.sq=clamp(1-fall*0.045,0.55,0.9);SFX.land(fall);
@@ -62,10 +76,12 @@ function doGust(){const yaw=P.yaw,fx=Math.sin(yaw),fz=Math.cos(yaw);const mx=P.p
   for(const sn of snoozles){if(sn.state!=='sleep')continue;const s=k(sn.g.position.x,sn.g.position.z);if(s>0.18&&Math.abs(sn.g.position.y-P.pos.y)<2.5)wakeSnoozle(sn);}
   for(const e of gloops){if(!e.alive||e.state==='dying'||Math.abs(e.y-P.pos.y)>3)continue;const s=k(e.x,e.z);if(s>0){e.vx+=fx*(5+s*7);e.vz+=fz*(5+s*7);e.stunT=1.2;e.wind=0;e.hurtT=Math.max(e.hurtT,0.1);}}
   for(const q of goos){if(!q.alive||q.ref||Math.abs(q.pos.y-P.pos.y)>3)continue;const s=k(q.pos.x,q.pos.z);if(s>0){q.ref=true;q.vel.x=fx*12;q.vel.z=fz*12;q.vel.y=Math.max(q.vel.y,3);q.life=3;q.m.material.color.setHex(0xd8ff9a);spawnRing(q.pos.x,q.pos.y,q.pos.z,0xd8ff9a,0.2,3,0.25);}}
-  {const s=k(WM.sailX,WM.sailZ);if(s>0)WM.spin+=s*7;}
-  {const s=k(BOAT.pos.x,BOAT.pos.z);if(s>0){BOAT.vel.x+=fx*s*6;BOAT.vel.z+=fz*s*6;}}
-  rumble(60,0.2,0.4);}
-const BONKR=2.05;
+  {if(WM){const s=k(WM.sailX,WM.sailZ);if(s>0)WM.spin+=s*7;}}
+  {if(BOAT){const s=k(BOAT.pos.x,BOAT.pos.z);if(s>0){BOAT.vel.x+=fx*s*6;BOAT.vel.z+=fz*s*6;}}}
+  if(isUnderwater())gustHitKelp(mx,mz,k);
+  rumble(60,0.2,0.4);
+  if(isUnderwater()&&P.bubble)fireBubble();
+}
 function doBonk(){const px=P.pos.x,pz=P.pos.z;SFX.bonk();SFX.spin();
   const k=(x,z)=>{const d=Math.hypot(x-px,z-pz);return d>BONKR?0:1-d/BONKR;};
   const nx=(x,z)=>{const d=Math.hypot(x-px,z-pz)||0.01;return [(x-px)/d,(z-pz)/d];};
@@ -76,6 +92,7 @@ function doBonk(){const px=P.pos.x,pz=P.pos.z;SFX.bonk();SFX.spin();
   for(const w of wobblers){if(Math.abs(w.y-P.pos.y)>1.5)continue;const s=k(w.x,w.z);if(s>0){const n=nx(w.x,w.z);w.vx+=n[0]*s*9;w.vz+=n[1]*s*9;}}
   for(const d of dust){if(d.amt<=0)continue;const s=k(d.x,d.z);if(s>0){dustHit(d,0.7);hit=true;}}
   for(const e of gloops){if(!e.alive||e.state==='dying'||Math.abs(e.y-P.pos.y)>1.5)continue;const s=k(e.x,e.z);if(s>0){const n=nx(e.x,e.z);hitGloop(e,1,n[0]*6,n[1]*6);hit=true;}}
+  for(const s of sharks){if(!s.alive)continue;const s2=k(s.x,s.z);if(s2>0&&Math.abs(s.y-P.pos.y)<1.5){hitSharkSpinJet(s,1);hit=true;}}
   for(const c of crates){if(c.broken)continue;if(Math.hypot(c.x-px,c.z-pz)<BONKR&&Math.abs(c.y-P.pos.y)<1.4){breakCrate(c);hit=true;}}
   spawnRing(px,P.pos.y+0.45,pz,0xffe9b0,0.55,5,0.3);
   for(let i=0;i<7;i++){const a=i/7*TAU;spawnP(px+Math.cos(a)*0.7,P.pos.y+0.55,pz+Math.sin(a)*0.7,Math.cos(a)*3,rand(0.5,1.5),Math.sin(a)*3,0.09,0xfff0b8,0.3,0.8,0,0.8);}
@@ -92,15 +109,18 @@ function slamImpact(){const px=P.pos.x,py=P.pos.y,pz=P.pos.z;SFX.slam();CAM.shak
   for(const e of gloops){if(!e.alive||e.state==='dying'||Math.abs(e.y-py)>3)continue;const s=kk(e.x,e.z);if(s>0.15){const d=Math.hypot(e.x-px,e.z-pz)||0.01;hitGloop(e,2,(e.x-px)/d*8,(e.z-pz)/d*8);}}
   for(const c of crates){if(c.broken)continue;if(Math.hypot(c.x-px,c.z-pz)<RS*0.55&&Math.abs(c.y-py)<2.5)breakCrate(c);}
   if(P.fire)fireBurst(px,py,pz);
-  {const s=kk(WM.sailX,WM.sailZ);if(s>0)WM.spin+=s*4;}
-  {const s=kk(BOAT.pos.x,BOAT.pos.z);if(s>0){const d=Math.hypot(BOAT.pos.x-px,BOAT.pos.z-pz)||0.01;BOAT.vel.x+=(BOAT.pos.x-px)/d*s*4;BOAT.vel.z+=(BOAT.pos.z-pz)/d*s*4;}}
-  P.vel.y=8;P.grounded=false;P.lastGround=-9;P.slam=0;P.sq=0.5;if(!P.puff){P.puff=true;refillFX();}}
+  {if(WM){const s=kk(WM.sailX,WM.sailZ);if(s>0)WM.spin+=s*4;}}
+  {if(BOAT){const s=kk(BOAT.pos.x,BOAT.pos.z);if(s>0){const d=Math.hypot(BOAT.pos.x-px,BOAT.pos.z-pz)||0.01;BOAT.vel.x+=(BOAT.pos.x-px)/d*s*4;BOAT.vel.z+=(BOAT.pos.z-pz)/d*s*4;}}}
+  P.vel.y=SLAM_REBOUND;P.grounded=false;P.lastGround=-9;P.slam=0;P.sq=0.5;if(!P.puff){P.puff=true;refillFX();}}
 function hurtPlayer(kx,kz,col){if(P.inv>0||P.dead)return;P.hp--;P.inv=1.4;const l=Math.hypot(kx,kz)||1;P.vel.x=kx/l*5;P.vel.z=kz/l*5;P.vel.y=Math.max(P.vel.y,5);P.grounded=false;P.slam=0;P.puffAir=0;endHover();P.sq=0.6;SFX.hurt();CAM.shake=0.45;rumble(150,0.7,0.3);
   for(let i=0;i<10;i++)spawnP(P.pos.x,P.pos.y+0.6,P.pos.z,rand(-3,3),rand(1,4),rand(-3,3),rand(0.06,0.12),col||GOOC,rand(0.3,0.5),0.3,-8,0.9);
   const lostFire=P.fire;
+  const lostBubble=P.bubble&&isUnderwater();
   if(P.fire){P.fire=false;SFX.fireOut();spoutWorld(tmpV);for(let i=0;i<12;i++)spawnP(tmpV.x,tmpV.y,tmpV.z,rand(-1.2,1.2),rand(0.5,2.2),rand(-1.2,1.2),rand(0.08,0.15),0x8a8a8a,rand(0.5,0.9),0.9,-1,0.55);}
+  if(lostBubble){P.bubble=false;SFX.bubbleOut();spoutWorld(tmpV);for(let i=0;i<10;i++)spawnP(tmpV.x,tmpV.y,tmpV.z,rand(-1,1),rand(0.5,2),rand(-1,1),0.07,0xc8f0ff,rand(0.4,0.7),0.8,-1,0.7);}
   updateHUD();if(P.hp<=0){P.dead=true;P.deadT=1.8;SFX.deflate();showToast('Out of puff! Back to the last checkpoint…');spoutWorld(tmpV);for(let i=0;i<8;i++)spawnP(tmpV.x,tmpV.y,tmpV.z,rand(-0.5,0.5),rand(1,2),rand(-0.5,0.5),0.08,0xffffff,0.8,1.2,0,0.7);}
-  else if(lostFire)showToast('The fire went out!');}
+  else if(lostFire)showToast('The fire went out!');
+  else if(lostBubble)showToast('The bubbles went away!');}
 function respawn(){P.pos.set(P.spawn.x,P.spawn.y,P.spawn.z);P.vel.set(0,0,0);P.hp=P.maxHp;P.dead=false;P.inv=1.5;P.puff=true;P.puffAir=0;endHover();P.slam=0;P.sq=1.3;P.yaw=Math.PI;CAM.yaw=0;CAM.pos.set(P.spawn.x,P.spawn.y+5,P.spawn.z+9);CAM.look.set(P.spawn.x,P.spawn.y+1,P.spawn.z);CAM.lastManual=-9;SFX.refill();puffJumpFX();showToast('Back on your feet!');updateHUD();}
 function hitGloop(e,dmg,kx,kz){if(!e.alive||e.state==='dying')return;e.hp-=dmg;e.hurtT=0.3;e.vx+=kx;e.vz+=kz;e.wind=0;SFX.blorp();
   for(let i=0;i<8;i++)spawnP(e.x,e.y+0.5,e.z,rand(-3,3),rand(1,4),rand(-3,3),rand(0.06,0.12),e.col,rand(0.3,0.5),0.3,-8,0.9);
@@ -121,15 +141,19 @@ function updatePlayer(dt){const p=P.pos,v=P.vel;
   if(P.jumping&&!IN.jumpHeld&&v.y>0){v.y*=0.5;P.jumping=false;}
   if(v.y<=0)P.jumping=false;
   P.gustCD-=dt;P.bonkCD-=dt;
-  if(!P.dead&&IN.b&&!P.grounded&&P.slam===0&&!P.inFan){P.slam=1;P.hangT=0.14;v.x*=0.25;v.z*=0.25;v.y=Math.max(v.y,0)*0.2;P.puffAir=0;endHover();SFX.slamCharge();}
-  else if(!P.dead&&IN.b&&P.grounded&&P.gustCD<=0&&P.slam===0){doGust();P.gustCD=0.45;}
-  if(!P.dead&&IN.y&&P.bonkCD<=0){doBonk();P.bonkCD=0.5;P.bonkT=0.45;}
-  if(P.slam===1){P.hangT-=dt;v.y=1.5;P.sqT=1.4;if(P.hangT<=0){P.slam=2;v.y=-34;}}
-  else if(P.slam===2){v.y=-34;P.sqT=1.25;}
+  const uw=isUnderwater();
+  if(!P.dead&&IN.b&&P.slam===0&&!P.inFan){
+    if(uw){if(P.gustCD<=0){doGust();P.gustCD=0.45;}}
+    else if(!P.grounded){P.slam=1;P.hangT=SLAM_HANG;v.x*=0.25;v.z*=0.25;v.y=Math.max(v.y,0)*0.2;P.puffAir=0;endHover();SFX.slamCharge();}
+    else if(P.gustCD<=0){doGust();P.gustCD=0.45;}
+  }
+  if(!P.dead&&IN.y&&P.bonkCD<=0){doBonk();P.bonkCD=BONK_CD;P.bonkT=0.45;}
+  if(P.slam===1){P.hangT-=dt;v.y=1.5;P.sqT=1.4;if(P.hangT<=0){P.slam=2;v.y=SLAM_FALL;}}
+  else if(P.slam===2){v.y=SLAM_FALL;P.sqT=1.25;}
   else if(P.puffAir>0&&!P.grounded&&v.y<1.0&&!P.inFan){
     if(!P.hover){P.hover=true;P.hoverS=SFX.hoverStart();}
-    P.puffAir-=dt/(IN.jumpHeld?1.0:0.5);
-    v.y=moveTo(v.y,-1.6,7*dt);P.sqT=lerp(0.72,1.2,clamp(P.puffAir,0,1));
+    P.puffAir-=dt/(IN.jumpHeld?HOVER_HELD:HOVER_REL);
+    v.y=moveTo(v.y,HOVER_DRIFT,7*dt);P.sqT=lerp(0.72,1.2,clamp(P.puffAir,0,1));
     P.hovT-=dt;if(P.hovT<=0){P.hovT=0.05;hoverPuffFX();}
     if(P.puffAir<=0){P.puffAir=0;endHover();}}
   else{P.sqT=P.grounded?1:(v.y>3?1.1:1);v.y+=GRAV*dt;if(v.y<MAXFALL)v.y=MAXFALL;}
@@ -169,7 +193,7 @@ function updatePlayerVisual(dt){const u=player.userData;if(P.dead)P.sqT=0.45;
     u.armL.rotation.x=0;u.armR.rotation.x=0;u.armL.rotation.z=-1.6*out;u.armR.rotation.z=1.6*out;u.armL.scale.y=1+out*0.85;u.armR.scale.y=1+out*0.85;
     u.head.rotation.x=-0.12*out;player.rotation.y=P.yaw+bk*TAU;}
   else{u.armL.rotation.z=0;u.armR.rotation.z=0;u.armL.scale.y=1;u.armR.scale.y=1;}
-  if(P.jetT>0){const jk=clamp(P.jetT/0.38,0,1);u.jet.visible=true;
+  if(P.jetT>0){const jk=clamp(P.jetT/JET_T,0,1);u.jet.visible=true;
     u.jet.scale.set(0.85+Math.sin(time*42)*0.16,0.3+jk*1.1,0.85+Math.sin(time*49)*0.16);
     u.jet.children.forEach(c=>{c.material.opacity=(c.material.color?0.5:0.5)+jk*0.45;});}
   else u.jet.visible=false;

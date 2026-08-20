@@ -11,7 +11,7 @@
 // Order matters: modules are emitted in the order listed below, inside one IIFE,
 // so later files can use anything an earlier one declared.
 const fs=require('fs'),path=require('path');
-const ORDER=['util.js','audio.js','input.js','render.js','fx.js','entities.js','player.js','enemies.js','hud.js','game.js'];
+const ORDER=['util.js','audio.js','input.js','render.js','fx.js','entities.js','player.js','enemies.js','deep.js','hud.js','game.js'];
 const SRC=path.join(__dirname,'src'),LEVELS=path.join(__dirname,'levels');
 const HTML=path.join(__dirname,'index.html');
 const START='// ---- BUILD:START ----',END='// ---- BUILD:END ----';
@@ -32,6 +32,11 @@ const body=parts.join('\n\n');
 const html=fs.readFileSync(HTML,'utf8');
 const i=html.indexOf(START),j=html.indexOf(END);
 if(i<0||j<0){console.error(`index.html is missing the ${START} / ${END} markers`);process.exit(1);}
+const committed=html.slice(i+START.length,j);
+if(process.argv.includes('--check')&&!committed.trim()){
+  console.error('index.html BUILD section is empty — run: node build.js');
+  process.exit(1);
+}
 const out=html.slice(0,i+START.length)+'\n'+body+'\n'+html.slice(j);
 if(process.argv.includes('--check')){
   if(out!==html){console.error('index.html is out of date — run: node build.js');process.exit(1);}

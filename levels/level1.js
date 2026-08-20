@@ -1,4 +1,14 @@
 const LEVEL1={
+id:'level1',
+spawn:{x:0,y:0,z:10},
+physics:{
+  speed:6.8,acc:44,dec:60,airAcc:20,
+  grav:-30,maxFall:-32,jumpV:10.5,puffV:9.4,
+  coyote:0.12,buffer:0.15,step:0.42,r:0.36,h:1.15,
+  hoverHeld:1.0,hoverReleased:0.5,hoverDrift:-1.6,
+  slamHang:0.14,slamFall:-34,slamRebound:8,
+  jetTime:0.38,bonkR:2.05,bonkCD:0.5
+},
 fence:0x9c6b3c,
 fenceSolids:[[-6,0,26,84,0.7,0.5],[-6,0,-84,84,0.7,0.5],[-48,0,-29,0.5,0.7,112],[36,0,-29,0.5,0.7,112]],
 pathTiles:[[-3,12,3,-20],[-3,-24,11,-21],[7,-38,11,-24],[6,-48,10,-38],[6,-60,10,-48],[-3,-62,10,-58],[-19,-62,-3,-58],[-32,-62,-19,-58],[-34,-68,-22,-56]],

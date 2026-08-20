@@ -12,5 +12,5 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: '22'
-      - run: node tests/run.js
       - run: node build.js --check
+      - run: node tests/run.js
