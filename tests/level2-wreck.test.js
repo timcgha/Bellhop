@@ -186,4 +186,28 @@ function push(H,x,y,z,vx,vz,n){
   ok(H.P.pos.z<-190&&H.P.pos.y<4,'player can swim out of the Wreck top toward Stage 6 ('+H.P.pos.z.toFixed(1)+')');
 }
 
+// ---- interior hull-shell fade (readability only; collision unchanged) ----
+{
+  const H=boot();startL2(H);
+  const w=H.W.wreck;
+  ok(w&&w.shellMeshes&&w.shellMeshes.length>10,'Wreck registers decorative shell meshes for fading');
+  ok(w.interior&&Number.isFinite(w.interior.x0),'interior bounds exist for fade gating');
+  // outside approach — shell stays opaque
+  H.P.pos.set(0,1,-160);H.P.vel.set(0,0,0);H.frames(90);
+  ok(!w.shellInside&&w.shellFade>0.85,'outside the Wreck the hull shell stays opaque');
+  // inside keel floor
+  H.P.pos.set(0,1,-172);H.P.vel.set(0,0,0);H.frames(90);
+  ok(w.shellInside,'player inside the Wreck sets shellInside');
+  ok(w.shellFade<0.4,'inside the Wreck the hull shell fades below 40% opacity');
+  const sample=w.shellMeshes[0];
+  ok(sample&&sample.material&&sample.material.opacity<0.4,'a shell mesh material opacity tracks the fade');
+  // exit back to open water
+  H.P.pos.set(0,1,-155);H.P.vel.set(0,0,0);H.frames(90);
+  ok(!w.shellInside&&w.shellFade>0.85,'leaving the Wreck restores hull opacity');
+  // collision still honest: push into the west wall from inside
+  H.P.pos.set(-5,3.3,-174);H.P.vel.set(0,0,0);
+  for(let i=0;i<120;i++){H.P.vel.x=-5;H.frames(1);}
+  ok(H.P.pos.x>-7.5,'faded shell still collides — west wall blocks');
+}
+
 report();
