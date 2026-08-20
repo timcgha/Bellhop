@@ -185,6 +185,23 @@ function push(H,x,y,z,vx,vz,n){
   ok(push(H,0,0.5,-91,0,-5,140).z<-100,'center passage leads onward once the spikefish is dealt with');
 }
 
+// ---- perimeter containment ----
+function pushFly(H,x,y,z,vx,vy,vz,n){
+  H.P.pos.set(x,y,z);H.P.vel.set(0,0,0);H.frames(3);
+  for(let i=0;i<(n||250);i++){H.P.vel.x=vx;H.P.vel.y=vy;H.P.vel.z=vz;H.frames(1);}
+  return H.P.pos;
+}
+{
+  const H=boot();startL2(H);
+  ok(push(H,10,0.5,0,5,0).x<14,'ground-level east edge of the Shallows is fenced');
+  ok(push(H,-10,0.5,0,-5,0).x>-14,'ground-level west edge of the Shallows is fenced');
+  // from the crow's nest (highest reachable geometry), no direction leaks out
+  ok(pushFly(H,0,14.7,-184,5,1.5,0).x<14.2,'crow\'s-nest east escape is contained');
+  ok(pushFly(H,0,14.7,-184,-5,1.5,0).x>-14.2,'crow\'s-nest west escape is contained');
+  ok(pushFly(H,0,14.7,-184,0,1.5,-5).z>-205.5,'crow\'s-nest south escape is contained');
+  ok(pushFly(H,0,14.7,-184,0,1.5,5,400).z<14.2,'crow\'s-nest north escape is contained');
+}
+
 // ---- Areas 1–3 traversable ----
 {
   const H=boot();startL2(H);

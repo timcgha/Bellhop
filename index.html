@@ -132,7 +132,7 @@ physics:{
   jetTime:0.38,bonkR:2.05,bonkCD:0.5
 },
 fence:0x4a7a8a,
-fenceSolids:[[0,0,14,28,6,0.7],[0,0,-205,28,6,0.7],[-14,0,-130,0.7,6,170],[14,0,-130,0.7,6,170]],
+fenceSolids:[[0,0,14,28,6,0.7],[0,0,-205,28,6,0.7],[-14,0,-130,0.7,6,170],[14,0,-130,0.7,6,170],[-14,0,-15.5,0.7,6,59],[14,0,-15.5,0.7,6,59]],
 pathTiles:[],
 hedges:[],
 checks:[[0,10],[0,-18],[0,-48],[0,-82],[0,-102],[0,-160],[3.5,-177.5,8.9]],
@@ -141,6 +141,12 @@ snoozleHomes:[[0,-8],[4,-62],[0,-184]],
 snoozles:[[0,0.35,-8,0,false],[4,3.2,-62,1,false],[0,14.5,-184,2,false]],
 trees:[],
 steps:[
+  // --- containment: invisible walls above the fences around the whole perimeter,
+  // so nothing reachable (crow's nest included) can fly out of the level ---
+  ['solid',0,6,14,28.8,26,0.7,0x4a7a8a,{invisible:true}],
+  ['solid',0,6,-205,28.8,26,0.7,0x4a7a8a,{invisible:true}],
+  ['solid',-14,6,-95.5,0.7,26,220,0x4a7a8a,{invisible:true}],
+  ['solid',14,6,-95.5,0.7,26,220,0x4a7a8a,{invisible:true}],
   // --- presentation ---
   ['sunRays',10,0,8],
   ['suspendMotes',36],
