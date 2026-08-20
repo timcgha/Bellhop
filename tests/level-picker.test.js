@@ -71,12 +71,49 @@ function boot(opts){return require('./harness.js')(Object.assign({autostart:fals
   ok(H.pickerIdx()===0,'touch: default highlight is Level 1');
   H.tapCard(1);
   ok(H.pickerIdx()===1,'touch: tapping Level 2 card selects it');
-  ok(!H.isStarted(),'touch: tapping a card does not start the game');
+  ok(!H.isStarted(),'touch: tapping an unselected card does not start the game');
   H.tapBtn('bB');
   ok(!H.isStarted(),'touch: B button does not start the game');
   H.tapBtn('bA');
   ok(H.isStarted(),'touch: A button confirms and starts');
   ok(H.getLevel()&&H.getLevel().id==='level2','touch: confirmed Level 2 boots LEVEL2');
+}
+
+// ---- touch: tap selected card again to start (no A required) ----
+{
+  const H=boot();
+  ok(H.pickerIdx()===0,'double-tap: default is Level 1');
+  H.tapCard(1);
+  ok(H.pickerIdx()===1&&!H.isStarted(),'double-tap: first tap on Level 2 selects only');
+  H.tapCard(1);
+  ok(H.isStarted(),'double-tap: second tap on selected Level 2 starts');
+  ok(H.getLevel()&&H.getLevel().id==='level2','double-tap: Level 2 loads through tap-again flow');
+}
+{
+  const H=boot();
+  H.tapCard(1);
+  ok(H.pickerIdx()===1&&!H.isStarted(),'switch: first tap selects Level 2');
+  H.tapCard(0);
+  ok(H.pickerIdx()===0&&!H.isStarted(),'switch: tapping the other card changes selection without starting');
+  H.tapCard(0);
+  ok(H.isStarted(),'switch: tapping newly selected Level 1 again starts it');
+  ok(H.getLevel()&&H.getLevel().id==='level1','switch: Level 1 loads through the new double-tap flow');
+}
+{
+  const H=boot();
+  // default card is already selected — one tap starts Level 1
+  H.tapCard(0);
+  ok(H.isStarted(),'default: tapping the already-selected Level 1 card starts it');
+  ok(H.getLevel()&&H.getLevel().id==='level1','default: Level 1 loads from selected-card tap');
+}
+
+// ---- keyboard confirm still works after the touch UX change ----
+{
+  const H=boot();
+  H.selectLevel(1);
+  ok(!H.isStarted(),'keyboard: selecting a card alone does not start');
+  H.confirmStart();
+  ok(H.isStarted()&&H.getLevel().id==='level2','keyboard: Space still confirms the highlighted level');
 }
 
 // ---- gamepad picker: dpad/stick moves highlight, A confirms, B does not start ----
@@ -126,6 +163,10 @@ function boot(opts){return require('./harness.js')(Object.assign({autostart:fals
   ok(/#start\{[^}]*pointer-events\s*:\s*none/.test(css),'start overlay ignores pointer events outside the card');
   ok(/#start \.card\{[^}]*pointer-events\s*:\s*auto/.test(css),'start card remains tappable for level selection');
   ok(/\.tbtn\{[^}]*z-index\s*:\s*6/.test(css),'touch buttons stack above the start overlay');
+  ok(/lvlPulse/.test(css),'selected level card has a pulse animation for touch feedback');
+  const hud=require('fs').readFileSync(require('path').join(__dirname,'..','src','hud.js'),'utf8');
+  ok(/tap it again to play/.test(hud),'touch pick hint no longer requires pressing A');
+  ok(/function tapLevelCard/.test(hud),'level cards use tapLevelCard for select-or-start');
 }
 
 report();

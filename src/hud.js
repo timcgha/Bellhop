@@ -9,17 +9,30 @@ function updateTouchLabels(){
 }
 let toastTO=null;function showToast(t){const el=$('toast');el.textContent=t;el.style.opacity=1;clearTimeout(toastTO);toastTO=setTimeout(()=>{el.style.opacity=0;},2400);}
 const CTLTEXT=isTouch?'Left thumb moves · right thumb looks · A jump — blue jet burns anything under him (tap again in the air for an air-puff, hold to float) · B slam in the air, gust on the ground · Y spin':'WASD or arrows move · Space jumps — the blue jet burns anything under him (again in the air for an air-puff, hold to float) · J or Shift: slam in the air, gust on the ground · K spins · drag or Q/E turns the camera · M mutes';
-const PICKHINT=isTouch?'Tap a picture · A to start':'← → choose a level · Space or A to start';
+const PICKHINT=isTouch?'Tap a picture · tap it again to play':'← → choose a level · Space or A to start';
 $('ctlText').textContent=CTLTEXT;$('hint').textContent=CTLTEXT;$('pickHint').textContent=PICKHINT;
 
 let pickerIdx=0;
-function updatePickerUI(){
+function updatePickerUI(pulse){
   for(let i=0;i<LEVELS.length;i++){
-    const el=$('lvl'+i);
-    if(el)el.classList.toggle('sel',i===pickerIdx);
+    const el=$('lvl'+i);if(!el)continue;
+    const on=i===pickerIdx;
+    el.classList.toggle('sel',on);
+    if(pulse&&on){el.classList.remove('pulse');void el.offsetWidth;el.classList.add('pulse');}
+    else if(!on)el.classList.remove('pulse');
   }
 }
-function setPickerIdx(i){pickerIdx=clamp(i,0,LEVELS.length-1);updatePickerUI();}
+function setPickerIdx(i){
+  const next=clamp(i,0,LEVELS.length-1);
+  const changed=next!==pickerIdx;
+  pickerIdx=next;
+  updatePickerUI(changed);
+}
+function tapLevelCard(i){
+  if(started)return;
+  if(i===pickerIdx){startGame();return;}
+  setPickerIdx(i);
+}
 window.__pickerIdx=()=>pickerIdx;
 window.__setPickerIdx=setPickerIdx;
 
@@ -50,7 +63,7 @@ function drawLevelArt(){
 }
 drawLevelArt();
 for(let i=0;i<LEVELS.length;i++){
-  $('lvl'+i).addEventListener('pointerdown',e=>{e.stopPropagation();e.preventDefault();setPickerIdx(i);});
+  $('lvl'+i).addEventListener('pointerdown',e=>{e.stopPropagation();e.preventDefault();tapLevelCard(i);});
 }
 
 function startGame(){if(started)return;loadLevel(LEVELS[pickerIdx]);started=true;$('start').style.display='none';initAudio();IN.jump=false;IN.b=false;IN.y=false;updateHUD();
