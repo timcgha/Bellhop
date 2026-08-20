@@ -130,8 +130,12 @@ function updatePlayer(dt){const p=P.pos,v=P.vel;
   if(P.jumping&&!IN.jumpHeld&&v.y>0){v.y*=0.5;P.jumping=false;}
   if(v.y<=0)P.jumping=false;
   P.gustCD-=dt;P.bonkCD-=dt;
-  if(!P.dead&&IN.b&&!P.grounded&&P.slam===0&&!P.inFan){P.slam=1;P.hangT=SLAM_HANG;v.x*=0.25;v.z*=0.25;v.y=Math.max(v.y,0)*0.2;P.puffAir=0;endHover();SFX.slamCharge();}
-  else if(!P.dead&&IN.b&&P.grounded&&P.gustCD<=0&&P.slam===0){doGust();P.gustCD=0.45;}
+  const uw=isUnderwater();
+  if(!P.dead&&IN.b&&P.slam===0&&!P.inFan){
+    if(uw){if(P.gustCD<=0){doGust();P.gustCD=0.45;}}
+    else if(!P.grounded){P.slam=1;P.hangT=SLAM_HANG;v.x*=0.25;v.z*=0.25;v.y=Math.max(v.y,0)*0.2;P.puffAir=0;endHover();SFX.slamCharge();}
+    else if(P.gustCD<=0){doGust();P.gustCD=0.45;}
+  }
   if(!P.dead&&IN.y&&P.bonkCD<=0){doBonk();P.bonkCD=BONK_CD;P.bonkT=0.45;}
   if(P.slam===1){P.hangT-=dt;v.y=1.5;P.sqT=1.4;if(P.hangT<=0){P.slam=2;v.y=SLAM_FALL;}}
   else if(P.slam===2){v.y=SLAM_FALL;P.sqT=1.25;}

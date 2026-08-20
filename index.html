@@ -119,6 +119,7 @@ steps:[
 // ===== levels/level2.js =====
 const LEVEL2={
 id:'level2',
+underwater:true,
 spawn:{x:0,y:0,z:0},
 physics:{
   speed:6.8,acc:44,dec:60,airAcc:20,
@@ -353,6 +354,7 @@ let BOAT=null,WM=null,player=null,shadow=null,RAINBOW=null;
 const checks=[];let won=false,winT=0,confT=0;
 const LEVELS=[LEVEL1,LEVEL2];
 let CURRENT_LEVEL=null;
+function isUnderwater(){return !!(CURRENT_LEVEL&&CURRENT_LEVEL.underwater);}
 const POND={x0:-6,x1:6,z0:-33,z1:-25};
 function inPond(x,z){return x>POND.x0&&x<POND.x1&&z>POND.z0&&z<POND.z1;}
 function groundHeightAt(x,z){return inPond(x,z)?-0.4:0;}
@@ -525,6 +527,7 @@ function loadLevel(L){
 }
 window.__LEVEL=()=>CURRENT_LEVEL;
 window.__LEVELS=LEVELS;
+window.__isUnderwater=isUnderwater;
 
 
 
@@ -661,8 +664,12 @@ function updatePlayer(dt){const p=P.pos,v=P.vel;
   if(P.jumping&&!IN.jumpHeld&&v.y>0){v.y*=0.5;P.jumping=false;}
   if(v.y<=0)P.jumping=false;
   P.gustCD-=dt;P.bonkCD-=dt;
-  if(!P.dead&&IN.b&&!P.grounded&&P.slam===0&&!P.inFan){P.slam=1;P.hangT=SLAM_HANG;v.x*=0.25;v.z*=0.25;v.y=Math.max(v.y,0)*0.2;P.puffAir=0;endHover();SFX.slamCharge();}
-  else if(!P.dead&&IN.b&&P.grounded&&P.gustCD<=0&&P.slam===0){doGust();P.gustCD=0.45;}
+  const uw=isUnderwater();
+  if(!P.dead&&IN.b&&P.slam===0&&!P.inFan){
+    if(uw){if(P.gustCD<=0){doGust();P.gustCD=0.45;}}
+    else if(!P.grounded){P.slam=1;P.hangT=SLAM_HANG;v.x*=0.25;v.z*=0.25;v.y=Math.max(v.y,0)*0.2;P.puffAir=0;endHover();SFX.slamCharge();}
+    else if(P.gustCD<=0){doGust();P.gustCD=0.45;}
+  }
   if(!P.dead&&IN.y&&P.bonkCD<=0){doBonk();P.bonkCD=BONK_CD;P.bonkT=0.45;}
   if(P.slam===1){P.hangT-=dt;v.y=1.5;P.sqT=1.4;if(P.hangT<=0){P.slam=2;v.y=SLAM_FALL;}}
   else if(P.slam===2){v.y=SLAM_FALL;P.sqT=1.25;}
@@ -917,9 +924,10 @@ function updateCamera(dt){
 camera.position.copy(CAM.pos);camera.lookAt(CAM.look);
 let last=performance.now();
 function frame(now){requestAnimationFrame(frame);let dt=(now-last)/1000;last=now;if(dt>0.05)dt=0.05;
+  pollGamepad(dt);
   if(!started){updateClouds(dt);updateSnoozles(dt);updateZ(dt);updatePlayerVisual(dt);renderer.render(scene,camera);return;}
   time+=dt;
-  readKeys(dt);pollGamepad(dt);if(T.stickId!==null){IN.mx=T.jx;IN.mz=T.jy;}if(HELD.a)IN.jumpHeld=true;if(HELD.b)IN.bHeld=true;
+  readKeys(dt);if(T.stickId!==null){IN.mx=T.jx;IN.mz=T.jy;}if(HELD.a)IN.jumpHeld=true;if(HELD.b)IN.bHeld=true;
   updatePlayer(dt);updateWobblers(dt);updatePinwheels(dt);updateToss(dt);updateNotes(dt);updateSnoozles(dt);updateBoat(dt);updateWindmill(dt);updateFans(dt);updateClouds(dt);updateGloops(dt);updateGoos(dt);updatePuddles(dt);updateFires(dt);updateCrates(dt);updatePowers(dt);updateHearts(dt);updateChecks(dt);updateWin(dt);
   updateParticles(dt);updateRings(dt);updateZ(dt);updateCamera(dt);updatePlayerVisual(dt);
   IN.jump=IN.b=IN.y=false;IN.jumpHeld=IN.bHeld=false;IN.camDX=IN.camDY=0;IN.mx=IN.mz=0;

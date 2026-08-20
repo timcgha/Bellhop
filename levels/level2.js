@@ -1,5 +1,6 @@
 const LEVEL2={
 id:'level2',
+underwater:true,
 spawn:{x:0,y:0,z:0},
 physics:{
   speed:6.8,acc:44,dec:60,airAcc:20,

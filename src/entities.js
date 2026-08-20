@@ -4,6 +4,7 @@ let BOAT=null,WM=null,player=null,shadow=null,RAINBOW=null;
 const checks=[];let won=false,winT=0,confT=0;
 const LEVELS=[LEVEL1,LEVEL2];
 let CURRENT_LEVEL=null;
+function isUnderwater(){return !!(CURRENT_LEVEL&&CURRENT_LEVEL.underwater);}
 const POND={x0:-6,x1:6,z0:-33,z1:-25};
 function inPond(x,z){return x>POND.x0&&x<POND.x1&&z>POND.z0&&z<POND.z1;}
 function groundHeightAt(x,z){return inPond(x,z)?-0.4:0;}
@@ -176,4 +177,5 @@ function loadLevel(L){
 }
 window.__LEVEL=()=>CURRENT_LEVEL;
 window.__LEVELS=LEVELS;
+window.__isUnderwater=isUnderwater;
 
