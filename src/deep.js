@@ -531,5 +531,6 @@ window.__TEST={
   addShark:(x,y,z,n)=>{addShark(x,y,z,n);return sharks[sharks.length-1];},
   addFishSchool:(x,y,z,n)=>{addFishSchool(x,y,z,n);return fish.slice(-n);},
   addNoteFish:(x,y,z)=>{addNoteFish(x,y,z);return fish[fish.length-1];},
-  addSpikefish:(x1,y1,z1,x2,y2,z2,n,r)=>{addSpikefish(x1,y1,z1,x2,y2,z2,n,r);return spikefish[spikefish.length-1];}
+  addSpikefish:(x1,y1,z1,x2,y2,z2,n,r)=>{addSpikefish(x1,y1,z1,x2,y2,z2,n,r);return spikefish[spikefish.length-1];},
+  loadLevel:l=>loadLevel(typeof l==='number'?LEVELS[l]:l)
 };

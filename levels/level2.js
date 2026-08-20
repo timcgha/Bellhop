@@ -21,6 +21,7 @@ snoozleHomes:[[0,-8],[4,-62],[0,-184]],
 snoozles:[[0,0.35,-8,0,false],[4,3.2,-62,1,false],[0,14.5,-184,2,false]],
 trees:[],
 steps:[
+  ['unfinishedFinish',0,-184,17],
   // --- containment: invisible walls above the fences around the whole perimeter,
   // so nothing reachable (crow's nest included) can fly out of the level ---
   ['solid',0,6,14,28.8,26,0.7,0x4a7a8a,{invisible:true}],

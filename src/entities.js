@@ -1,7 +1,7 @@
 const solids=[],wobblers=[],pinwheels=[],toss=[],notes=[],dust=[],snoozles=[],fans=[],clouds=[],gloops=[],goos=[],puddles=[],hearts=[],crates=[],powers=[],fires=[];
 const sharks=[],fish=[],spikefish=[],clams=[],bubbleShots=[];
 let seenGloop=false,seenCrate=false;
-let BOAT=null,WM=null,player=null,shadow=null,RAINBOW=null;
+let BOAT=null,WM=null,player=null,shadow=null,RAINBOW=null,FINISH=null;
 const checks=[];let won=false,winT=0,confT=0;
 const LEVELS=[LEVEL1,LEVEL2];
 let CURRENT_LEVEL=null;
@@ -59,13 +59,31 @@ function addSnoozle(x,y,z,home,boat){const g=buildSnoozle();g.position.set(x,y,z
 function addTree(x,z){addSolid(x,0,z,0.8,3.6,0.8,0x7a4f2b,{surf:'wood'});const c=lam(0x4d9a3a);scene.add(mesh(SPH,c,x,4.2,z,1.9,1.6,1.9));scene.add(mesh(SPH,c,x+0.9,3.6,z-0.4,1.2));scene.add(mesh(SPH,c,x-0.8,3.9,z+0.6,1.1));}
 function addFan(x,z,r,top){const g=new THREE.Group();g.position.set(x,0,z);g.add(mesh(CYL,lam(0x4b5563),0,0.15,0,r,0.3,r));const ring=new THREE.Mesh(new THREE.TorusGeometry(r,0.08,8,32),pho(0xd1a83c,120,0xfff0b8));ring.rotation.x=Math.PI/2;ring.position.y=0.32;g.add(ring);
   const bl=new THREE.Group();bl.position.y=0.3;for(let i=0;i<3;i++){const b=mesh(BOXG,lam(0x9ca3af),0,0,0,r*1.7,0.04,0.35);b.rotation.y=i*Math.PI/3;bl.add(b);}g.add(bl);scene.add(g);fans.push({x,z,r,top,blades:bl,pt:0});}
+function registerFinish(f){
+  if(FINISH)throw new Error('Level registered more than one FINISH');
+  if(!f||![f.x,f.z,f.top].every(Number.isFinite)||typeof f.onAllAwake!=='function'||typeof f.onWin!=='function'||typeof f.update!=='function')
+    throw new Error('Invalid FINISH registration');
+  FINISH=f;
+}
 function buildWindmill(x,z){const col=addSolid(x,0,z,3.4,6.6,3.4,0xffffff,{surf:'stone'});col.mesh.visible=false;
   const body=new THREE.Mesh(new THREE.CylinderGeometry(1.25,1.75,6.4,18),lam(0xf1e3c2));body.position.set(x,3.2,z);scene.add(body);
   const cap=new THREE.Mesh(new THREE.ConeGeometry(1.55,1.8,18),lam(0xc0392b));cap.position.set(x,7.3,z);scene.add(cap);
   scene.add(mesh(BOXG,lam(0x6b4a2a),x,0.9,z+1.68,1.0,1.8,0.2));scene.add(mesh(BOXG,lam(0x8fd3ff),x,3.6,z+1.5,0.6,0.7,0.2));
   const sails=new THREE.Group();sails.position.set(x,5.6,z+1.85);sails.add(mesh(SPH,pho(0xd1a83c,120,0xfff0b8),0,0,0,0.3));
   for(let i=0;i<4;i++){const a=new THREE.Group();a.rotation.z=i*Math.PI/2;a.add(mesh(BOXG,lam(0x7a4f2b),0,1.9,0,0.16,3.8,0.08));a.add(mesh(BOXG,lam(0xfff5e0),0.42,2.1,0,0.65,2.6,0.03));sails.add(a);}
-  scene.add(sails);WM={sails,spin:0.5,party:false,sailX:x,sailZ:z+1.85,x,z};}
+  scene.add(sails);WM={sails,spin:0.5,party:false,sailX:x,sailZ:z+1.85,x,z};
+  registerFinish({x,z,top:17,
+    onAllAwake(){triggerWin();},
+    onWin(){WM.party=true;RAINBOW.visible=true;},
+    update(dt,t){if(t<0)return;const k=smooth(Math.min(t/1.3,1));RAINBOW.scale.setScalar(0.15+k*0.85);RAINBOW.children.forEach(r=>{r.material.opacity=0.85*k;});}
+  });}
+function registerUnfinishedFinish(x,z,top){
+  registerFinish({x,z,top,
+    onAllAwake(){showToast('All Snoozles awake! ♪ '+rescued+' of '+snoozles.length);},
+    onWin(){},
+    update(){}
+  });
+}
 function buildBoat(x,z){const g=new THREE.Group();g.add(mesh(BOXG,lam(0x8b5a2b),0,0.15,0,0.9,0.3,1.7));g.add(mesh(BOXG,lam(0xa86b32),0,0.32,0,1.0,0.06,1.8));g.add(mesh(CYL,lam(0x5b3a1a),0,1.0,-0.1,0.04,1.4,0.04));
   g.add(mesh(BOXG,lam(0xffffff),0,1.15,-0.1,0.9,0.9,0.02));g.add(mesh(BOXG,lam(0xe74c3c),0,1.15,-0.1,0.9,0.25,0.021));scene.add(g);g.position.set(x,-0.1,z);
   BOAT={g,pos:new THREE.Vector3(x,0,z),vel:new THREE.Vector3(),yaw:0};}
@@ -140,17 +158,16 @@ const CONF=[0xff5a7a,0xffc94a,0x6fd45a,0x4fb4e6,0xa15ae0,0xffffff,0xff9a3c];
 function buildRainbow(x,z){const g=new THREE.Group();const cols=[0xff5a5a,0xff9a3c,0xffe14a,0x6fd45a,0x4fb4e6,0x5a6fe0,0xa15ae0];
   cols.forEach((c,i)=>{const t=new THREE.Mesh(new THREE.TorusGeometry(27-i*1.6,0.8,7,44,Math.PI),new THREE.MeshBasicMaterial({color:c,transparent:true,opacity:0.85}));g.add(t);});
   g.position.set(x,0.2,z);g.scale.setScalar(0.15);g.visible=false;scene.add(g);return g;}
-function levelHasWin(){return !!(CURRENT_LEVEL&&CURRENT_LEVEL.win);}
-function triggerWin(){if(won||!levelHasWin())return;won=true;winT=0;if(WM)WM.party=true;AU.win=true;SFX.fanfare();
-  if(RAINBOW)RAINBOW.visible=true;const w=$('win');w.style.display='flex';w.style.opacity=1;
+function triggerWin(){if(won)return;won=true;winT=0;AU.win=true;SFX.fanfare();FINISH.onWin();
+  const w=$('win');w.style.display='flex';w.style.opacity=1;
   CAM.fovKick=Math.max(CAM.fovKick,7);CAM.shake=Math.max(CAM.shake,0.4);rumble(500,0.6,0.7);}
 function updateWin(dt){if(!won)return;winT+=dt;
-  const k=smooth(Math.min(winT/1.3,1));if(RAINBOW){RAINBOW.scale.setScalar(0.15+k*0.85);RAINBOW.children.forEach(t=>{t.material.opacity=0.85*k;});}
-  confT-=dt;if(confT<=0&&winT<16&&WM){confT=0.05;const a=rand(0,TAU),r=rand(0,15);
-    spawnP(WM.x+Math.cos(a)*r,rand(13,21),WM.z+Math.sin(a)*r,rand(-1.2,1.2),rand(-3,-1),rand(-1.2,1.2),rand(0.09,0.18),CONF[Math.floor(Math.random()*CONF.length)],rand(1.8,2.8),0,-2.2,1);}
+  confT-=dt;if(confT<=0&&winT<16){confT=0.05;const a=rand(0,TAU),r=rand(0,15);
+    spawnP(FINISH.x+Math.cos(a)*r,rand(FINISH.top-4,FINISH.top+4),FINISH.z+Math.sin(a)*r,rand(-1.2,1.2),rand(-3,-1),rand(-1.2,1.2),rand(0.09,0.18),CONF[Math.floor(Math.random()*CONF.length)],rand(1.8,2.8),0,-2.2,1);}
   if(winT>9){const w=$('win');w.style.opacity=Math.max(0,1-(winT-9)/2.5);if(winT>11.7)w.style.display='none';}}
 
 function loadLevel(L){
+  FINISH=null;
   if(L.physics)applyPhysics(L.physics);
   CURRENT_LEVEL=L;
   if(L.underwater)beginUnderwaterLevel(L);else beginLandLevel();
@@ -201,9 +218,11 @@ function loadLevel(L){
     else if(k==='wreck')buildWreck(step[1],step[2]);
     else if(k==='wreckDeck')wreckDeck(step[1],step[2],step[3],step[4],step[5],step[6]||0,step[7]||0,step[8]||0);
     else if(k==='wreckLedge')wreckLedge(step[1],step[2],step[3],step[4],step[5],step[6]||'');
+    else if(k==='unfinishedFinish')registerUnfinishedFinish(step[1],step[2],step[3]);
   }
   for(const t of L.trees)addTree(t[0],t[1]);
   for(const s of L.snoozles){const x=s[0]!=null?s[0]:TX,y=s[1],z=s[2]!=null?s[2]:TZ;addSnoozle(x,y,z,homes[s[3]],s[4]);}
+  if(!FINISH)throw new Error('Level '+L.id+' did not register FINISH');
 }
 window.__LEVEL=()=>CURRENT_LEVEL;
 window.__LEVELS=LEVELS;

@@ -1,6 +1,5 @@
 const LEVEL1={
 id:'level1',
-win:'windmill',
 spawn:{x:0,y:0,z:10},
 physics:{
   speed:6.8,acc:44,dec:60,airAcc:20,
