@@ -46,13 +46,15 @@ function validFinish(f){
     'shared confetti uses FINISH x/z/top rather than the windmill');
 }
 
-// ---- Level 2 explicitly remains unfinished and non-winning ----
+// ---- Level 2 Conch finish: waking all opens destination but does not win ----
 {
   const H=boot();H.startLevel(1);
-  ok(validFinish(H.W.FINISH),'current Level 2 explicitly registers a temporary FINISH');
-  for(const s of H.W.snoozles){wake(H,s);H.frames(180);}
-  ok(!H.W.won,'waking all currently implemented Level 2 Snoozles still does not win');
-  ok(H.el('win').style.display!=='flex','unfinished Level 2 does not show the win banner');
+  ok(validFinish(H.W.FINISH),'Level 2 registers a complete Conch FINISH');
+  ok(H.W.conch&&!H.W.conch.open,'Conch starts closed');
+  for(const s of H.W.snoozles){wake(H,s);H.frames(40);}
+  ok(H.W.conch.open,'waking all Level 2 Snoozles opens the Conch');
+  ok(!H.W.won,'waking all Level 2 Snoozles still does not win until entry');
+  ok(H.el('win').style.display!=='flex','Level 2 does not show the win banner on final wake alone');
 }
 
 // ---- loading replaces current-level FINISH and missing registration fails ----
@@ -75,7 +77,7 @@ function validFinish(f){
   const entities=fs.readFileSync(path.join(__dirname,'..','src','entities.js'),'utf8');
   const enemies=fs.readFileSync(path.join(__dirname,'..','src','enemies.js'),'utf8');
   const genericWin=entities.slice(entities.indexOf('function triggerWin'),entities.indexOf('function loadLevel'));
-  ok(!/\bWM\b|\bRAINBOW\b/.test(genericWin),'generic triggerWin/updateWin contain no WM or RAINBOW references');
+  ok(!/\bWM\b|\bRAINBOW\b|\bCONCH\b|\bconch\b/.test(genericWin),'generic triggerWin/updateWin contain no landmark references');
   ok(/FINISH\.onWin\(\)/.test(genericWin)&&/FINISH\.x/.test(genericWin)&&/FINISH\.top/.test(genericWin),
     'generic win flow delegates startup and anchors celebration through FINISH');
   const snoozleMove=enemies.slice(enemies.indexOf('function updateSnoozles'),enemies.indexOf('function updateBoat'));

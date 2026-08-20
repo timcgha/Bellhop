@@ -17,11 +17,10 @@ pathTiles:[],
 hedges:[],
 checks:[[0,10],[0,-18],[0,-48],[0,-82],[0,-102],[0,-160],[3.5,-177.5,8.9],[0,-240]],
 tower:{tx:0,tz:0},
-snoozleHomes:[[0,-8],[4,-62],[0,-184],[0,-285]],
+snoozleHomes:[[-4.5,-282],[4.5,-282],[0,-291,[[0,18,-196],[0,11,-225],[0,4,-260]]],[-3.5,-286]],
 snoozles:[[0,0.35,-8,0,false],[4,3.2,-62,1,false],[0,14.5,-184,2,false],[0,0.4,-272,3,false]],
 trees:[],
 steps:[
-  ['unfinishedFinish',0,-285,8],
   // --- containment: invisible walls above the fences around the whole perimeter,
   // so nothing reachable (crow's nest included) can fly out of the level ---
   ['solid',0,6,14,28.8,26,0.7,0x4a7a8a,{invisible:true}],
@@ -214,16 +213,15 @@ steps:[
   ['note',-9.0,1.3,-247.2,false],
   ['note',-10.4,1.5,-248.6,false],
   ['note',-8.6,1.4,-250.2,false],
-  // --- route toward future Conch (staging only; no Conch / no win) ---
+  // --- Area 6: The Conch (Stage 6B) ---
   ['trenchFloor',0,-285,24,24],
-  ['sandPath',-2,-276,2,-290],
-  ['trenchRock',-10,0,-282,5,10,10],
-  ['trenchRock',10,0,-282,5,10,10],
-  ['glowPool',0,-285,0x88aaff,4.5],
-  ['biolumCluster',-4,-284,3],
-  ['biolumCluster',4,-286,3],
-  ['trenchMotes',8,0,-285,6],
-  ['seabedScatter',0,-285,8,8],
-  ['solid',0,0,-292,12,2.2,0.9,0x3a4a58,{surf:'stone'}],
-  ['dressPlatform',0,0,-292,12,2.2,0.9]
+  ['sandPath',-2,-276,2,-286],
+  ['trenchRock',-10,0,-280,5,10,8],
+  ['trenchRock',10,0,-280,5,10,8],
+  ['glowPool',0,-280,0x88aaff,4.5],
+  ['biolumCluster',-4,-281,3],
+  ['biolumCluster',4,-281,3],
+  ['trenchMotes',8,0,-282,6],
+  ['seabedScatter',0,-282,8,8],
+  ['conch',0,-288]
 ]};

@@ -55,7 +55,20 @@ function buildSnoozle(){const g=new THREE.Group();g.add(mesh(SPH,lam(0xdba86a),0
   const mouth=mesh(BOXG,lam(0x8b4a3a),0,0.25,0.35,0.08,0.03,0.02);g.add(mouth);
   [-0.15,0.15].forEach(x=>g.add(mesh(SPH,lam(0x8b6a4a),x,0.06,0.1,0.09,0.06,0.09)));
   g.userData={closed,open,mouth};return g;}
-function addSnoozle(x,y,z,home,boat){const g=buildSnoozle();g.position.set(x,y,z);g.rotation.y=rand(0,TAU);scene.add(g);snoozles.push({g,state:'sleep',t:0,zz:rand(0,1),ph:rand(0,TAU),baseY:y,home:{x:home[0],z:home[1]},boat:!!boat,stepT:0,hopT:0});}
+function addSnoozle(x,y,z,home,boat){
+  const g=buildSnoozle();g.position.set(x,y,z);g.rotation.y=rand(0,TAU);scene.add(g);
+  const h=parseSnoozleHome(home);
+  snoozles.push({g,state:'sleep',t:0,zz:rand(0,1),ph:rand(0,TAU),baseY:y,home:h,path:h.path||null,boat:!!boat,stepT:0,hopT:0});
+}
+function parseSnoozleHome(home){
+  if(!home)return {x:0,z:0};
+  if(Array.isArray(home)){
+    const h={x:home[0],z:home[1]};
+    if(home[2]&&Array.isArray(home[2]))h.path=home[2].map(p=>({x:p[0],y:p[1],z:p[2]}));
+    return h;
+  }
+  return {x:home.x,z:home.z,path:home.path||null};
+}
 function addTree(x,z){addSolid(x,0,z,0.8,3.6,0.8,0x7a4f2b,{surf:'wood'});const c=lam(0x4d9a3a);scene.add(mesh(SPH,c,x,4.2,z,1.9,1.6,1.9));scene.add(mesh(SPH,c,x+0.9,3.6,z-0.4,1.2));scene.add(mesh(SPH,c,x-0.8,3.9,z+0.6,1.1));}
 function addFan(x,z,r,top){const g=new THREE.Group();g.position.set(x,0,z);g.add(mesh(CYL,lam(0x4b5563),0,0.15,0,r,0.3,r));const ring=new THREE.Mesh(new THREE.TorusGeometry(r,0.08,8,32),pho(0xd1a83c,120,0xfff0b8));ring.rotation.x=Math.PI/2;ring.position.y=0.32;g.add(ring);
   const bl=new THREE.Group();bl.position.y=0.3;for(let i=0;i<3;i++){const b=mesh(BOXG,lam(0x9ca3af),0,0,0,r*1.7,0.04,0.35);b.rotation.y=i*Math.PI/3;bl.add(b);}g.add(bl);scene.add(g);fans.push({x,z,r,top,blades:bl,pt:0});}
@@ -224,6 +237,7 @@ function loadLevel(L){
     else if(k==='wreckDeck')wreckDeck(step[1],step[2],step[3],step[4],step[5],step[6]||0,step[7]||0,step[8]||0);
     else if(k==='wreckLedge')wreckLedge(step[1],step[2],step[3],step[4],step[5],step[6]||'');
     else if(k==='unfinishedFinish')registerUnfinishedFinish(step[1],step[2],step[3]);
+    else if(k==='conch')buildConch(step[1],step[2]);
   }
   for(const t of L.trees)addTree(t[0],t[1]);
   for(const s of L.snoozles){const x=s[0]!=null?s[0]:TX,y=s[1],z=s[2]!=null?s[2]:TZ;addSnoozle(x,y,z,homes[s[3]],s[4]);}

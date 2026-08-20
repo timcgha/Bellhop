@@ -55,7 +55,7 @@ body.touch .tbtn{display:flex}
 <div id="hint"></div>
 <div id="start"><div class="card">
 <h1>BELLHOP</h1>
-<div class="sub">v15 · the trench</div>
+<div class="sub">v16 · the conch</div>
 <div class="level-pick">
 <div class="lvl-card sel" id="lvl0"><canvas class="lvl-art" id="art0" width="160" height="100"></canvas><span class="lvl-label">Meadow</span></div>
 <div class="lvl-card" id="lvl1"><canvas class="lvl-art" id="art1" width="160" height="100"></canvas><span class="lvl-label">The Deep</span></div>
@@ -136,11 +136,10 @@ pathTiles:[],
 hedges:[],
 checks:[[0,10],[0,-18],[0,-48],[0,-82],[0,-102],[0,-160],[3.5,-177.5,8.9],[0,-240]],
 tower:{tx:0,tz:0},
-snoozleHomes:[[0,-8],[4,-62],[0,-184],[0,-285]],
+snoozleHomes:[[-4.5,-282],[4.5,-282],[0,-291,[[0,18,-196],[0,11,-225],[0,4,-260]]],[-3.5,-286]],
 snoozles:[[0,0.35,-8,0,false],[4,3.2,-62,1,false],[0,14.5,-184,2,false],[0,0.4,-272,3,false]],
 trees:[],
 steps:[
-  ['unfinishedFinish',0,-285,8],
   // --- containment: invisible walls above the fences around the whole perimeter,
   // so nothing reachable (crow's nest included) can fly out of the level ---
   ['solid',0,6,14,28.8,26,0.7,0x4a7a8a,{invisible:true}],
@@ -333,18 +332,17 @@ steps:[
   ['note',-9.0,1.3,-247.2,false],
   ['note',-10.4,1.5,-248.6,false],
   ['note',-8.6,1.4,-250.2,false],
-  // --- route toward future Conch (staging only; no Conch / no win) ---
+  // --- Area 6: The Conch (Stage 6B) ---
   ['trenchFloor',0,-285,24,24],
-  ['sandPath',-2,-276,2,-290],
-  ['trenchRock',-10,0,-282,5,10,10],
-  ['trenchRock',10,0,-282,5,10,10],
-  ['glowPool',0,-285,0x88aaff,4.5],
-  ['biolumCluster',-4,-284,3],
-  ['biolumCluster',4,-286,3],
-  ['trenchMotes',8,0,-285,6],
-  ['seabedScatter',0,-285,8,8],
-  ['solid',0,0,-292,12,2.2,0.9,0x3a4a58,{surf:'stone'}],
-  ['dressPlatform',0,0,-292,12,2.2,0.9]
+  ['sandPath',-2,-276,2,-286],
+  ['trenchRock',-10,0,-280,5,10,8],
+  ['trenchRock',10,0,-280,5,10,8],
+  ['glowPool',0,-280,0x88aaff,4.5],
+  ['biolumCluster',-4,-281,3],
+  ['biolumCluster',4,-281,3],
+  ['trenchMotes',8,0,-282,6],
+  ['seabedScatter',0,-282,8,8],
+  ['conch',0,-288]
 ]};
 
 
@@ -442,6 +440,7 @@ const SFX={
   bubblePop(){noise(0.1,{type:'highpass',freq:2000,gain:0.14});tone(880,0.08,{type:'sine',gain:0.06,slide:520});},
   bubblePower(){if(!AU.ctx)return;[0,3,7,12].forEach((n,i)=>tone(hz(n,523.25),0.35,{at:AU.ctx.currentTime+i*0.07,type:'sine',gain:0.11}));},
   bubbleOut(){noise(0.35,{type:'lowpass',freq:1800,fslide:400,gain:0.1});tone(640,0.3,{type:'triangle',gain:0.07,slide:220});},
+  conchOpen(){if(!AU.ctx)return;const c=AU.ctx.currentTime;tone(220,0.55,{at:c,type:'sine',gain:0.16,slide:440,attack:0.04});[0,4,7,12,16].forEach((n,i)=>tone(hz(n,329.63),0.55,{at:c+0.12+i*0.08,type:'triangle',gain:0.12}));noise(0.45,{at:c,type:'bandpass',freq:900,fslide:1800,gain:0.1,attack:0.05});},
   fishPop(){tone(rand(700,950),0.08,{type:'sine',gain:0.1,slide:400});noise(0.06,{type:'highpass',freq:2500,gain:0.08});},
   sharkPop(){noise(0.2,{type:'lowpass',freq:600,fslide:200,gain:0.15});tone(180,0.15,{type:'sine',gain:0.1,slide:90});},
   sharkBite(){noise(0.12,{type:'bandpass',freq:500,gain:0.18});tone(120,0.1,{type:'square',gain:0.08,slide:70});},
@@ -621,7 +620,20 @@ function buildSnoozle(){const g=new THREE.Group();g.add(mesh(SPH,lam(0xdba86a),0
   const mouth=mesh(BOXG,lam(0x8b4a3a),0,0.25,0.35,0.08,0.03,0.02);g.add(mouth);
   [-0.15,0.15].forEach(x=>g.add(mesh(SPH,lam(0x8b6a4a),x,0.06,0.1,0.09,0.06,0.09)));
   g.userData={closed,open,mouth};return g;}
-function addSnoozle(x,y,z,home,boat){const g=buildSnoozle();g.position.set(x,y,z);g.rotation.y=rand(0,TAU);scene.add(g);snoozles.push({g,state:'sleep',t:0,zz:rand(0,1),ph:rand(0,TAU),baseY:y,home:{x:home[0],z:home[1]},boat:!!boat,stepT:0,hopT:0});}
+function addSnoozle(x,y,z,home,boat){
+  const g=buildSnoozle();g.position.set(x,y,z);g.rotation.y=rand(0,TAU);scene.add(g);
+  const h=parseSnoozleHome(home);
+  snoozles.push({g,state:'sleep',t:0,zz:rand(0,1),ph:rand(0,TAU),baseY:y,home:h,path:h.path||null,boat:!!boat,stepT:0,hopT:0});
+}
+function parseSnoozleHome(home){
+  if(!home)return {x:0,z:0};
+  if(Array.isArray(home)){
+    const h={x:home[0],z:home[1]};
+    if(home[2]&&Array.isArray(home[2]))h.path=home[2].map(p=>({x:p[0],y:p[1],z:p[2]}));
+    return h;
+  }
+  return {x:home.x,z:home.z,path:home.path||null};
+}
 function addTree(x,z){addSolid(x,0,z,0.8,3.6,0.8,0x7a4f2b,{surf:'wood'});const c=lam(0x4d9a3a);scene.add(mesh(SPH,c,x,4.2,z,1.9,1.6,1.9));scene.add(mesh(SPH,c,x+0.9,3.6,z-0.4,1.2));scene.add(mesh(SPH,c,x-0.8,3.9,z+0.6,1.1));}
 function addFan(x,z,r,top){const g=new THREE.Group();g.position.set(x,0,z);g.add(mesh(CYL,lam(0x4b5563),0,0.15,0,r,0.3,r));const ring=new THREE.Mesh(new THREE.TorusGeometry(r,0.08,8,32),pho(0xd1a83c,120,0xfff0b8));ring.rotation.x=Math.PI/2;ring.position.y=0.32;g.add(ring);
   const bl=new THREE.Group();bl.position.y=0.3;for(let i=0;i<3;i++){const b=mesh(BOXG,lam(0x9ca3af),0,0,0,r*1.7,0.04,0.35);b.rotation.y=i*Math.PI/3;bl.add(b);}g.add(bl);scene.add(g);fans.push({x,z,r,top,blades:bl,pt:0});}
@@ -790,6 +802,7 @@ function loadLevel(L){
     else if(k==='wreckDeck')wreckDeck(step[1],step[2],step[3],step[4],step[5],step[6]||0,step[7]||0,step[8]||0);
     else if(k==='wreckLedge')wreckLedge(step[1],step[2],step[3],step[4],step[5],step[6]||'');
     else if(k==='unfinishedFinish')registerUnfinishedFinish(step[1],step[2],step[3]);
+    else if(k==='conch')buildConch(step[1],step[2]);
   }
   for(const t of L.trees)addTree(t[0],t[1]);
   for(const s of L.snoozles){const x=s[0]!=null?s[0]:TX,y=s[1],z=s[2]!=null?s[2]:TZ;addSnoozle(x,y,z,homes[s[3]],s[4]);}
@@ -1051,7 +1064,15 @@ function wakeSnoozle(s){if(s.state!=='sleep')return;s.state='wake';s.t=0;s.boat=
 function updateSnoozles(dt){for(const s of snoozles){const g=s.g;
   if(s.state==='sleep'){if(s.boat&&BOAT){g.position.set(BOAT.pos.x,0.28,BOAT.pos.z);g.rotation.y=BOAT.yaw+Math.PI/2;}
     g.scale.set(1,1+Math.sin(time*2+s.ph)*0.03,1);s.zz-=dt;if(s.zz<=0){s.zz=rand(0.8,1.3);spawnZ(g.position.x+0.2,g.position.y+0.8,g.position.z);}}
-  else if(s.state==='wake'){s.t+=dt;const k=Math.min(s.t/1.1,1);g.position.y=s.baseY+Math.sin(k*Math.PI)*1.3;g.rotation.y+=dt*10;if(s.t>1.1){s.state='zoom';s.t=0;s.fx=g.position.x;s.fy=s.baseY;s.fz=g.position.z;s.homeY=groundHeightAt(s.home.x,s.home.z);}}
+  else if(s.state==='wake'){s.t+=dt;const k=Math.min(s.t/1.1,1);g.position.y=s.baseY+Math.sin(k*Math.PI)*1.3;g.rotation.y+=dt*10;
+    if(s.t>1.1){s.t=0;s.fx=g.position.x;s.fy=s.baseY;s.fz=g.position.z;s.homeY=groundHeightAt(s.home.x,s.home.z);
+      if(s.path&&s.path.length){s.state='path';s.pathIdx=0;}else s.state='zoom';}}
+  else if(s.state==='path'){s.t+=dt;const dur=1.15;const k=Math.min(s.t/dur,1);const tgt=s.path[s.pathIdx];
+    g.position.x=lerp(s.fx,tgt.x,k);g.position.y=lerp(s.fy,tgt.y,k);g.position.z=lerp(s.fz,tgt.z,k);
+    g.rotation.y+=dt*9;g.scale.set(1,1,1);
+    s.stepT-=dt;if(s.stepT<=0){s.stepT=0.05;spawnP(g.position.x,g.position.y+0.3,g.position.z,rand(-0.6,0.6),rand(-0.6,0.6),rand(-0.6,0.6),0.1,Math.random()<0.5?0xfff0b8:0xffffff,0.55,0.4,0,0.85);}
+    if(k>=1){s.pathIdx++;s.t=0;s.fx=g.position.x;s.fy=g.position.y;s.fz=g.position.z;
+      if(s.pathIdx>=s.path.length)s.state='zoom';}}
   else if(s.state==='zoom'){s.t+=dt;const k=Math.min(s.t/1.7,1);
     g.position.x=lerp(s.fx,s.home.x,k);g.position.z=lerp(s.fz,s.home.z,k);
     g.position.y=lerp(s.fy,s.homeY,k)+Math.sin(k*Math.PI)*10;
@@ -1407,7 +1428,7 @@ function beginLandLevel(){if(landGround)landGround.visible=true;if(underwaterGro
 function beginUnderwaterLevel(L){
   if(landGround)landGround.visible=false;
   scene.background=new THREE.Color(0x4ab8d8);scene.fog=new THREE.Fog(0x52b8d4,20,92);
-  decorKelps.length=0;suspendMotes.length=0;biolumGlows.length=0;
+  decorKelps.length=0;suspendMotes.length=0;biolumGlows.length=0;CONCH=null;
   if(!underwaterGroup){underwaterGroup=new THREE.Group();scene.add(underwaterGroup);}
   underwaterGroup.visible=true;while(underwaterGroup.children.length)underwaterGroup.remove(underwaterGroup.children[0]);
   for(let i=0;i<5;i++){const c=SANDC[i%SANDC.length];const px=rand(-55,55),pz=rand(-105,18);
@@ -1718,6 +1739,104 @@ function buildWreck(cx,cz){
 window.__WRECK=()=>WRECK;
 window.__WRECK_RECOVERY_MAX=()=>WRECK_RECOVERY_MAX;
 window.__inWreckInterior=inWreckInterior;
+
+let CONCH=null;
+function inConchInterior(){
+  if(!CONCH||!CONCH.interior)return false;
+  const b=CONCH.interior,p=P.pos;
+  return p.x>b.x0&&p.x<b.x1&&p.y<b.yMax&&p.z>b.z0&&p.z<b.z1;
+}
+function playerInConchTrigger(){
+  if(!CONCH||!CONCH.trigger)return false;
+  const t=CONCH.trigger,p=P.pos;
+  return Math.abs(p.x-t.x)<t.hx&&Math.abs(p.y-t.y)<t.hy&&Math.abs(p.z-t.z)<t.hz;
+}
+function setConchDoorOpen(open){
+  if(!CONCH||!CONCH.doorSolid)return;
+  const i=solids.indexOf(CONCH.doorSolid);
+  if(open){if(i>=0)solids.splice(i,1);CONCH.doorSolid.mesh.visible=false;if(CONCH.doorVis)CONCH.doorVis.visible=false;if(CONCH.openMouth)CONCH.openMouth.visible=true;}
+  else{if(i<0)solids.push(CONCH.doorSolid);CONCH.doorSolid.mesh.visible=false;if(CONCH.doorVis)CONCH.doorVis.visible=true;if(CONCH.openMouth)CONCH.openMouth.visible=false;}
+}
+function openConch(){
+  if(!CONCH||CONCH.open)return;
+  CONCH.open=true;CONCH.openT=0;
+  setConchDoorOpen(true);
+  SFX.conchOpen();
+  CAM.fovKick=Math.max(CAM.fovKick,5);CAM.shake=Math.max(CAM.shake,0.25);
+  spawnRing(CONCH.doorX,CONCH.doorY,CONCH.doorZ,0xffe9b0,0.45,6,0.55);
+  for(let i=0;i<18;i++)spawnP(CONCH.doorX+rand(-1,1),CONCH.doorY+rand(0,2),CONCH.doorZ+rand(-0.5,0.5),rand(-2,2),rand(1,4),rand(-2,2),0.08,Math.random()<0.5?0xffe36b:0xc8f0ff,0.7,0.3,-4,1);
+  showToast('The Conch opened!');
+}
+function updateConch(dt,winT){
+  if(!CONCH)return;
+  if(CONCH.open)CONCH.openT+=dt;
+  const glow=CONCH.open?(0.22+Math.min(CONCH.openT,1)*0.35):(0.06+Math.sin(time*0.8)*0.02);
+  if(CONCH.spiralLights)for(const L of CONCH.spiralLights){L.m.material.opacity=glow*(0.55+0.45*Math.sin(time*1.6+L.ph));}
+  if(CONCH.shellGlow)CONCH.shellGlow.material.opacity=CONCH.open?(0.12+Math.min(CONCH.openT,1)*0.18):(0.03+Math.sin(time*0.6)*0.015);
+  if(CONCH.interiorGlow)CONCH.interiorGlow.material.opacity=CONCH.open?(0.1+Math.min(CONCH.openT,1)*0.25):0.02;
+  if(winT>=0){
+    if(CONCH.rainbow){const k=smooth(Math.min(winT/1.3,1));CONCH.rainbow.visible=true;CONCH.rainbow.scale.setScalar(0.2+k*1.1);
+      CONCH.rainbow.children.forEach(r=>{r.material.opacity=0.85*k;});}
+    if(CONCH.spiralLights)for(const L of CONCH.spiralLights){L.m.material.opacity=0.55+Math.sin(time*4+L.ph)*0.25;}
+    if(CONCH.shellGlow)CONCH.shellGlow.material.opacity=0.35+Math.sin(time*3)*0.08;
+    if(CONCH.interiorGlow)CONCH.interiorGlow.material.opacity=0.4+Math.sin(time*2.4)*0.1;
+  }else if(CONCH.open&&!won&&playerInConchTrigger())triggerWin();
+}
+function buildConch(cx,cz){
+  CONCH={cx,cz,open:false,openT:0,spiralLights:[],doorX:cx,doorY:2.2,doorZ:cz+5.2};
+  const g=new THREE.Group();g.position.set(cx,0,cz);scene.add(g);
+  const shell=lam(0xd9a07a),rib=lam(0xc4865c),lip=lam(0xe8b890),dark=lam(0x6a4030),inner=lam(0xf0c8a8);
+  // body: stacked tapered rings forming a readable spiral shell silhouette
+  for(let i=0;i<10;i++){
+    const t=i/9,ang=-t*2.4,r=3.6-t*2.4,y=1.1+t*5.2,z=-1.2-t*3.4;
+    const ring=mesh(SPH,shell,Math.sin(ang)*0.6,y,z,r*1.15,r*0.72,r*1.05);
+    g.add(ring);
+    if(i%2===0)g.add(mesh(SPH,rib,Math.sin(ang)*0.6,y+0.15,z-0.1,r*1.22,r*0.35,r*1.12));
+  }
+  // mouth / aperture facing north (+z) toward the Trench approach
+  g.add(mesh(SPH,lip,0,2.4,4.2,4.2,3.2,2.4));
+  g.add(mesh(SPH,inner,0,2.2,3.4,3.2,2.4,2.0));
+  g.add(mesh(BOXG,dark,0,2.3,5.0,5.2,4.2,0.35));
+  // closed door visual (dark plate) + matching collision proxy
+  const doorVis=mesh(BOXG,dark,0,2.2,5.25,4.6,3.8,0.45);g.add(doorVis);CONCH.doorVis=doorVis;
+  const openMouth=mesh(BOXG,new THREE.MeshBasicMaterial({color:0xffe6c0,transparent:true,opacity:0.35,depthWrite:false}),0,2.2,5.15,4.2,3.4,0.2);
+  openMouth.visible=false;g.add(openMouth);CONCH.openMouth=openMouth;
+  const doorSolid=addSolid(cx,0.2,cz+5.25,4.8,4.2,0.7,0x6a4030,{surf:'stone'});doorSolid.mesh.visible=false;CONCH.doorSolid=doorSolid;
+  // major shell collision proxies (not every decorative ridge)
+  addSolid(cx-4.2,0,cz-1.5,2.4,7.5,8.5,0xd9a07a,{surf:'stone'}).mesh.visible=false;
+  addSolid(cx+4.2,0,cz-1.5,2.4,7.5,8.5,0xd9a07a,{surf:'stone'}).mesh.visible=false;
+  addSolid(cx,0,cz-5.6,8.5,8.5,2.4,0xd9a07a,{surf:'stone'}).mesh.visible=false;
+  addSolid(cx,6.8,cz-1.2,7.5,2.2,9.5,0xd9a07a,{surf:'stone'}).mesh.visible=false;
+  // interior floor strip so the player can rest after swimming in
+  addSolid(cx,0,cz+1.2,3.6,0.35,6.5,0xe8b890,{surf:'stone'});
+  // spiral lights (dim when closed, bright when open)
+  for(let i=0;i<8;i++){
+    const t=i/7,y=1.4+t*4.8,z=3.2-t*7.5;
+    const m=new THREE.Mesh(SPH,new THREE.MeshBasicMaterial({color:0xffe39a,transparent:true,opacity:0.08,depthWrite:false}));
+    m.position.set((i%2?0.5:-0.5),y,z);m.scale.setScalar(0.35+t*0.15);g.add(m);
+    CONCH.spiralLights.push({m,ph:i*0.7});
+  }
+  const shellGlow=new THREE.Mesh(new THREE.SphereGeometry(1,10,8),new THREE.MeshBasicMaterial({color:0xffd28a,transparent:true,opacity:0.04,depthWrite:false}));
+  shellGlow.position.set(0,3.5,-1);shellGlow.scale.set(5.5,4.2,6.2);g.add(shellGlow);CONCH.shellGlow=shellGlow;
+  const interiorGlow=new THREE.Mesh(new THREE.SphereGeometry(1,8,6),new THREE.MeshBasicMaterial({color:0xfff0c8,transparent:true,opacity:0.02,depthWrite:false}));
+  interiorGlow.position.set(0,2.4,1.5);interiorGlow.scale.set(2.8,2.2,3.4);g.add(interiorGlow);CONCH.interiorGlow=interiorGlow;
+  // finish trigger deep enough inside that brushing the doorway does not win
+  CONCH.trigger={x:cx,y:2.0,z:cz-0.4,hx:1.8,hy:2.2,hz:1.6};
+  CONCH.interior={x0:cx-2.4,x1:cx+2.4,z0:cz-4.2,z1:cz+4.8,yMax:6.5};
+  // Level-2-owned rainbow (surface-brightening cue); not the Level 1 windmill rainbow
+  const rainbow=buildRainbow(cx,cz);
+  rainbow.position.set(cx,18,cz);rainbow.scale.setScalar(0.18);rainbow.visible=false;CONCH.rainbow=rainbow;
+  CONCH.g=g;
+  registerFinish({
+    x:cx,z:cz,top:10,
+    onAllAwake(){openConch();},
+    onWin(){AU.layers=Math.max(AU.layers,4);if(CONCH.rainbow)CONCH.rainbow.visible=true;},
+    update(dt,winT){updateConch(dt,winT);}
+  });
+  return CONCH;
+}
+window.__CONCH=()=>CONCH;
+window.__inConchInterior=inConchInterior;
 window.__TEST={
   addClam:(x,y,z,r)=>{addClam(x,y,z,r);return clams[clams.length-1];},
   addShark:(x,y,z,n)=>{addShark(x,y,z,n);return sharks[sharks.length-1];},
@@ -1794,22 +1913,24 @@ updatePickerUI();
 // ===== src/game.js =====
 let time=0,rescued=0,gotNotes=0;
 let started=false;
-window.__W={solids,gloops,goos,hearts,crates,powers,fires,checks,snoozles,notes,dust,puddles,sharks,fish,spikefish,clams,bubbleShots,kelps,celebrationParticles:PART,get underwaterGroup(){return underwaterGroup;},get won(){return won;},get WM(){return WM;},get RAINBOW(){return RAINBOW;},get FINISH(){return FINISH;},get sfx(){return SFX;},get wreck(){return WRECK;}};
+window.__W={solids,gloops,goos,hearts,crates,powers,fires,checks,snoozles,notes,dust,puddles,sharks,fish,spikefish,clams,bubbleShots,kelps,celebrationParticles:PART,get underwaterGroup(){return underwaterGroup;},get won(){return won;},get WM(){return WM;},get RAINBOW(){return RAINBOW;},get FINISH(){return FINISH;},get sfx(){return SFX;},get wreck(){return WRECK;},get conch(){return CONCH;}};
 window.__started=()=>started;
 
 // ---------- camera ----------
 const CAM=window.__CAM={yaw:0,pitch:0.42,dist:8.5,pos:new THREE.Vector3(0,5,19),look:new THREE.Vector3(0,1,10),shake:0,fovKick:0,lastManual:-9};
 function updateCamera(dt){
   const inWreck=window.__inWreckInterior&&window.__inWreckInterior();
-  const pitchMin=inWreck?0.22:0.08;
+  const inConch=window.__inConchInterior&&window.__inConchInterior();
+  const tight=inWreck||inConch;
+  const pitchMin=tight?0.22:0.08;
   if(Math.abs(IN.camDX)>1e-4||Math.abs(IN.camDY)>1e-4){CAM.yaw+=IN.camDX;CAM.pitch=clamp(CAM.pitch+IN.camDY,pitchMin,1.05);CAM.lastManual=time;}
   const sp=Math.hypot(P.vel.x,P.vel.z);
   if(sp>2&&time-CAM.lastManual>1.2){const mvx=P.vel.x/sp,mvz=P.vel.z/sp;const fx=-Math.sin(CAM.yaw),fz=-Math.cos(CAM.yaw);const d=mvx*fx+mvz*fz;if(d>-0.3)CAM.yaw=angDamp(CAM.yaw,Math.atan2(-mvx,-mvz),1.2*(0.5+d*0.5),dt);}
-  const tx=P.pos.x,ty=P.pos.y+(inWreck?1.35:1.1),tz=P.pos.z;
+  const tx=P.pos.x,ty=P.pos.y+(tight?1.35:1.1),tz=P.pos.z;
   const cp=Math.cos(CAM.pitch),spp=Math.sin(CAM.pitch);
-  const dist=inWreck?10.8:8.5;
+  const dist=inConch?9.2:(inWreck?10.8:8.5);
   const dx=Math.sin(CAM.yaw)*cp*dist,dy=spp*dist,dz=Math.cos(CAM.yaw)*cp*dist;
-  let k=1;for(let i=1;i<=8;i++){const f=i/8;if(insideSolid(tx+dx*f,ty+dy*f,tz+dz*f,inWreck?0.2:0.35)){k=(i-1)/8;break;}}k=Math.max(k,inWreck?0.45:0.25);
+  let k=1;for(let i=1;i<=8;i++){const f=i/8;if(insideSolid(tx+dx*f,ty+dy*f,tz+dz*f,tight?0.2:0.35)){k=(i-1)/8;break;}}k=Math.max(k,tight?0.45:0.25);
   const wx=tx+dx*k,wz=tz+dz*k,wy=Math.max(ty+dy*k,groundHeightAt(wx,wz)+0.6);
   CAM.pos.x=damp(CAM.pos.x,wx,10,dt);CAM.pos.y=damp(CAM.pos.y,wy,10,dt);CAM.pos.z=damp(CAM.pos.z,wz,10,dt);
   CAM.look.x=damp(CAM.look.x,tx,14,dt);CAM.look.y=damp(CAM.look.y,ty,10,dt);CAM.look.z=damp(CAM.look.z,tz,14,dt);

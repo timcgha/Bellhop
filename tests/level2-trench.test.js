@@ -60,7 +60,7 @@ const SHARK_AGGRO=7;
   let stuck=[];
   for(const L of legs){H.P.inv=999;if(!canStand(H,L[0],L[1],55))stuck.push(L.join(','));}
   ok(stuck.length===0,'main Trench route samples are traversable ('+(stuck.join(' | ')||'all clear')+')');
-  ok(canStand(H,0,CONCH_STAGING_Z,55),'route reaches the future Conch staging space');
+  ok(canStand(H,0,-280,55),'route reaches the Conch approach');
 }
 
 // ---- physics frozen ----
@@ -186,12 +186,12 @@ const SHARK_AGGRO=7;
   ok(Math.abs(H.P.pos.y-c.y)<2,'respawn height is recoverable on the Trench platform');
 }
 
-// ---- unfinished finish still at future Conch staging ----
+// ---- Conch FINISH still does not win from the trench approach ----
 {
   const H=boot();startL2(H);
-  ok(H.W.FINISH&&H.W.FINISH.z===CONCH_STAGING_Z,'temporary FINISH anchors at the future Conch staging');
-  H.P.pos.set(0,1,CONCH_STAGING_Z);H.P.vel.set(0,0,0);H.frames(60);
-  ok(!H.W.won,'reaching the future Conch staging does not win Level 2');
+  ok(H.W.FINISH&&H.W.FINISH.z===-288,'Level 2 FINISH anchors at the Conch');
+  H.P.pos.set(0,1,-283);H.P.vel.set(0,0,0);H.frames(60);
+  ok(!H.W.won,'reaching the Conch approach does not win Level 2');
 }
 
 report();

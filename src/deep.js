@@ -273,7 +273,7 @@ function beginLandLevel(){if(landGround)landGround.visible=true;if(underwaterGro
 function beginUnderwaterLevel(L){
   if(landGround)landGround.visible=false;
   scene.background=new THREE.Color(0x4ab8d8);scene.fog=new THREE.Fog(0x52b8d4,20,92);
-  decorKelps.length=0;suspendMotes.length=0;biolumGlows.length=0;
+  decorKelps.length=0;suspendMotes.length=0;biolumGlows.length=0;CONCH=null;
   if(!underwaterGroup){underwaterGroup=new THREE.Group();scene.add(underwaterGroup);}
   underwaterGroup.visible=true;while(underwaterGroup.children.length)underwaterGroup.remove(underwaterGroup.children[0]);
   for(let i=0;i<5;i++){const c=SANDC[i%SANDC.length];const px=rand(-55,55),pz=rand(-105,18);
@@ -584,6 +584,104 @@ function buildWreck(cx,cz){
 window.__WRECK=()=>WRECK;
 window.__WRECK_RECOVERY_MAX=()=>WRECK_RECOVERY_MAX;
 window.__inWreckInterior=inWreckInterior;
+
+let CONCH=null;
+function inConchInterior(){
+  if(!CONCH||!CONCH.interior)return false;
+  const b=CONCH.interior,p=P.pos;
+  return p.x>b.x0&&p.x<b.x1&&p.y<b.yMax&&p.z>b.z0&&p.z<b.z1;
+}
+function playerInConchTrigger(){
+  if(!CONCH||!CONCH.trigger)return false;
+  const t=CONCH.trigger,p=P.pos;
+  return Math.abs(p.x-t.x)<t.hx&&Math.abs(p.y-t.y)<t.hy&&Math.abs(p.z-t.z)<t.hz;
+}
+function setConchDoorOpen(open){
+  if(!CONCH||!CONCH.doorSolid)return;
+  const i=solids.indexOf(CONCH.doorSolid);
+  if(open){if(i>=0)solids.splice(i,1);CONCH.doorSolid.mesh.visible=false;if(CONCH.doorVis)CONCH.doorVis.visible=false;if(CONCH.openMouth)CONCH.openMouth.visible=true;}
+  else{if(i<0)solids.push(CONCH.doorSolid);CONCH.doorSolid.mesh.visible=false;if(CONCH.doorVis)CONCH.doorVis.visible=true;if(CONCH.openMouth)CONCH.openMouth.visible=false;}
+}
+function openConch(){
+  if(!CONCH||CONCH.open)return;
+  CONCH.open=true;CONCH.openT=0;
+  setConchDoorOpen(true);
+  SFX.conchOpen();
+  CAM.fovKick=Math.max(CAM.fovKick,5);CAM.shake=Math.max(CAM.shake,0.25);
+  spawnRing(CONCH.doorX,CONCH.doorY,CONCH.doorZ,0xffe9b0,0.45,6,0.55);
+  for(let i=0;i<18;i++)spawnP(CONCH.doorX+rand(-1,1),CONCH.doorY+rand(0,2),CONCH.doorZ+rand(-0.5,0.5),rand(-2,2),rand(1,4),rand(-2,2),0.08,Math.random()<0.5?0xffe36b:0xc8f0ff,0.7,0.3,-4,1);
+  showToast('The Conch opened!');
+}
+function updateConch(dt,winT){
+  if(!CONCH)return;
+  if(CONCH.open)CONCH.openT+=dt;
+  const glow=CONCH.open?(0.22+Math.min(CONCH.openT,1)*0.35):(0.06+Math.sin(time*0.8)*0.02);
+  if(CONCH.spiralLights)for(const L of CONCH.spiralLights){L.m.material.opacity=glow*(0.55+0.45*Math.sin(time*1.6+L.ph));}
+  if(CONCH.shellGlow)CONCH.shellGlow.material.opacity=CONCH.open?(0.12+Math.min(CONCH.openT,1)*0.18):(0.03+Math.sin(time*0.6)*0.015);
+  if(CONCH.interiorGlow)CONCH.interiorGlow.material.opacity=CONCH.open?(0.1+Math.min(CONCH.openT,1)*0.25):0.02;
+  if(winT>=0){
+    if(CONCH.rainbow){const k=smooth(Math.min(winT/1.3,1));CONCH.rainbow.visible=true;CONCH.rainbow.scale.setScalar(0.2+k*1.1);
+      CONCH.rainbow.children.forEach(r=>{r.material.opacity=0.85*k;});}
+    if(CONCH.spiralLights)for(const L of CONCH.spiralLights){L.m.material.opacity=0.55+Math.sin(time*4+L.ph)*0.25;}
+    if(CONCH.shellGlow)CONCH.shellGlow.material.opacity=0.35+Math.sin(time*3)*0.08;
+    if(CONCH.interiorGlow)CONCH.interiorGlow.material.opacity=0.4+Math.sin(time*2.4)*0.1;
+  }else if(CONCH.open&&!won&&playerInConchTrigger())triggerWin();
+}
+function buildConch(cx,cz){
+  CONCH={cx,cz,open:false,openT:0,spiralLights:[],doorX:cx,doorY:2.2,doorZ:cz+5.2};
+  const g=new THREE.Group();g.position.set(cx,0,cz);scene.add(g);
+  const shell=lam(0xd9a07a),rib=lam(0xc4865c),lip=lam(0xe8b890),dark=lam(0x6a4030),inner=lam(0xf0c8a8);
+  // body: stacked tapered rings forming a readable spiral shell silhouette
+  for(let i=0;i<10;i++){
+    const t=i/9,ang=-t*2.4,r=3.6-t*2.4,y=1.1+t*5.2,z=-1.2-t*3.4;
+    const ring=mesh(SPH,shell,Math.sin(ang)*0.6,y,z,r*1.15,r*0.72,r*1.05);
+    g.add(ring);
+    if(i%2===0)g.add(mesh(SPH,rib,Math.sin(ang)*0.6,y+0.15,z-0.1,r*1.22,r*0.35,r*1.12));
+  }
+  // mouth / aperture facing north (+z) toward the Trench approach
+  g.add(mesh(SPH,lip,0,2.4,4.2,4.2,3.2,2.4));
+  g.add(mesh(SPH,inner,0,2.2,3.4,3.2,2.4,2.0));
+  g.add(mesh(BOXG,dark,0,2.3,5.0,5.2,4.2,0.35));
+  // closed door visual (dark plate) + matching collision proxy
+  const doorVis=mesh(BOXG,dark,0,2.2,5.25,4.6,3.8,0.45);g.add(doorVis);CONCH.doorVis=doorVis;
+  const openMouth=mesh(BOXG,new THREE.MeshBasicMaterial({color:0xffe6c0,transparent:true,opacity:0.35,depthWrite:false}),0,2.2,5.15,4.2,3.4,0.2);
+  openMouth.visible=false;g.add(openMouth);CONCH.openMouth=openMouth;
+  const doorSolid=addSolid(cx,0.2,cz+5.25,4.8,4.2,0.7,0x6a4030,{surf:'stone'});doorSolid.mesh.visible=false;CONCH.doorSolid=doorSolid;
+  // major shell collision proxies (not every decorative ridge)
+  addSolid(cx-4.2,0,cz-1.5,2.4,7.5,8.5,0xd9a07a,{surf:'stone'}).mesh.visible=false;
+  addSolid(cx+4.2,0,cz-1.5,2.4,7.5,8.5,0xd9a07a,{surf:'stone'}).mesh.visible=false;
+  addSolid(cx,0,cz-5.6,8.5,8.5,2.4,0xd9a07a,{surf:'stone'}).mesh.visible=false;
+  addSolid(cx,6.8,cz-1.2,7.5,2.2,9.5,0xd9a07a,{surf:'stone'}).mesh.visible=false;
+  // interior floor strip so the player can rest after swimming in
+  addSolid(cx,0,cz+1.2,3.6,0.35,6.5,0xe8b890,{surf:'stone'});
+  // spiral lights (dim when closed, bright when open)
+  for(let i=0;i<8;i++){
+    const t=i/7,y=1.4+t*4.8,z=3.2-t*7.5;
+    const m=new THREE.Mesh(SPH,new THREE.MeshBasicMaterial({color:0xffe39a,transparent:true,opacity:0.08,depthWrite:false}));
+    m.position.set((i%2?0.5:-0.5),y,z);m.scale.setScalar(0.35+t*0.15);g.add(m);
+    CONCH.spiralLights.push({m,ph:i*0.7});
+  }
+  const shellGlow=new THREE.Mesh(new THREE.SphereGeometry(1,10,8),new THREE.MeshBasicMaterial({color:0xffd28a,transparent:true,opacity:0.04,depthWrite:false}));
+  shellGlow.position.set(0,3.5,-1);shellGlow.scale.set(5.5,4.2,6.2);g.add(shellGlow);CONCH.shellGlow=shellGlow;
+  const interiorGlow=new THREE.Mesh(new THREE.SphereGeometry(1,8,6),new THREE.MeshBasicMaterial({color:0xfff0c8,transparent:true,opacity:0.02,depthWrite:false}));
+  interiorGlow.position.set(0,2.4,1.5);interiorGlow.scale.set(2.8,2.2,3.4);g.add(interiorGlow);CONCH.interiorGlow=interiorGlow;
+  // finish trigger deep enough inside that brushing the doorway does not win
+  CONCH.trigger={x:cx,y:2.0,z:cz-0.4,hx:1.8,hy:2.2,hz:1.6};
+  CONCH.interior={x0:cx-2.4,x1:cx+2.4,z0:cz-4.2,z1:cz+4.8,yMax:6.5};
+  // Level-2-owned rainbow (surface-brightening cue); not the Level 1 windmill rainbow
+  const rainbow=buildRainbow(cx,cz);
+  rainbow.position.set(cx,18,cz);rainbow.scale.setScalar(0.18);rainbow.visible=false;CONCH.rainbow=rainbow;
+  CONCH.g=g;
+  registerFinish({
+    x:cx,z:cz,top:10,
+    onAllAwake(){openConch();},
+    onWin(){AU.layers=Math.max(AU.layers,4);if(CONCH.rainbow)CONCH.rainbow.visible=true;},
+    update(dt,winT){updateConch(dt,winT);}
+  });
+  return CONCH;
+}
+window.__CONCH=()=>CONCH;
+window.__inConchInterior=inConchInterior;
 window.__TEST={
   addClam:(x,y,z,r)=>{addClam(x,y,z,r);return clams[clams.length-1];},
   addShark:(x,y,z,n)=>{addShark(x,y,z,n);return sharks[sharks.length-1];},
