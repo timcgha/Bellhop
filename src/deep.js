@@ -362,25 +362,32 @@ function inWreckInterior(){
 }
 function updateWreckVisuals(){
   if(!WRECK||!WRECK.shaftLights)return;
-  for(const l of WRECK.shaftLights){l.m.material.opacity=0.055+Math.sin(time*0.75+l.ph)*0.035;}
+  for(const l of WRECK.shaftLights){l.m.material.opacity=0.11+Math.sin(time*0.75+l.ph)*0.05;}
   if(WRECK.shaftBubbles)for(const b of WRECK.shaftBubbles){
     b.m.position.y=((b.y0+time*b.sp*0.9+b.ph*0.5)%13)+0.8;
     b.m.position.x=b.x0+Math.sin(time*0.6+b.ph)*0.12;
   }
-  if(WRECK.openGlow){WRECK.openGlow.material.opacity=0.05+Math.sin(time*0.5)*0.02;}
+  if(WRECK.openGlow){WRECK.openGlow.material.opacity=0.1+Math.sin(time*0.5)*0.035;}
+  if(WRECK.entryGlow){WRECK.entryGlow.material.opacity=0.09+Math.sin(time*0.65)*0.03;}
 }
 function buildWreckShaftVisuals(g){
   WRECK.shaftLights=[];WRECK.shaftBubbles=[];
-  // [deck height, local z of that deck's climb hole] — light + broken frame under each opening
+  // [deck height, local z of that deck's climb hole] — brighter shafts + thin hole rims for phone read
+  const rim=lam(0xc8a878);
   [[2.8,6],[5.6,2.5],[8.4,0],[11.2,-2.5]].forEach(([dy,hz],i)=>{
-    const beam=new THREE.Mesh(new THREE.PlaneGeometry(3.2,4.2),new THREE.MeshBasicMaterial({color:0xffffff,transparent:true,opacity:0.08,depthWrite:false}));
+    const beam=new THREE.Mesh(new THREE.PlaneGeometry(3.6,4.6),new THREE.MeshBasicMaterial({color:0xe8f8ff,transparent:true,opacity:0.12,depthWrite:false}));
     beam.position.set(0,dy+1.4,hz);beam.rotation.x=-0.12;g.add(beam);
     WRECK.shaftLights.push({m:beam,ph:i*1.1});
-    const fr=mesh(BOXG,lam(0x4a3520),-2.1,dy+0.5,hz,0.12,2.0,0.12);fr.rotation.z=0.32;g.add(fr);
-    const fl=mesh(BOXG,lam(0x4a3520),2.1,dy+0.5,hz,0.12,2.0,0.12);fl.rotation.z=-0.32;g.add(fl);
+    // light rim around the climb hole so the next deck reads as an opening, not a dark slab
+    g.add(mesh(BOXG,rim,0,dy+0.55,hz,3.4,0.08,3.4));
+    const fr=mesh(BOXG,lam(0x6a5030),-2.35,dy+0.55,hz,0.1,1.6,0.1);fr.rotation.z=0.28;g.add(fr);
+    const fl=mesh(BOXG,lam(0x6a5030),2.35,dy+0.55,hz,0.1,1.6,0.1);fl.rotation.z=-0.28;g.add(fl);
   });
-  const glow=new THREE.Mesh(new THREE.PlaneGeometry(4.5,3),new THREE.MeshBasicMaterial({color:0xc8f0ff,transparent:true,opacity:0.06,depthWrite:false}));
+  const glow=new THREE.Mesh(new THREE.PlaneGeometry(5.2,3.6),new THREE.MeshBasicMaterial({color:0xc8f0ff,transparent:true,opacity:0.1,depthWrite:false}));
   glow.position.set(0,15.5,-4);g.add(glow);WRECK.openGlow=glow;
+  // keel entrance wash — reads the way in from open water
+  const entry=new THREE.Mesh(new THREE.PlaneGeometry(5.5,3.8),new THREE.MeshBasicMaterial({color:0xb8e8ff,transparent:true,opacity:0.09,depthWrite:false}));
+  entry.position.set(0,2.2,WRECK_HALF_L-0.2);g.add(entry);WRECK.entryGlow=entry;
   for(let i=0;i<10;i++){
     const m=new THREE.Mesh(new THREE.SphereGeometry(1,5,4),new THREE.MeshBasicMaterial({color:0xd8f8ff,transparent:true,opacity:0.18,depthWrite:false}));
     const x0=rand(-1,1),y0=rand(0.8,11);m.position.set(x0,y0,rand(-2.5,6));m.scale.setScalar(rand(0.04,0.09));g.add(m);
@@ -527,43 +534,51 @@ const WRECK_WALL_H=13,WRECK_HALF_W=7.8,WRECK_HALF_L=10.4,WRECK_GAP_HALF=3,WRECK_
 function buildWreck(cx,cz){
   initWreck(cx,cz);
   const g=new THREE.Group();g.position.set(cx,0,cz);scene.add(g);
-  const wood=lam(0x6b4a2a),dark=lam(0x4a3520),rust=lam(0x8a5a3a),hull=lam(0x5a3820);
+  const wood=lam(0x8a6a48),dark=lam(0x5a4030),rust=lam(0x8a5a3a),hull=lam(0x6a4830),liner=lam(0x9a7858);
   const HW=WRECK_HALF_W,HL=WRECK_HALF_L,GH=WRECK_GAP_HALF,GY=WRECK_GAP_H,WH=WRECK_WALL_H;
-  // --- collision hull shell (world coords) ---
-  addSolid(cx-HW,0,cz,0.8,WH,HL*2,0x5a3820,{surf:'stone'});
-  addSolid(cx+HW,0,cz,0.8,WH,HL*2,0x5a3820,{surf:'stone'});
-  addSolid(cx,0,cz-HL,HW*2+0.8,WH,0.8,0x4a3520,{surf:'stone'});
+  // --- collision hull shell (world coords); hide bulky default boxes and dress thin liners ---
+  // Liners sit on the inner collision face so what you see is what stops you.
+  const west=addSolid(cx-HW,0,cz,0.8,WH,HL*2,0x5a3820,{surf:'stone'});west.mesh.visible=false;
+  const east=addSolid(cx+HW,0,cz,0.8,WH,HL*2,0x5a3820,{surf:'stone'});east.mesh.visible=false;
+  const stern=addSolid(cx,0,cz-HL,HW*2+0.8,WH,0.8,0x4a3520,{surf:'stone'});stern.mesh.visible=false;
   const sideW=HW+0.4-GH;
-  addSolid(cx-GH-sideW/2,0,cz+HL,sideW,WH,0.8,0x5a3820,{surf:'stone'});
-  addSolid(cx+GH+sideW/2,0,cz+HL,sideW,WH,0.8,0x5a3820,{surf:'stone'});
-  addSolid(cx,GY,cz+HL,GH*2,WH-GY,0.8,0x4a3520,{surf:'stone'});
-  // --- exterior dressing: tilted plating, ribs, jagged broken top ---
+  const bowL=addSolid(cx-GH-sideW/2,0,cz+HL,sideW,WH,0.8,0x5a3820,{surf:'stone'});bowL.mesh.visible=false;
+  const bowR=addSolid(cx+GH+sideW/2,0,cz+HL,sideW,WH,0.8,0x5a3820,{surf:'stone'});bowR.mesh.visible=false;
+  const bowTop=addSolid(cx,GY,cz+HL,GH*2,WH-GY,0.8,0x4a3520,{surf:'stone'});bowTop.mesh.visible=false;
+  g.add(mesh(BOXG,liner,-(HW-0.4-0.12),WH*0.5,0,0.24,WH,HL*2-0.6));
+  g.add(mesh(BOXG,liner,HW-0.4-0.12,WH*0.5,0,0.24,WH,HL*2-0.6));
+  g.add(mesh(BOXG,liner,0,WH*0.5,-(HL-0.4-0.12),HW*2-0.6,WH,0.24));
+  g.add(mesh(BOXG,liner,-(GH+sideW/2),WH*0.5,HL-0.4-0.12,sideW-0.2,WH,0.24));
+  g.add(mesh(BOXG,liner,GH+sideW/2,WH*0.5,HL-0.4-0.12,sideW-0.2,WH,0.24));
+  g.add(mesh(BOXG,liner,0,GY+(WH-GY)*0.5,HL-0.4-0.12,GH*2-0.2,WH-GY,0.24));
+  // --- exterior dressing: plating pulled outward so interiors read open ---
   for(const s of[-1,1]){
-    const p1=mesh(BOXG,hull,s*(HW+0.55),5.2,-3.5,0.35,10,12);p1.rotation.z=s*0.09;g.add(p1);
-    const p2=mesh(BOXG,dark,s*(HW+0.5),4.6,5.5,0.35,8.5,7.5);p2.rotation.z=s*0.12;g.add(p2);
+    const p1=mesh(BOXG,hull,s*(HW+0.95),5.2,-3.5,0.28,10,12);p1.rotation.z=s*0.07;g.add(p1);
+    const p2=mesh(BOXG,dark,s*(HW+0.9),4.6,5.5,0.28,8.5,7.5);p2.rotation.z=s*0.1;g.add(p2);
     for(let i=0;i<6;i++){const rz=-8.5+i*3.4;
-      g.add(mesh(BOXG,rust,s*(HW+0.75),1.6+rand(0,0.5),rz,0.16,3.4+rand(0,1.2),0.16));}
+      g.add(mesh(BOXG,rust,s*(HW+1.1),1.6+rand(0,0.5),rz,0.14,3.4+rand(0,1.2),0.14));}
     for(let i=0;i<5;i++){const tz=-8+i*4+rand(-0.8,0.8);
-      g.add(mesh(BOXG,hull,s*HW,WH+rand(0.3,1.1),tz,0.7,rand(0.6,2.2),rand(1.4,3.2)));}
+      g.add(mesh(BOXG,hull,s*(HW+0.2),WH+rand(0.3,1.1),tz,0.55,rand(0.6,2.2),rand(1.4,3.2)));}
   }
-  for(let i=0;i<4;i++)g.add(mesh(BOXG,dark,-6+i*4+rand(-0.5,0.5),WH+rand(0.3,0.9),-HL,rand(1.2,2.6),rand(0.5,1.8),0.7));
+  for(let i=0;i<4;i++)g.add(mesh(BOXG,dark,-6+i*4+rand(-0.5,0.5),WH+rand(0.3,0.9),-HL-0.35,rand(1.2,2.6),rand(0.5,1.8),0.55));
   // raised stern castle silhouette above the stern wall
   g.add(mesh(BOXG,hull,0,WH+0.9,-HL+1.2,10,1.8,2.8));
   g.add(mesh(BOXG,dark,0,WH+2,-HL+1,6,0.9,2.2));
   // --- tapered bow forward of the entrance wall ---
   for(const s of[-1,1]){
-    const plate=mesh(BOXG,hull,s*4,7.5,HL+1.9,8.6,6.5,0.4);plate.rotation.y=-s*0.49;g.add(plate);
-    const rail=mesh(BOXG,dark,s*3.9,11,HL+2,8.8,0.35,0.5);rail.rotation.y=-s*0.49;g.add(rail);
+    const plate=mesh(BOXG,hull,s*4.4,7.5,HL+2.2,8.6,6.5,0.35);plate.rotation.y=-s*0.49;g.add(plate);
+    const rail=mesh(BOXG,dark,s*4.3,11,HL+2.3,8.8,0.35,0.45);rail.rotation.y=-s*0.49;g.add(rail);
   }
-  const stem=mesh(BOXG,dark,0,8.6,HL+4.1,0.5,7,0.7);stem.rotation.x=-0.18;g.add(stem);
-  const sprit=mesh(CYL,rust,0,12.6,HL+5.2,0.16,4.5,0.16);sprit.rotation.x=1.1;g.add(sprit);
-  // broken interior beams (visual only, kept clear of the climb holes)
-  for(let i=0;i<4;i++){const by=1.4+i*2.4,bh=mesh(BOXG,wood,0,by,-6.5+i*0.4,10.5,0.16,0.16);
-    bh.rotation.x=0.1+i*0.03;bh.rotation.z=0.06;g.add(bh);}
+  const stem=mesh(BOXG,dark,0,8.6,HL+4.4,0.5,7,0.65);stem.rotation.x=-0.18;g.add(stem);
+  const sprit=mesh(CYL,rust,0,12.6,HL+5.5,0.16,4.5,0.16);sprit.rotation.x=1.1;g.add(sprit);
+  // broken interior beams — side stubs only, clear of the climb shaft
+  for(let i=0;i<4;i++){const by=1.4+i*2.4;
+    for(const s of[-1,1]){const bh=mesh(BOXG,wood,s*4.3,by,-5.8+i*0.7,2.8,0.14,0.14);
+      bh.rotation.z=s*0.07;g.add(bh);}}
   // mast leaning over the ship, leading the eye up to the crow's nest
-  const mast=mesh(CYL,rust,3.5,8.5,-4.5,0.38,17,0.38);mast.rotation.z=0.3;g.add(mast);
-  g.add(mesh(BOXG,rust,3.5,15,-4.5,5,0.18,0.22));
-  g.add(mesh(BOXG,rust,3.5,11.5,-4.5,0.18,0.14,2.8));
+  const mast=mesh(CYL,rust,3.8,8.5,-4.5,0.34,17,0.34);mast.rotation.z=0.3;g.add(mast);
+  g.add(mesh(BOXG,rust,3.8,15,-4.5,5,0.18,0.22));
+  g.add(mesh(BOXG,rust,3.8,11.5,-4.5,0.18,0.14,2.8));
   // crow's-nest railing around the top collision deck (deck itself is a wreckDeck step)
   const nest=new THREE.Group();nest.position.set(0,14.5,-6);
   for(const sx of[-1,1])for(const sz of[-1,1])
@@ -592,15 +607,17 @@ function inConchInterior(){
   return p.x>b.x0&&p.x<b.x1&&p.y<b.yMax&&p.z>b.z0&&p.z<b.z1;
 }
 function playerInConchTrigger(){
-  if(!CONCH||!CONCH.trigger)return false;
+  if(!CONCH||!CONCH.trigger||!CONCH.open)return false;
   const t=CONCH.trigger,p=P.pos;
+  // Must clear the doorway plane first — brushing the open mouth never wins.
+  if(p.z>CONCH.doorZ-1.4)return false;
   return Math.abs(p.x-t.x)<t.hx&&Math.abs(p.y-t.y)<t.hy&&Math.abs(p.z-t.z)<t.hz;
 }
 function setConchDoorOpen(open){
   if(!CONCH||!CONCH.doorSolid)return;
   const i=solids.indexOf(CONCH.doorSolid);
-  if(open){if(i>=0)solids.splice(i,1);CONCH.doorSolid.mesh.visible=false;if(CONCH.doorVis)CONCH.doorVis.visible=false;if(CONCH.openMouth)CONCH.openMouth.visible=true;}
-  else{if(i<0)solids.push(CONCH.doorSolid);CONCH.doorSolid.mesh.visible=false;if(CONCH.doorVis)CONCH.doorVis.visible=true;if(CONCH.openMouth)CONCH.openMouth.visible=false;}
+  if(open){if(i>=0)solids.splice(i,1);CONCH.doorSolid.mesh.visible=false;if(CONCH.doorVis)CONCH.doorVis.visible=false;if(CONCH.openMouth)CONCH.openMouth.visible=true;if(CONCH.closedSeam)CONCH.closedSeam.visible=false;}
+  else{if(i<0)solids.push(CONCH.doorSolid);CONCH.doorSolid.mesh.visible=false;if(CONCH.doorVis)CONCH.doorVis.visible=true;if(CONCH.openMouth)CONCH.openMouth.visible=false;if(CONCH.closedSeam)CONCH.closedSeam.visible=true;}
 }
 function openConch(){
   if(!CONCH||CONCH.open)return;
@@ -618,7 +635,7 @@ function updateConch(dt,winT){
   const glow=CONCH.open?(0.22+Math.min(CONCH.openT,1)*0.35):(0.06+Math.sin(time*0.8)*0.02);
   if(CONCH.spiralLights)for(const L of CONCH.spiralLights){L.m.material.opacity=glow*(0.55+0.45*Math.sin(time*1.6+L.ph));}
   if(CONCH.shellGlow)CONCH.shellGlow.material.opacity=CONCH.open?(0.12+Math.min(CONCH.openT,1)*0.18):(0.03+Math.sin(time*0.6)*0.015);
-  if(CONCH.interiorGlow)CONCH.interiorGlow.material.opacity=CONCH.open?(0.1+Math.min(CONCH.openT,1)*0.25):0.02;
+  if(CONCH.interiorGlow)CONCH.interiorGlow.material.opacity=CONCH.open?(0.12+Math.min(CONCH.openT,1)*0.28):0.03;
   if(winT>=0){
     if(CONCH.rainbow){const k=smooth(Math.min(winT/1.3,1));CONCH.rainbow.visible=true;CONCH.rainbow.scale.setScalar(0.2+k*1.1);
       CONCH.rainbow.children.forEach(r=>{r.material.opacity=0.85*k;});}
@@ -627,48 +644,70 @@ function updateConch(dt,winT){
     if(CONCH.interiorGlow)CONCH.interiorGlow.material.opacity=0.4+Math.sin(time*2.4)*0.1;
   }else if(CONCH.open&&!won&&playerInConchTrigger())triggerWin();
 }
+function addConchShellSolid(x,y,z,w,h,d){
+  const s=addSolid(x,y,z,w,h,d,0xd9a07a,{surf:'stone'});s.mesh.visible=false;CONCH.shellSolids.push(s);return s;
+}
 function buildConch(cx,cz){
-  CONCH={cx,cz,open:false,openT:0,spiralLights:[],doorX:cx,doorY:2.2,doorZ:cz+5.2};
+  // Doorway aperture facing +z (north / trench approach). Collision and visuals share these sizes.
+  const DOOR_W=3.6,DOOR_H=3.5,DOOR_D=0.85,DOOR_Y=0.35,DOOR_Z=5.15;
+  CONCH={cx,cz,open:false,openT:0,spiralLights:[],shellSolids:[],
+    doorX:cx,doorY:DOOR_Y+DOOR_H*0.5,doorZ:cz+DOOR_Z,
+    doorW:DOOR_W,doorH:DOOR_H};
   const g=new THREE.Group();g.position.set(cx,0,cz);scene.add(g);
-  const shell=lam(0xd9a07a),rib=lam(0xc4865c),lip=lam(0xe8b890),dark=lam(0x6a4030),inner=lam(0xf0c8a8);
-  // body: stacked tapered rings forming a readable spiral shell silhouette
+  const shell=lam(0xd9a07a),rib=lam(0xc4865c),lip=lam(0xe8b890),dark=lam(0x5a3020),inner=lam(0xf0c8a8);
+  // body: stacked tapered rings (decorative ridges — not individually collidable)
   for(let i=0;i<10;i++){
     const t=i/9,ang=-t*2.4,r=3.6-t*2.4,y=1.1+t*5.2,z=-1.2-t*3.4;
     const ring=mesh(SPH,shell,Math.sin(ang)*0.6,y,z,r*1.15,r*0.72,r*1.05);
     g.add(ring);
     if(i%2===0)g.add(mesh(SPH,rib,Math.sin(ang)*0.6,y+0.15,z-0.1,r*1.22,r*0.35,r*1.12));
   }
-  // mouth / aperture facing north (+z) toward the Trench approach
-  g.add(mesh(SPH,lip,0,2.4,4.2,4.2,3.2,2.4));
-  g.add(mesh(SPH,inner,0,2.2,3.4,3.2,2.4,2.0));
-  g.add(mesh(BOXG,dark,0,2.3,5.0,5.2,4.2,0.35));
-  // closed door visual (dark plate) + matching collision proxy
-  const doorVis=mesh(BOXG,dark,0,2.2,5.25,4.6,3.8,0.45);g.add(doorVis);CONCH.doorVis=doorVis;
-  const openMouth=mesh(BOXG,new THREE.MeshBasicMaterial({color:0xffe6c0,transparent:true,opacity:0.35,depthWrite:false}),0,2.2,5.15,4.2,3.4,0.2);
+  // mouth frame: always-solid looking rim around the intended doorway
+  g.add(mesh(SPH,lip,0,2.3,4.35,3.6,2.8,1.7));
+  g.add(mesh(SPH,inner,0,2.15,3.5,2.7,2.1,1.55));
+  // left / right / top mouth cheeks (visual + collision below) so the opening reads as a door
+  g.add(mesh(BOXG,lip,-(DOOR_W*0.5+0.85),2.2,DOOR_Z,1.5,4.2,1.1));
+  g.add(mesh(BOXG,lip,DOOR_W*0.5+0.85,2.2,DOOR_Z,1.5,4.2,1.1));
+  g.add(mesh(BOXG,lip,0,DOOR_Y+DOOR_H+0.55,DOOR_Z,DOOR_W+2.6,1.0,1.0));
+  // closed door plate — fills the aperture; hidden when open
+  const doorVis=mesh(BOXG,dark,0,DOOR_Y+DOOR_H*0.5,DOOR_Z,DOOR_W,DOOR_H,DOOR_D*0.7);
+  g.add(doorVis);CONCH.doorVis=doorVis;
+  const closedSeam=mesh(BOXG,lam(0x3a2010),0,DOOR_Y+DOOR_H*0.5,DOOR_Z+0.28,0.12,DOOR_H*0.92,0.08);
+  g.add(closedSeam);CONCH.closedSeam=closedSeam;
+  // open mouth glow — only visible when the doorway is passable
+  const openMouth=mesh(BOXG,new THREE.MeshBasicMaterial({color:0xfff2d0,transparent:true,opacity:0.5,depthWrite:false}),0,DOOR_Y+DOOR_H*0.5,DOOR_Z-0.05,DOOR_W*0.95,DOOR_H*0.92,0.2);
   openMouth.visible=false;g.add(openMouth);CONCH.openMouth=openMouth;
-  const doorSolid=addSolid(cx,0.2,cz+5.25,4.8,4.2,0.7,0x6a4030,{surf:'stone'});doorSolid.mesh.visible=false;CONCH.doorSolid=doorSolid;
-  // major shell collision proxies (not every decorative ridge)
-  addSolid(cx-4.2,0,cz-1.5,2.4,7.5,8.5,0xd9a07a,{surf:'stone'}).mesh.visible=false;
-  addSolid(cx+4.2,0,cz-1.5,2.4,7.5,8.5,0xd9a07a,{surf:'stone'}).mesh.visible=false;
-  addSolid(cx,0,cz-5.6,8.5,8.5,2.4,0xd9a07a,{surf:'stone'}).mesh.visible=false;
-  addSolid(cx,6.8,cz-1.2,7.5,2.2,9.5,0xd9a07a,{surf:'stone'}).mesh.visible=false;
-  // interior floor strip so the player can rest after swimming in
-  addSolid(cx,0,cz+1.2,3.6,0.35,6.5,0xe8b890,{surf:'stone'});
+  // --- collision proxies (simple boxes; ridges stay decorative) ---
+  // Removable front door — matches visible closed plate
+  const doorSolid=addSolid(cx,DOOR_Y,cz+DOOR_Z,DOOR_W,DOOR_H,DOOR_D,0x5a3020,{surf:'stone'});
+  doorSolid.mesh.visible=false;CONCH.doorSolid=doorSolid;
+  // Always-solid mouth flanks + lintel (remain after open)
+  addConchShellSolid(cx-(DOOR_W*0.5+0.95),0,cz+DOOR_Z,1.7,4.6,1.2);
+  addConchShellSolid(cx+(DOOR_W*0.5+0.95),0,cz+DOOR_Z,1.7,4.6,1.2);
+  addConchShellSolid(cx,DOOR_Y+DOOR_H,cz+DOOR_Z,DOOR_W+2.8,1.3,1.15);
+  // Side shell walls (cover the visible left/right spiral body)
+  addConchShellSolid(cx-4.3,0,cz-0.8,3.0,8.0,11.5);
+  addConchShellSolid(cx+4.3,0,cz-0.8,3.0,8.0,11.5);
+  // Rear / stern shell
+  addConchShellSolid(cx,0,cz-6.0,9.2,9.0,3.2);
+  // Upper shell cap
+  addConchShellSolid(cx,6.6,cz-1.0,8.0,2.4,10.5);
+  // Floor strip inside so the player can rest after swimming in
+  addSolid(cx,0,cz+0.6,3.4,0.35,7.2,0xe8b890,{surf:'stone'});
   // spiral lights (dim when closed, bright when open)
   for(let i=0;i<8;i++){
-    const t=i/7,y=1.4+t*4.8,z=3.2-t*7.5;
+    const t=i/7,y=1.4+t*4.8,z=3.0-t*7.5;
     const m=new THREE.Mesh(SPH,new THREE.MeshBasicMaterial({color:0xffe39a,transparent:true,opacity:0.08,depthWrite:false}));
     m.position.set((i%2?0.5:-0.5),y,z);m.scale.setScalar(0.35+t*0.15);g.add(m);
     CONCH.spiralLights.push({m,ph:i*0.7});
   }
   const shellGlow=new THREE.Mesh(new THREE.SphereGeometry(1,10,8),new THREE.MeshBasicMaterial({color:0xffd28a,transparent:true,opacity:0.04,depthWrite:false}));
   shellGlow.position.set(0,3.5,-1);shellGlow.scale.set(5.5,4.2,6.2);g.add(shellGlow);CONCH.shellGlow=shellGlow;
-  const interiorGlow=new THREE.Mesh(new THREE.SphereGeometry(1,8,6),new THREE.MeshBasicMaterial({color:0xfff0c8,transparent:true,opacity:0.02,depthWrite:false}));
-  interiorGlow.position.set(0,2.4,1.5);interiorGlow.scale.set(2.8,2.2,3.4);g.add(interiorGlow);CONCH.interiorGlow=interiorGlow;
-  // finish trigger deep enough inside that brushing the doorway does not win
-  CONCH.trigger={x:cx,y:2.0,z:cz-0.4,hx:1.8,hy:2.2,hz:1.6};
-  CONCH.interior={x0:cx-2.4,x1:cx+2.4,z0:cz-4.2,z1:cz+4.8,yMax:6.5};
-  // Level-2-owned rainbow (surface-brightening cue); not the Level 1 windmill rainbow
+  const interiorGlow=new THREE.Mesh(new THREE.SphereGeometry(1,8,6),new THREE.MeshBasicMaterial({color:0xfff0c8,transparent:true,opacity:0.04,depthWrite:false}));
+  interiorGlow.position.set(0,2.2,0.2);interiorGlow.scale.set(2.6,2.2,3.2);g.add(interiorGlow);CONCH.interiorGlow=interiorGlow;
+  // Finish trigger deep inside — past the doorway plane, not the mouth lip
+  CONCH.trigger={x:cx,y:2.0,z:cz-1.6,hx:1.5,hy:2.0,hz:1.35};
+  CONCH.interior={x0:cx-2.2,x1:cx+2.2,z0:cz-4.5,z1:cz+DOOR_Z-0.6,yMax:6.2};
   const rainbow=buildRainbow(cx,cz);
   rainbow.position.set(cx,18,cz);rainbow.scale.setScalar(0.18);rainbow.visible=false;CONCH.rainbow=rainbow;
   CONCH.g=g;

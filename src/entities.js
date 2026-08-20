@@ -183,6 +183,7 @@ function loadLevel(L){
   FINISH=null;
   if(L.physics)applyPhysics(L.physics);
   CURRENT_LEVEL=L;
+  setSong(L.music||'meadow');
   if(L.underwater)beginUnderwaterLevel(L);else beginLandLevel();
   if(L.spawn){P.spawn.x=L.spawn.x;P.spawn.y=L.spawn.y;P.spawn.z=L.spawn.z;P.pos.set(L.spawn.x,L.spawn.y,L.spawn.z);P.vel.set(0,0,0);}
   const fence=L.fence;

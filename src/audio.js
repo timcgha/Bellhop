@@ -1,8 +1,61 @@
-const AU={ctx:null,master:null,muted:false,noise:null,layers:0,step:0,next:0,bpm:112,win:false};
-const CHORDS=[[0,4,7],[-3,0,4],[-7,-3,0],[-5,-1,2]];
+const AU={ctx:null,master:null,muted:false,noise:null,layers:0,step:0,next:0,bpm:112,win:false,song:null};
 const PENTA=[0,2,4,7,9,12,14,16];
+// Level-owned songs: shared sequencer, per-level chords + layer voices.
+// Meadow keeps the original Level 1 arrangement note-for-note.
+function meadowBed(sib,chord,t){
+  if(sib===0||sib===4)tone(70,0.18,{at:t,type:'sine',slide:40,gain:0.35,attack:0.002});
+  if(sib%2===0)tone(hz(chord[0],65.41),0.22,{at:t,type:'triangle',gain:0.12,attack:0.01});
+  if(sib%2===1)noise(0.04,{at:t,type:'highpass',freq:7000,gain:0.05});
+}
+function meadowVoice(i,sib,s,chord,t){
+  const pats=[[0,3,6],[2,5],[1,4,7],[0,2,4,6]];
+  if(pats[i%4].indexOf(sib)<0)return;
+  const n=chord[(s+i)%3]+12*(1+(i%2));const f=hz(n,523.25);
+  tone(f,0.5,{at:t,type:'sine',gain:0.09,attack:0.003});tone(f*3,0.18,{at:t,type:'sine',gain:0.02,attack:0.003});
+}
+// The Deep: gentle underwater lullaby — four compatible parts, not four jingles.
+function deepBed(sib,chord,t){
+  if(sib===0)tone(hz(chord[0],55),0.55,{at:t,type:'sine',gain:0.1,attack:0.04});
+  if(sib===4)tone(hz(chord[1],82.41),0.4,{at:t,type:'triangle',gain:0.06,attack:0.03});
+  if(sib%4===2)noise(0.08,{at:t,type:'lowpass',freq:900,fslide:400,gain:0.035,attack:0.02});
+}
+function deepVoice(i,sib,s,chord,t){
+  const pats=[[0,4],[1,3,5],[0,2,6],[2,4,7]];
+  if(pats[i%4].indexOf(sib)<0)return;
+  if(i===0){
+    // soft bell / pluck foundation
+    const f=hz(chord[sib%3],329.63);
+    tone(f,0.55,{at:t,type:'triangle',gain:0.07,attack:0.006});
+    tone(f*2,0.22,{at:t,type:'sine',gain:0.025,attack:0.006});
+  }else if(i===1){
+    // watery arpeggio
+    const deg=[0,3,7,12,7,3,5,10][(s+sib)%8];
+    const f=hz(chord[0]+deg,196);
+    tone(f,0.38,{at:t,type:'sine',gain:0.055,attack:0.012,slide:f*1.03});
+  }else if(i===2){
+    // warm low harmony
+    tone(hz(chord[0],98),0.75,{at:t,type:'triangle',gain:0.075,attack:0.05});
+    tone(hz(chord[2],98),0.75,{at:t,type:'sine',gain:0.04,attack:0.05});
+  }else{
+    // floating upper melody
+    const mel=[0,3,7,10,7,5,3,0][s%8];
+    const f=hz(chord[0]+mel+24,174.61);
+    tone(f,0.7,{at:t,type:'sine',gain:0.05,attack:0.04});
+  }
+}
+const SONGS={
+  meadow:{id:'meadow',bpm:112,chords:[[0,4,7],[-3,0,4],[-7,-3,0],[-5,-1,2]],bed:meadowBed,voice:meadowVoice},
+  deep:{id:'deep',bpm:84,chords:[[0,3,7],[-2,2,5],[-5,0,3],[2,5,9]],bed:deepBed,voice:deepVoice}
+};
+AU.song=SONGS.meadow;
+// Kept as aliases so older call sites / mental model still match meadow.
+const CHORDS=SONGS.meadow.chords;
 const LAYER_PAT=[[0,3,6],[2,5],[1,4,7],[0,2,4,6]];
-function chordNow(){return CHORDS[Math.floor(AU.step/8)%4];}
+function setSong(name){
+  AU.song=SONGS[name]||SONGS.meadow;
+  AU.bpm=AU.song.bpm;
+}
+function chordNow(){const c=AU.song.chords;return c[Math.floor(AU.step/8)%c.length];}
 function hz(semi,base){return (base||261.63)*Math.pow(2,semi/12);}
 function initAudio(){
   if(AU.ctx){if(AU.ctx.state==='suspended')AU.ctx.resume();return;}
@@ -28,17 +81,16 @@ function noise(dur,o){o=o||{};const c=AU.ctx;if(!c)return;const t=(o.at!=null?o.
   g.gain.setValueAtTime(0.0001,t);g.gain.exponentialRampToValueAtTime(gain,t+atk);g.gain.exponentialRampToValueAtTime(0.0001,t+dur);
   s.connect(f);f.connect(g);g.connect(AU.master);s.start(t);s.stop(t+dur+0.05);}
 function schedule(){
-  const c=AU.ctx;const stepDur=60/AU.bpm/2;
+  const c=AU.ctx;if(!c||!AU.song)return;const stepDur=60/AU.bpm/2;const song=AU.song;
   while(AU.next<c.currentTime+0.15){
-    const t=AU.next,s=AU.step,sib=s%8,chord=CHORDS[Math.floor(s/8)%4];
-    if(sib===0||sib===4)tone(70,0.18,{at:t,type:'sine',slide:40,gain:0.35,attack:0.002});
-    if(sib%2===0)tone(hz(chord[0],65.41),0.22,{at:t,type:'triangle',gain:0.12,attack:0.01});
-    if(sib%2===1)noise(0.04,{at:t,type:'highpass',freq:7000,gain:0.05});
-    for(let i=0;i<AU.layers;i++){const pat=LAYER_PAT[i%LAYER_PAT.length];if(pat.indexOf(sib)>=0){const n=chord[(s+i)%3]+12*(1+(i%2));const f=hz(n,523.25);tone(f,0.5,{at:t,type:'sine',gain:0.09,attack:0.003});tone(f*3,0.18,{at:t,type:'sine',gain:0.02,attack:0.003});}}
+    const t=AU.next,s=AU.step,sib=s%8,chord=song.chords[Math.floor(s/8)%song.chords.length];
+    song.bed(sib,chord,t);
+    for(let i=0;i<AU.layers;i++)song.voice(i,sib,s,chord,t);
     if(AU.win){if(sib%2===0)tone(hz(chord[(s+2)%3]+24,523.25),0.26,{at:t,type:'sine',gain:0.05,attack:0.003});if(sib===0)noise(0.14,{at:t,type:'highpass',freq:6200,gain:0.05});}
     AU.next+=stepDur;AU.step++;
   }
 }
+window.__AU=AU;window.__SONGS=SONGS;window.__setSong=setSong;
 const SFX={
   jump(){tone(hz(PENTA[Math.floor(Math.random()*4)],523.25),0.12,{type:'triangle',gain:0.12,slide:hz(PENTA[5],523.25)});},
   puff(){const n=chordNow();const f=hz(n[Math.floor(Math.random()*3)]+12,523.25);tone(f,0.35,{type:'sine',gain:0.14,slide:f*1.5,attack:0.01});noise(0.25,{type:'lowpass',freq:1800,fslide:400,gain:0.25});},
