@@ -190,9 +190,10 @@ function updateFish(dt){
         P.vel.x-=dx/d*0.8*dt;P.vel.z-=dz/d*0.8*dt;
       }
     }
+    // gentle pull back toward home so scared fish do not drift away forever
+    f.vx+=(f.hx-f.x)*0.8*dt;f.vz+=(f.hz-f.z)*0.8*dt;
     f.vx=damp(f.vx,0,2.5,dt);f.vz=damp(f.vz,0,2.5,dt);
-    f.vy=damp(f.vy,0,2,dt);
-    f.x+=f.vx*dt;f.y+=f.vy*dt;f.z+=f.vz*dt;
+    f.x+=f.vx*dt;f.z+=f.vz*dt;
     f.y=f.hy+Math.sin(time*1.8+f.ph)*0.12;
     f.g.position.set(f.x,f.y,f.z);
     f.g.rotation.y=Math.atan2(f.vx,f.vz)||f.g.rotation.y;
@@ -250,8 +251,8 @@ function updateClams(dt){
           showToast('Bubble power! Gust to trap fish — keep it until something hits you.');
           for(let i=0;i<14;i++)spawnP(c.x,c.y+0.4,c.z,rand(-2,2),rand(1,3),rand(-2,2),0.07,0xc8f0ff,0.6,0.3,-4,1);
           updateHUD();
+          c.cd=1.6;
         }
-        c.cd=1.6;
       }
     }
   }

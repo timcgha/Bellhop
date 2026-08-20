@@ -262,6 +262,29 @@ testSharkNoteReveal((H,s)=>{bubbleShark(H,s,AX+2,AZ);},'bubble defeat');
   ok(grantBubble(H,AX,AZ+30),'same clam grants bubble power again after loss');
 }
 
+// ---- fish return home after fleeing ----
+{
+  const H=boot();startMechanic(H);
+  const school=H.test.addFishSchool(AX,1.2,AZ+14,4);
+  const f=school[0];
+  H.P.pos.set(f.x+0.8,1.2,f.z);H.P.vel.set(0,0,0);H.frames(120);
+  const fled=Math.hypot(f.x-f.hx,f.z-f.hz);
+  ok(fled>0.4,'fish flees from the player ('+fled.toFixed(1)+'m)');
+  H.P.pos.set(AX+30,1.2,AZ);H.P.vel.set(0,0,0);H.frames(500);
+  ok(Math.hypot(f.x-f.hx,f.z-f.hz)<1.2,'scared fish drifts back to its home spot');
+}
+
+// ---- clam cooldown only starts when a grant occurs ----
+{
+  const H=boot();startMechanic(H);
+  const c=H.test.addClam(AX,0,AZ+40);
+  H.P.bubble=true;
+  H.P.pos.set(AX,0,AZ+40);H.P.vel.set(0,0,0);H.frames(60);
+  ok(c.open,'clam stays open while the player already has bubble power');
+  H.P.bubble=false;H.frames(10);
+  ok(H.P.bubble,'open clam regrants right away after a loss, no phantom cooldown');
+}
+
 // ---- shark leash, return home, and bite backoff ----
 {
   const H=boot();startMechanic(H);

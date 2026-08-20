@@ -92,7 +92,7 @@ steps:[
   ['kelpCluster',-1.8,-72.9,3.5,4,5.6],
   ['kelpCluster',1.8,-72.9,3.5,4,5.6],
   ['note',-1.2,1.2,-70,false],
-  ['note',1.2,1.8,-70.8,false],
+  ['note',1.2,1.4,-70.8,false],
   ['coralScatter',6,-55,5,4],
   ['seabedScatter',-4,-68,3,6],
   // --- Area 3: The Shoal ---
