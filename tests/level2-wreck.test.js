@@ -147,6 +147,23 @@ function push(H,x,y,z,vx,vz,n){
   ok(canRest(H,0,14.25,-184,50),'crow\'s nest deck is standable');
 }
 
+// ---- midway checkpoint on the middle deck ----
+{
+  const H=boot();startL2(H);
+  const c=H.W.checks.find(c=>c.z<-175&&c.z>-185);
+  ok(c&&Math.abs(c.y-8.9)<0.01,'midway checkpoint sits on the upper-middle deck surface');
+  H.P.pos.set(c.x,c.y+0.5,c.z);H.P.vel.set(0,0,0);H.frames(20);
+  ok(c.on,'midway checkpoint activates when the player lands on its deck');
+  ok(Math.abs(H.P.spawn.y-c.y)<0.01&&Math.abs(H.P.spawn.x-c.x)<0.01,'respawn point is on the deck, not the seabed');
+  ok(canRest(H,H.P.spawn.x,H.P.spawn.y,H.P.spawn.z,45),'respawn position is a standable deck spot');
+}
+{
+  const H=boot();startL2(H);
+  const c=H.W.checks.find(c=>c.z<-175&&c.z>-185);
+  H.P.pos.set(c.x,3.4,c.z);H.P.vel.set(0,0,0);H.frames(30);
+  ok(!c.on,'passing beneath the midway checkpoint on a lower deck does not activate it');
+}
+
 // ---- Snoozle 3 and no win ----
 {
   const H=boot();startL2(H);

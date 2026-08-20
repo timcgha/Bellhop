@@ -122,7 +122,7 @@ function hedge(x1,z1,x2,z2){const cx=(x1+x2)/2,cz=(z1+z2)/2,w=Math.abs(x2-x1)+0.
     scene.add(mesh(SPH,lam(Math.random()<0.5?0x57a83f:0x4a9633),px+rand(-0.1,0.1),1.28,pz+rand(-0.1,0.1),along?0.66:w*0.6,0.44,along?d*0.6:0.66));}
   return sol;}
 function pathTile(x1,z1,x2,z2){const cx=(x1+x2)/2,cz=(z1+z2)/2;scene.add(mesh(BOXG,lam(0xd8c48f),cx,0.02,cz,Math.abs(x2-x1),0.05,Math.abs(z2-z1)));}
-function addCheck(x,z){const g=new THREE.Group();const y=groundHeightAt(x,z);g.position.set(x,y,z);
+function addCheck(x,z,yOpt){const g=new THREE.Group();const y=(yOpt!=null)?yOpt:groundHeightAt(x,z);g.position.set(x,y,z);
   g.add(mesh(CYL,lam(0x9aa4ad),0,0.11,0,0.58,0.22,0.58));
   const post=mesh(CYL,pho(0xd1a83c,140,0xfff0b8),0,0.82,0,0.085,1.45,0.085);g.add(post);
   const bell=new THREE.Mesh(new THREE.CylinderGeometry(0.15,0.31,0.44,12),pho(0x8f8467,50,0x777777));bell.position.y=1.66;g.add(bell);
@@ -159,7 +159,7 @@ function loadLevel(L){
   for(const s of L.fenceSolids)addSolid(s[0],s[1],s[2],s[3],s[4],s[5],fence);
   for(const p of L.pathTiles)pathTile(p[0],p[1],p[2],p[3]);
   for(const h of L.hedges)hedge(h[0],h[1],h[2],h[3]);
-  for(const c of L.checks)addCheck(c[0],c[1]);
+  for(const c of L.checks)addCheck(c[0],c[1],c[2]);
   const TX=L.tower.tx,TZ=L.tower.tz,homes=L.snoozleHomes;
   for(const step of L.steps){
     const k=step[0];
