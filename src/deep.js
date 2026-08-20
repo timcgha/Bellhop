@@ -45,10 +45,10 @@ function buildSpikefish(){
   g.add(mesh(SPH,lam(0x111111),0.12,0.08,0.18,0.05));
   return g;
 }
-function addSpikefish(x1,y1,z1,x2,y2,z2,withNote){
+function addSpikefish(x1,y1,z1,x2,y2,z2,withNote,role){
   const g=buildSpikefish();g.position.set(x1,y1,z1);scene.add(g);
   const note=withNote?addNote(x1,y1+0.5,z1,true):null;
-  spikefish.push({g,x:x1,y:y1,z:z1,x1,y1,z1,x2,y2,z2,pathT:0,pathDir:1,note,alive:true,warnT:0,ph:rand(0,TAU)});
+  spikefish.push({g,x:x1,y:y1,z:z1,x1,y1,z1,x2,y2,z2,pathT:0,pathDir:1,note,alive:true,warnT:0,ph:rand(0,TAU),role:role||null});
 }
 function buildClam(){
   const g=new THREE.Group();
@@ -60,9 +60,9 @@ function buildClam(){
   g.userData.bubble.visible=false;g.add(g.userData.bubble);
   return g;
 }
-function addClam(x,y,z){
+function addClam(x,y,z,role){
   const g=buildClam();g.position.set(x,y,z);scene.add(g);
-  clams.push({g,x,y,z,open:true,cd:0,ph:rand(0,TAU),gave:false});
+  clams.push({g,x,y,z,open:true,cd:0,ph:rand(0,TAU),gave:false,role:role||null});
 }
 for(let i=0;i<16;i++){
   const m=new THREE.Mesh(BUBBLEGEO,new THREE.MeshPhongMaterial({color:0xc8f0ff,shininess:140,specular:0xffffff,transparent:true,opacity:0.72}));
@@ -219,4 +219,58 @@ function updateClams(dt){
 function hitSharkSpinJet(s,dmg){
   if(!s.alive||s.state==='trapped')return;
   killShark(s,false);
+}
+
+const kelps=[];let underwaterGroup=null;
+const CORALC=[0xff6b81,0xff8a65,0xffb347,0xf48fb1,0xce93d8,0x80cbc4,0xffee58];
+function beginLandLevel(){if(landGround)landGround.visible=true;if(underwaterGroup)underwaterGroup.visible=false;scene.background=new THREE.Color(0x9fdcff);scene.fog=new THREE.Fog(0x9fdcff,45,120);}
+function beginUnderwaterLevel(L){
+  if(landGround)landGround.visible=false;
+  scene.background=new THREE.Color(0x58c8e8);scene.fog=new THREE.Fog(0x58c8e8,18,85);
+  if(!underwaterGroup){underwaterGroup=new THREE.Group();scene.add(underwaterGroup);}
+  underwaterGroup.visible=true;while(underwaterGroup.children.length)underwaterGroup.remove(underwaterGroup.children[0]);
+  const sand=lam(0xe8dcc0);
+  const floor=new THREE.Mesh(new THREE.PlaneGeometry(140,160),sand);floor.rotation.x=-Math.PI/2;floor.position.set(0,-0.55,-48);underwaterGroup.add(floor);
+  const bright=lam(0xf5ecd7);const floor2=new THREE.Mesh(new THREE.PlaneGeometry(50,40),bright);floor2.rotation.x=-Math.PI/2;floor2.position.set(0,-0.48,4);underwaterGroup.add(floor2);
+}
+function sandPath(x1,z1,x2,z2){const cx=(x1+x2)/2,cz=(z1+z2)/2;underwaterGroup.add(mesh(BOXG,lam(0xf0e4c8),cx,-0.42,cz,Math.abs(x2-x1)+0.4,0.06,Math.abs(z2-z1)+0.4));}
+function addCoralWall(x1,z1,x2,z2){const cx=(x1+x2)/2,cz=(z1+z2)/2,w=Math.abs(x2-x1)+0.8,d=Math.abs(z2-z1)+0.8;
+  addSolid(cx,0,cz,w,1.6,d,0xff7043,{surf:'stone'});
+  const along=w>d,len=Math.max(w,d),n=Math.max(2,Math.round(len/1.0));
+  for(let i=0;i<n;i++){const t=(i+0.5)/n;const px=along?cx-w/2+t*w:cx,pz=along?cz:cz-d/2+t*d;
+    const c=CORALC[i%CORALC.length];scene.add(mesh(SPH,lam(c),px,0.55+rand(0,0.35),pz,rand(0.35,0.65),rand(0.35,0.75),rand(0.35,0.65)));
+    scene.add(mesh(CONE,lam(c),px+rand(-0.15,0.15),0.25,pz+rand(-0.15,0.15),rand(0.12,0.22),rand(0.35,0.75),rand(0.12,0.22)));}}
+function addCoralScatter(n,cx,cz,r){for(let i=0;i<n;i++){const a=rand(0,TAU),rr=Math.sqrt(Math.random())*r;const x=cx+Math.cos(a)*rr,z=cz+Math.sin(a)*rr,c=CORALC[i%CORALC.length];
+  scene.add(mesh(SPH,lam(c),x,0.35+rand(0,0.25),z,rand(0.25,0.55),rand(0.25,0.55),rand(0.25,0.55)));}}
+function buildKelpStrand(h){const g=new THREE.Group();const stem=mesh(CYL,lam(0x3d7a37),0,h/2,0,0.07,h,0.07);g.add(stem);
+  for(let i=0;i<4;i++){const y=0.5+i*(h/4);const fr=mesh(CONE,lam(0x4caf50),0,y,0,0.35,0.55,0.08);fr.rotation.z=(i%2?1:-1)*0.7;fr.rotation.y=i*0.9;g.add(fr);}return g;}
+function addKelpCurtain(id,cx,cz,w,h,secret){
+  const g=new THREE.Group();g.position.set(cx,0,cz);scene.add(g);
+  const strands=[];const n=Math.max(4,Math.round(w*1.4));
+  for(let i=0;i<n;i++){const t=(i+0.5)/n;const sx=(t-0.5)*w;const st=buildKelpStrand(h+rand(-0.4,0.6));st.position.set(sx,0,rand(-0.15,0.15));g.add(st);strands.push(st);}
+  const sol=addSolid(cx,0,cz,w+0.4,h+0.5,0.55,0x2e6b32,{surf:'grass'});
+  sol.mesh.visible=false;
+  kelps.push({id,g,strands,sol,cx,cz,w,h,secret:!!secret,parted:false,partT:0,openSide:secret?-1:1});
+}
+function addSnoozleShell(x,y,z){
+  const g=new THREE.Group();g.position.set(x,y,z);
+  const shell=lam(0xf5a8a8);
+  g.add(mesh(SPH,shell,-0.55,-0.05,0,0.75,0.18,0.55));g.add(mesh(SPH,shell,0.55,-0.05,0,0.75,0.18,0.55));
+  g.add(mesh(SPH,lam(0xfff0f0),0,0.08,0,0.55,0.12,0.45));scene.add(g);}
+function addSunRays(n,cx,cz){for(let i=0;i<n;i++){const m=new THREE.Mesh(new THREE.PlaneGeometry(0.35,8+rand(0,6)),new THREE.MeshBasicMaterial({color:0xffffff,transparent:true,opacity:0.07+Math.random()*0.05,depthWrite:false}));
+  m.position.set(cx+rand(-8,8),rand(6,14),cz+rand(-6,6));m.rotation.x=-0.35+rand(-0.1,0.1);m.rotation.z=rand(-0.2,0.2);if(underwaterGroup)underwaterGroup.add(m);else scene.add(m);}}
+function gustHitKelp(mx,mz,k){
+  for(const kp of kelps){if(kp.parted)continue;if(Math.abs(kp.cz-mz)>kp.h+2)continue;
+    const s=k(kp.cx,kp.cz);if(s>0.12)partKelp(kp,s);}}
+function partKelp(kp,s){
+  if(kp.parted)return;kp.parted=true;kp.partT=0;SFX.gust();
+  const i=solids.indexOf(kp.sol);if(i>=0)solids.splice(i,1);
+  spawnRing(kp.cx,kp.h*0.55,kp.cz,0xa5d6a7,0.35,5,0.35);
+  for(let j=0;j<10;j++)spawnP(kp.cx+rand(-1,1),rand(0.5,kp.h),kp.cz+rand(-1,1),rand(-2,2),rand(0.5,2),rand(-2,2),0.07,0xc8f0ff,0.5,0.3,-4,0.9);
+  if(kp.secret)showToast('The kelp wall parted!');}
+function updateKelp(dt){
+  for(const kp of kelps){
+    kp.strands.forEach((st,i)=>{st.rotation.z=Math.sin(time*1.4+i)*0.08;st.rotation.x=Math.sin(time*1.1+i*0.7)*0.05;
+      if(kp.parted){kp.partT+=dt;const k=smooth(Math.min(kp.partT/0.55,1));st.rotation.y=kp.openSide*(0.9+i*0.08)*k;}});
+    if(kp.parted&&kp.partT>0.15){const k=smooth(Math.min(kp.partT/0.7,1));kp.g.position.x=lerp(kp.cx,kp.cx+kp.openSide*2.0,k);}}
 }

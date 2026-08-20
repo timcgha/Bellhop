@@ -25,8 +25,8 @@ function boot(opts){return require('./harness.js')(Object.assign({autostart:fals
   const H=boot();
   H.startLevel(1);
   ok(H.getLevel()&&H.getLevel().id==='level2','selecting Level 2 boots LEVEL2');
-  ok(H.W.checks.length===0,'Level 2 stub has no checkpoints yet');
-  ok(H.W.snoozles.length===0,'Level 2 stub has no snoozles yet');
+  ok(H.W.checks.length===5,'Level 2 has checkpoints through The Shoal');
+  ok(H.W.snoozles.length===2,'Level 2 has two snoozles in Areas 1–2');
 }
 
 // ---- booting Level 2 does not alter Level 1 physics or expected values ----

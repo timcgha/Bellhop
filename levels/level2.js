@@ -1,7 +1,7 @@
 const LEVEL2={
 id:'level2',
 underwater:true,
-spawn:{x:0,y:0,z:0},
+spawn:{x:0,y:0,z:12},
 physics:{
   speed:6.8,acc:44,dec:60,airAcc:20,
   grav:-6,maxFall:-6,jumpV:5.5,
@@ -12,20 +12,61 @@ physics:{
   jetTime:0.38,bonkR:2.05,bonkCD:0.5
 },
 fence:0x4a7a8a,
-fenceSolids:[],
+fenceSolids:[[0,0,14,28,6,0.7],[0,0,-112,28,6,0.7],[-14,0,-49,0.7,6,130],[14,0,-49,0.7,6,130]],
 pathTiles:[],
 hedges:[],
-checks:[],
+checks:[[0,10],[0,-18],[0,-48],[0,-82],[0,-102]],
 tower:{tx:0,tz:0},
-snoozleHomes:[],
-snoozles:[],
+snoozleHomes:[[0,-8],[4,-62]],
+snoozles:[[0,0.35,-8,0,false],[4,3.2,-62,1,false]],
 trees:[],
 steps:[
-  ['clam',2,0,3],
+  // --- presentation ---
+  ['sunRays',8,0,8],
+  ['sandPath',-4,14,4,-2],
+  ['coralScatter',14,0,8,7],
+  ['coralScatter',10,-6,5,5],
+  // --- Area 1: The Shallows ---
+  ['coralWall',-10,14,10,14],
+  ['coralWall',-10,-16,10,-16],
+  ['fishSchool',-4,1.2,8,10],
+  ['solid',-3,0,4,2.8,0.5,2.8,0xd9c08a,{surf:'stone'}],
+  ['solid',3,0,-1,2.8,0.5,2.8,0xd9c08a,{surf:'stone'}],
+  ['solid',-2,0,-6,2.8,0.5,2.8,0xd9c08a,{surf:'stone'}],
+  ['snoozleShell',0,0,-8],
+  ['coralScatter',8,0,-4,4],
+  ['sandPath',-3,-2,3,-14],
+  // deep-test alcove clam (renewable)
+  ['clam',2,0,3,null],
+  // stage-3 fixture alcoves (off main teaching order)
   ['fishSchool',-5,1.5,4,5],
   ['noteFish',6,1.2,2],
   ['shark',-7,1.8,6,true],
   ['shark',9,1.5,-2,false],
-  ['spikefish',0,2,7,5,2,7,true],
-  ['spikefish',-3,2.5,-6,-3,3,-4,false]
+  ['spikefish',0,2,7,5,2,7,true,null],
+  ['spikefish',-3,2.5,-6,-3,3,-4,false,null],
+  // --- Area 2: Kelp Forest ---
+  ['kelpCurtain','curtain',0,-22,5,4.5,false],
+  ['sandPath',-3,-18,3,-66],
+  ['coralWall',-8,-18,8,-18],
+  ['crate',2,0,-30,'bubble'],
+  ['fishSchool',0,1.5,-40,12],
+  ['noteFish',1.2,1.3,-39],
+  ['shark',0,1.8,-52,false],
+  ['solid',4,2.2,-62,5.5,0.55,4.5,0x9aa4ad,{surf:'stone'}],
+  ['kelpCurtain','secret',0,-68,5.5,4.5,true],
+  ['note',-5.5,1.2,-70,false],
+  ['note',-5.5,1.8,-71,false],
+  ['coralScatter',6,-55,5,4],
+  // --- Area 3: The Shoal ---
+  ['sandPath',-4,-66,4,-104],
+  ['coralWall',-8,-66,8,-66],
+  ['spikefish',8,2,-74,8,2,-80,false,'open'],
+  ['coralScatter',10,-78,6,5],
+  ['solid',0,0,-88,4.5,2.2,0.7,0x9aa4ad,{surf:'stone'}],
+  ['solid',0,0,-104,4.5,2.2,0.7,0x9aa4ad,{surf:'stone'}],
+  ['clam',-2,0,-96,'safety'],
+  ['spikefish',0,2,-95,0,2,-99,false,'mandatory'],
+  ['sandPath',-2,-100,2,-108],
+  ['solid',0,0,-110,8,3,0.8,0x6a7a8a,{surf:'stone'}]
 ]};

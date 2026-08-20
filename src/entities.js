@@ -8,7 +8,7 @@ let CURRENT_LEVEL=null;
 function isUnderwater(){return !!(CURRENT_LEVEL&&CURRENT_LEVEL.underwater);}
 const POND={x0:-6,x1:6,z0:-33,z1:-25};
 function inPond(x,z){return x>POND.x0&&x<POND.x1&&z>POND.z0&&z<POND.z1;}
-function groundHeightAt(x,z){return inPond(x,z)?-0.4:0;}
+function groundHeightAt(x,z){if(isUnderwater())return 0;return inPond(x,z)?-0.4:0;}
 function surfaceHeightAt(x,z,belowY,r){r=r||0.2;let h=groundHeightAt(x,z);for(const s of solids){if(x+r>s.min.x&&x-r<s.max.x&&z+r>s.min.z&&z-r<s.max.z&&s.max.y<=belowY+0.05&&s.max.y>h)h=s.max.y;}return h;}
 function insideSolid(x,y,z,m){for(const s of solids){if(x>s.min.x-m&&x<s.max.x+m&&y>s.min.y-m&&y<s.max.y+m&&z>s.min.z-m&&z<s.max.z+m)return true;}return false;}
 function addSolid(x,y,z,w,h,d,color,opts){const m=new THREE.Mesh(BOXG,lam(color));m.scale.set(w,h,d);m.position.set(x,y+h/2,z);scene.add(m);
@@ -18,15 +18,18 @@ function addSolid(x,y,z,w,h,d,color,opts){const m=new THREE.Mesh(BOXG,lam(color)
 function grassTex(){const cv=document.createElement('canvas');cv.width=cv.height=256;const g=cv.getContext('2d');g.fillStyle='#78c65a';g.fillRect(0,0,256,256);
   for(let i=0;i<700;i++){g.fillStyle=Math.random()<0.5?'rgba(255,255,255,0.09)':'rgba(0,70,0,0.11)';const s=rand(4,16);g.fillRect(Math.random()*256,Math.random()*256,s,s*0.6);}
   const tx=new THREE.CanvasTexture(cv);tx.wrapS=tx.wrapT=THREE.RepeatWrapping;tx.repeat.set(0.4,0.4);tx.encoding=THREE.sRGBEncoding;return tx;}
+let landGround=null;
 (function buildGround(){
+  landGround=new THREE.Group();
   const shp=new THREE.Shape();shp.moveTo(-48,-28);shp.lineTo(36,-28);shp.lineTo(36,86);shp.lineTo(-48,86);shp.lineTo(-48,-28);
   const hole=new THREE.Path();hole.moveTo(POND.x0,-POND.z1);hole.lineTo(POND.x1,-POND.z1);hole.lineTo(POND.x1,-POND.z0);hole.lineTo(POND.x0,-POND.z0);hole.lineTo(POND.x0,-POND.z1);shp.holes.push(hole);
-  const g=new THREE.Mesh(new THREE.ShapeGeometry(shp),new THREE.MeshLambertMaterial({map:grassTex()}));g.rotation.x=-Math.PI/2;scene.add(g);
+  const g=new THREE.Mesh(new THREE.ShapeGeometry(shp),new THREE.MeshLambertMaterial({map:grassTex()}));g.rotation.x=-Math.PI/2;landGround.add(g);
   const cx=(POND.x0+POND.x1)/2,cz=(POND.z0+POND.z1)/2,w=POND.x1-POND.x0,d=POND.z1-POND.z0,sand=lam(0xd9c08a);
-  scene.add(mesh(BOXG,sand,cx,-0.5,cz,w+0.6,0.2,d+0.6));
-  scene.add(mesh(BOXG,sand,cx,-0.2,POND.z0-0.15,w+0.6,0.4,0.3));scene.add(mesh(BOXG,sand,cx,-0.2,POND.z1+0.15,w+0.6,0.4,0.3));
-  scene.add(mesh(BOXG,sand,POND.x0-0.15,-0.2,cz,0.3,0.4,d+0.6));scene.add(mesh(BOXG,sand,POND.x1+0.15,-0.2,cz,0.3,0.4,d+0.6));
-  const water=new THREE.Mesh(new THREE.PlaneGeometry(w,d),new THREE.MeshLambertMaterial({color:0x4fb4e6,transparent:true,opacity:0.72}));water.rotation.x=-Math.PI/2;water.position.set(cx,-0.08,cz);scene.add(water);
+  landGround.add(mesh(BOXG,sand,cx,-0.5,cz,w+0.6,0.2,d+0.6));
+  landGround.add(mesh(BOXG,sand,cx,-0.2,POND.z0-0.15,w+0.6,0.4,0.3));landGround.add(mesh(BOXG,sand,cx,-0.2,POND.z1+0.15,w+0.6,0.4,0.3));
+  landGround.add(mesh(BOXG,sand,POND.x0-0.15,-0.2,cz,0.3,0.4,d+0.6));landGround.add(mesh(BOXG,sand,POND.x1+0.15,-0.2,cz,0.3,0.4,d+0.6));
+  const water=new THREE.Mesh(new THREE.PlaneGeometry(w,d),new THREE.MeshLambertMaterial({color:0x4fb4e6,transparent:true,opacity:0.72}));water.rotation.x=-Math.PI/2;water.position.set(cx,-0.08,cz);landGround.add(water);
+  scene.add(landGround);
 })();
 
 const FLOWERC=[0xff6b81,0xffb347,0xf9f871,0xc084fc,0xff8ac9,0xffffff,0x7ad7ff];
@@ -95,12 +98,18 @@ function addCrate(x,y,z,item){const g=buildCrate();g.position.set(x,y,z);scene.a
 function breakCrate(c){if(c.broken)return;c.broken=true;c.g.visible=false;const i=solids.indexOf(c.sol);if(i>=0)solids.splice(i,1);
   SFX.crate();CAM.shake=Math.max(CAM.shake,0.3);rumble(70,0.4,0.2);spawnRing(c.x,c.y+0.05,c.z,0xffe9b0,0.3,5,0.35);
   for(let k=0;k<16;k++)spawnP(c.x+rand(-0.4,0.4),c.y+0.45+rand(-0.4,0.4),c.z+rand(-0.4,0.4),rand(-3.5,3.5),rand(1,4.5),rand(-3.5,3.5),rand(0.08,0.17),Math.random()<0.3?0xd1a83c:0xc98a4b,rand(0.5,0.9),0.2,-9,0.9);
-  if(c.item==='fire')addPower(c.x,c.y+0.85,c.z);else addHeart(c.x,c.y+0.85,c.z);}
+  if(c.item==='fire')addPower(c.x,c.y+0.85,c.z);
+  else if(c.item==='bubble')addBubblePower(c.x,c.y+0.85,c.z);
+  else addHeart(c.x,c.y+0.85,c.z);}
 function buildFlameItem(){const g=new THREE.Group();
   g.add(mesh(CONE,new THREE.MeshBasicMaterial({color:0xff7a1f}),0,0.06,0,0.22,0.58,0.22));
   g.add(mesh(CONE,new THREE.MeshBasicMaterial({color:0xffd24a}),0,-0.04,0,0.13,0.36,0.13));
   g.add(mesh(SPH,new THREE.MeshBasicMaterial({color:0xfff3c4}),0,-0.18,0,0.12,0.09,0.12));return g;}
-function addPower(x,y,z){const g=buildFlameItem();g.position.set(x,y,z);scene.add(g);powers.push({g,x,y,z,got:false,ph:rand(0,TAU),t:0});}
+function addPower(x,y,z){const g=buildFlameItem();g.position.set(x,y,z);scene.add(g);powers.push({g,x,y,z,got:false,ph:rand(0,TAU),t:0,kind:'fire'});}
+function buildBubbleItem(){const g=new THREE.Group();
+  g.add(mesh(SPH,new THREE.MeshBasicMaterial({color:0xc8f0ff,transparent:true,opacity:0.85}),0,0.08,0,0.24));
+  g.add(mesh(SPH,new THREE.MeshBasicMaterial({color:0xffffff,transparent:true,opacity:0.55}),0,0.12,0,0.14));return g;}
+function addBubblePower(x,y,z){const g=buildBubbleItem();g.position.set(x,y,z);scene.add(g);powers.push({g,x,y,z,got:false,ph:rand(0,TAU),t:0,kind:'bubble'});}
 const FIREGEO=new THREE.SphereGeometry(1,9,7);
 for(let i=0;i<26;i++){const m=new THREE.Mesh(FIREGEO,new THREE.MeshBasicMaterial({color:0xff8a2b}));m.scale.setScalar(0.24);m.visible=false;scene.add(m);fires.push({m,pos:new THREE.Vector3(),vel:new THREE.Vector3(),life:0,alive:false,trailT:0});}
 function buildHeart(){const g=new THREE.Group();const m=pho(0xff5a7a,120,0xffffff);g.add(mesh(SPH,m,-0.11,0.1,0,0.16));g.add(mesh(SPH,m,0.11,0.1,0,0.16));const c=mesh(CONE,m,0,-0.06,0,0.26,0.36,0.16);c.rotation.z=Math.PI;g.add(c);g.scale.setScalar(0.9);return g;}
@@ -143,6 +152,7 @@ function updateWin(dt){if(!won)return;winT+=dt;
 function loadLevel(L){
   if(L.physics)applyPhysics(L.physics);
   CURRENT_LEVEL=L;
+  if(L.underwater)beginUnderwaterLevel(L);else beginLandLevel();
   if(L.spawn){P.spawn.x=L.spawn.x;P.spawn.y=L.spawn.y;P.spawn.z=L.spawn.z;P.pos.set(L.spawn.x,L.spawn.y,L.spawn.z);P.vel.set(0,0,0);}
   const fence=L.fence;
   for(const s of L.fenceSolids)addSolid(s[0],s[1],s[2],s[3],s[4],s[5],fence);
@@ -172,11 +182,17 @@ function loadLevel(L){
     else if(k==='towerSteps'){for(let i=0;i<step[1];i++){const a=-Math.PI/2+i*0.56;const y=1.1*(i+1);const sl=addSolid(TX+Math.cos(a)*4.3,y-0.4,TZ+Math.sin(a)*4.3,2.4,0.4,2.4,i%2?0xc98a4b:0xd9a262,{surf:'wood'});if(step[2].indexOf(i)>=0)addNote(sl.mesh.position.x,y+0.7,sl.mesh.position.z,false);}}
     else if(k==='bushScatter'){for(let i=0;i<step[1];i++){const x=rand(-46,34),z=rand(-82,24);if(x>-38&&x<24&&z>-74&&z<16)continue;scene.add(mesh(SPH,lam(0x4f9f3f),x,0.35,z,rand(0.9,1.6),rand(0.6,1.0),rand(0.9,1.6)));}}
     else if(k==='cloudScatter'){for(let i=0;i<step[1];i++)addCloud(rand(-44,32),rand(22,30),rand(-80,20),rand(1.5,3));}
-    else if(k==='clam')addClam(step[1],step[2],step[3]);
+    else if(k==='clam')addClam(step[1],step[2],step[3],step[4]);
     else if(k==='shark')addShark(step[1],step[2],step[3],step[4]);
     else if(k==='fishSchool')addFishSchool(step[1],step[2],step[3],step[4]);
     else if(k==='noteFish')addNoteFish(step[1],step[2],step[3]);
-    else if(k==='spikefish')addSpikefish(step[1],step[2],step[3],step[4],step[5],step[6],step[7]);
+    else if(k==='spikefish')addSpikefish(step[1],step[2],step[3],step[4],step[5],step[6],step[7],step[8]);
+    else if(k==='kelpCurtain')addKelpCurtain(step[1],step[2],step[3],step[4],step[5],step[6]);
+    else if(k==='coralWall')addCoralWall(step[1],step[2],step[3],step[4]);
+    else if(k==='coralScatter')addCoralScatter(step[1],step[2],step[3]);
+    else if(k==='sandPath')sandPath(step[1],step[2],step[3],step[4]);
+    else if(k==='snoozleShell')addSnoozleShell(step[1],step[2],step[3]);
+    else if(k==='sunRays')addSunRays(step[1],step[2],step[3]);
   }
   for(const t of L.trees)addTree(t[0],t[1]);
   for(const s of L.snoozles){const x=s[0]!=null?s[0]:TX,y=s[1],z=s[2]!=null?s[2]:TZ;addSnoozle(x,y,z,homes[s[3]],s[4]);}

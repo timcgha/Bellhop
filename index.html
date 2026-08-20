@@ -55,7 +55,7 @@ body.touch .tbtn{display:flex}
 <div id="hint"></div>
 <div id="start"><div class="card">
 <h1>BELLHOP</h1>
-<div class="sub">v9 · the deep creatures</div>
+<div class="sub">v10 · the deep areas 1–3</div>
 <div class="level-pick">
 <div class="lvl-card sel" id="lvl0"><canvas class="lvl-art" id="art0" width="160" height="100"></canvas><span class="lvl-label">Meadow</span></div>
 <div class="lvl-card" id="lvl1"><canvas class="lvl-art" id="art1" width="160" height="100"></canvas><span class="lvl-label">The Deep</span></div>
@@ -120,7 +120,7 @@ steps:[
 const LEVEL2={
 id:'level2',
 underwater:true,
-spawn:{x:0,y:0,z:0},
+spawn:{x:0,y:0,z:12},
 physics:{
   speed:6.8,acc:44,dec:60,airAcc:20,
   grav:-6,maxFall:-6,jumpV:5.5,
@@ -131,22 +131,63 @@ physics:{
   jetTime:0.38,bonkR:2.05,bonkCD:0.5
 },
 fence:0x4a7a8a,
-fenceSolids:[],
+fenceSolids:[[0,0,14,28,6,0.7],[0,0,-112,28,6,0.7],[-14,0,-49,0.7,6,130],[14,0,-49,0.7,6,130]],
 pathTiles:[],
 hedges:[],
-checks:[],
+checks:[[0,10],[0,-18],[0,-48],[0,-82],[0,-102]],
 tower:{tx:0,tz:0},
-snoozleHomes:[],
-snoozles:[],
+snoozleHomes:[[0,-8],[4,-62]],
+snoozles:[[0,0.35,-8,0,false],[4,3.2,-62,1,false]],
 trees:[],
 steps:[
-  ['clam',2,0,3],
+  // --- presentation ---
+  ['sunRays',8,0,8],
+  ['sandPath',-4,14,4,-2],
+  ['coralScatter',14,0,8,7],
+  ['coralScatter',10,-6,5,5],
+  // --- Area 1: The Shallows ---
+  ['coralWall',-10,14,10,14],
+  ['coralWall',-10,-16,10,-16],
+  ['fishSchool',-4,1.2,8,10],
+  ['solid',-3,0,4,2.8,0.5,2.8,0xd9c08a,{surf:'stone'}],
+  ['solid',3,0,-1,2.8,0.5,2.8,0xd9c08a,{surf:'stone'}],
+  ['solid',-2,0,-6,2.8,0.5,2.8,0xd9c08a,{surf:'stone'}],
+  ['snoozleShell',0,0,-8],
+  ['coralScatter',8,0,-4,4],
+  ['sandPath',-3,-2,3,-14],
+  // deep-test alcove clam (renewable)
+  ['clam',2,0,3,null],
+  // stage-3 fixture alcoves (off main teaching order)
   ['fishSchool',-5,1.5,4,5],
   ['noteFish',6,1.2,2],
   ['shark',-7,1.8,6,true],
   ['shark',9,1.5,-2,false],
-  ['spikefish',0,2,7,5,2,7,true],
-  ['spikefish',-3,2.5,-6,-3,3,-4,false]
+  ['spikefish',0,2,7,5,2,7,true,null],
+  ['spikefish',-3,2.5,-6,-3,3,-4,false,null],
+  // --- Area 2: Kelp Forest ---
+  ['kelpCurtain','curtain',0,-22,5,4.5,false],
+  ['sandPath',-3,-18,3,-66],
+  ['coralWall',-8,-18,8,-18],
+  ['crate',2,0,-30,'bubble'],
+  ['fishSchool',0,1.5,-40,12],
+  ['noteFish',1.2,1.3,-39],
+  ['shark',0,1.8,-52,false],
+  ['solid',4,2.2,-62,5.5,0.55,4.5,0x9aa4ad,{surf:'stone'}],
+  ['kelpCurtain','secret',0,-68,5.5,4.5,true],
+  ['note',-5.5,1.2,-70,false],
+  ['note',-5.5,1.8,-71,false],
+  ['coralScatter',6,-55,5,4],
+  // --- Area 3: The Shoal ---
+  ['sandPath',-4,-66,4,-104],
+  ['coralWall',-8,-66,8,-66],
+  ['spikefish',8,2,-74,8,2,-80,false,'open'],
+  ['coralScatter',10,-78,6,5],
+  ['solid',0,0,-88,4.5,2.2,0.7,0x9aa4ad,{surf:'stone'}],
+  ['solid',0,0,-104,4.5,2.2,0.7,0x9aa4ad,{surf:'stone'}],
+  ['clam',-2,0,-96,'safety'],
+  ['spikefish',0,2,-95,0,2,-99,false,'mandatory'],
+  ['sandPath',-2,-100,2,-108],
+  ['solid',0,0,-110,8,3,0.8,0x6a7a8a,{surf:'stone'}]
 ]};
 
 
@@ -377,7 +418,7 @@ let CURRENT_LEVEL=null;
 function isUnderwater(){return !!(CURRENT_LEVEL&&CURRENT_LEVEL.underwater);}
 const POND={x0:-6,x1:6,z0:-33,z1:-25};
 function inPond(x,z){return x>POND.x0&&x<POND.x1&&z>POND.z0&&z<POND.z1;}
-function groundHeightAt(x,z){return inPond(x,z)?-0.4:0;}
+function groundHeightAt(x,z){if(isUnderwater())return 0;return inPond(x,z)?-0.4:0;}
 function surfaceHeightAt(x,z,belowY,r){r=r||0.2;let h=groundHeightAt(x,z);for(const s of solids){if(x+r>s.min.x&&x-r<s.max.x&&z+r>s.min.z&&z-r<s.max.z&&s.max.y<=belowY+0.05&&s.max.y>h)h=s.max.y;}return h;}
 function insideSolid(x,y,z,m){for(const s of solids){if(x>s.min.x-m&&x<s.max.x+m&&y>s.min.y-m&&y<s.max.y+m&&z>s.min.z-m&&z<s.max.z+m)return true;}return false;}
 function addSolid(x,y,z,w,h,d,color,opts){const m=new THREE.Mesh(BOXG,lam(color));m.scale.set(w,h,d);m.position.set(x,y+h/2,z);scene.add(m);
@@ -387,15 +428,18 @@ function addSolid(x,y,z,w,h,d,color,opts){const m=new THREE.Mesh(BOXG,lam(color)
 function grassTex(){const cv=document.createElement('canvas');cv.width=cv.height=256;const g=cv.getContext('2d');g.fillStyle='#78c65a';g.fillRect(0,0,256,256);
   for(let i=0;i<700;i++){g.fillStyle=Math.random()<0.5?'rgba(255,255,255,0.09)':'rgba(0,70,0,0.11)';const s=rand(4,16);g.fillRect(Math.random()*256,Math.random()*256,s,s*0.6);}
   const tx=new THREE.CanvasTexture(cv);tx.wrapS=tx.wrapT=THREE.RepeatWrapping;tx.repeat.set(0.4,0.4);tx.encoding=THREE.sRGBEncoding;return tx;}
+let landGround=null;
 (function buildGround(){
+  landGround=new THREE.Group();
   const shp=new THREE.Shape();shp.moveTo(-48,-28);shp.lineTo(36,-28);shp.lineTo(36,86);shp.lineTo(-48,86);shp.lineTo(-48,-28);
   const hole=new THREE.Path();hole.moveTo(POND.x0,-POND.z1);hole.lineTo(POND.x1,-POND.z1);hole.lineTo(POND.x1,-POND.z0);hole.lineTo(POND.x0,-POND.z0);hole.lineTo(POND.x0,-POND.z1);shp.holes.push(hole);
-  const g=new THREE.Mesh(new THREE.ShapeGeometry(shp),new THREE.MeshLambertMaterial({map:grassTex()}));g.rotation.x=-Math.PI/2;scene.add(g);
+  const g=new THREE.Mesh(new THREE.ShapeGeometry(shp),new THREE.MeshLambertMaterial({map:grassTex()}));g.rotation.x=-Math.PI/2;landGround.add(g);
   const cx=(POND.x0+POND.x1)/2,cz=(POND.z0+POND.z1)/2,w=POND.x1-POND.x0,d=POND.z1-POND.z0,sand=lam(0xd9c08a);
-  scene.add(mesh(BOXG,sand,cx,-0.5,cz,w+0.6,0.2,d+0.6));
-  scene.add(mesh(BOXG,sand,cx,-0.2,POND.z0-0.15,w+0.6,0.4,0.3));scene.add(mesh(BOXG,sand,cx,-0.2,POND.z1+0.15,w+0.6,0.4,0.3));
-  scene.add(mesh(BOXG,sand,POND.x0-0.15,-0.2,cz,0.3,0.4,d+0.6));scene.add(mesh(BOXG,sand,POND.x1+0.15,-0.2,cz,0.3,0.4,d+0.6));
-  const water=new THREE.Mesh(new THREE.PlaneGeometry(w,d),new THREE.MeshLambertMaterial({color:0x4fb4e6,transparent:true,opacity:0.72}));water.rotation.x=-Math.PI/2;water.position.set(cx,-0.08,cz);scene.add(water);
+  landGround.add(mesh(BOXG,sand,cx,-0.5,cz,w+0.6,0.2,d+0.6));
+  landGround.add(mesh(BOXG,sand,cx,-0.2,POND.z0-0.15,w+0.6,0.4,0.3));landGround.add(mesh(BOXG,sand,cx,-0.2,POND.z1+0.15,w+0.6,0.4,0.3));
+  landGround.add(mesh(BOXG,sand,POND.x0-0.15,-0.2,cz,0.3,0.4,d+0.6));landGround.add(mesh(BOXG,sand,POND.x1+0.15,-0.2,cz,0.3,0.4,d+0.6));
+  const water=new THREE.Mesh(new THREE.PlaneGeometry(w,d),new THREE.MeshLambertMaterial({color:0x4fb4e6,transparent:true,opacity:0.72}));water.rotation.x=-Math.PI/2;water.position.set(cx,-0.08,cz);landGround.add(water);
+  scene.add(landGround);
 })();
 
 const FLOWERC=[0xff6b81,0xffb347,0xf9f871,0xc084fc,0xff8ac9,0xffffff,0x7ad7ff];
@@ -464,12 +508,18 @@ function addCrate(x,y,z,item){const g=buildCrate();g.position.set(x,y,z);scene.a
 function breakCrate(c){if(c.broken)return;c.broken=true;c.g.visible=false;const i=solids.indexOf(c.sol);if(i>=0)solids.splice(i,1);
   SFX.crate();CAM.shake=Math.max(CAM.shake,0.3);rumble(70,0.4,0.2);spawnRing(c.x,c.y+0.05,c.z,0xffe9b0,0.3,5,0.35);
   for(let k=0;k<16;k++)spawnP(c.x+rand(-0.4,0.4),c.y+0.45+rand(-0.4,0.4),c.z+rand(-0.4,0.4),rand(-3.5,3.5),rand(1,4.5),rand(-3.5,3.5),rand(0.08,0.17),Math.random()<0.3?0xd1a83c:0xc98a4b,rand(0.5,0.9),0.2,-9,0.9);
-  if(c.item==='fire')addPower(c.x,c.y+0.85,c.z);else addHeart(c.x,c.y+0.85,c.z);}
+  if(c.item==='fire')addPower(c.x,c.y+0.85,c.z);
+  else if(c.item==='bubble')addBubblePower(c.x,c.y+0.85,c.z);
+  else addHeart(c.x,c.y+0.85,c.z);}
 function buildFlameItem(){const g=new THREE.Group();
   g.add(mesh(CONE,new THREE.MeshBasicMaterial({color:0xff7a1f}),0,0.06,0,0.22,0.58,0.22));
   g.add(mesh(CONE,new THREE.MeshBasicMaterial({color:0xffd24a}),0,-0.04,0,0.13,0.36,0.13));
   g.add(mesh(SPH,new THREE.MeshBasicMaterial({color:0xfff3c4}),0,-0.18,0,0.12,0.09,0.12));return g;}
-function addPower(x,y,z){const g=buildFlameItem();g.position.set(x,y,z);scene.add(g);powers.push({g,x,y,z,got:false,ph:rand(0,TAU),t:0});}
+function addPower(x,y,z){const g=buildFlameItem();g.position.set(x,y,z);scene.add(g);powers.push({g,x,y,z,got:false,ph:rand(0,TAU),t:0,kind:'fire'});}
+function buildBubbleItem(){const g=new THREE.Group();
+  g.add(mesh(SPH,new THREE.MeshBasicMaterial({color:0xc8f0ff,transparent:true,opacity:0.85}),0,0.08,0,0.24));
+  g.add(mesh(SPH,new THREE.MeshBasicMaterial({color:0xffffff,transparent:true,opacity:0.55}),0,0.12,0,0.14));return g;}
+function addBubblePower(x,y,z){const g=buildBubbleItem();g.position.set(x,y,z);scene.add(g);powers.push({g,x,y,z,got:false,ph:rand(0,TAU),t:0,kind:'bubble'});}
 const FIREGEO=new THREE.SphereGeometry(1,9,7);
 for(let i=0;i<26;i++){const m=new THREE.Mesh(FIREGEO,new THREE.MeshBasicMaterial({color:0xff8a2b}));m.scale.setScalar(0.24);m.visible=false;scene.add(m);fires.push({m,pos:new THREE.Vector3(),vel:new THREE.Vector3(),life:0,alive:false,trailT:0});}
 function buildHeart(){const g=new THREE.Group();const m=pho(0xff5a7a,120,0xffffff);g.add(mesh(SPH,m,-0.11,0.1,0,0.16));g.add(mesh(SPH,m,0.11,0.1,0,0.16));const c=mesh(CONE,m,0,-0.06,0,0.26,0.36,0.16);c.rotation.z=Math.PI;g.add(c);g.scale.setScalar(0.9);return g;}
@@ -512,6 +562,7 @@ function updateWin(dt){if(!won)return;winT+=dt;
 function loadLevel(L){
   if(L.physics)applyPhysics(L.physics);
   CURRENT_LEVEL=L;
+  if(L.underwater)beginUnderwaterLevel(L);else beginLandLevel();
   if(L.spawn){P.spawn.x=L.spawn.x;P.spawn.y=L.spawn.y;P.spawn.z=L.spawn.z;P.pos.set(L.spawn.x,L.spawn.y,L.spawn.z);P.vel.set(0,0,0);}
   const fence=L.fence;
   for(const s of L.fenceSolids)addSolid(s[0],s[1],s[2],s[3],s[4],s[5],fence);
@@ -541,11 +592,17 @@ function loadLevel(L){
     else if(k==='towerSteps'){for(let i=0;i<step[1];i++){const a=-Math.PI/2+i*0.56;const y=1.1*(i+1);const sl=addSolid(TX+Math.cos(a)*4.3,y-0.4,TZ+Math.sin(a)*4.3,2.4,0.4,2.4,i%2?0xc98a4b:0xd9a262,{surf:'wood'});if(step[2].indexOf(i)>=0)addNote(sl.mesh.position.x,y+0.7,sl.mesh.position.z,false);}}
     else if(k==='bushScatter'){for(let i=0;i<step[1];i++){const x=rand(-46,34),z=rand(-82,24);if(x>-38&&x<24&&z>-74&&z<16)continue;scene.add(mesh(SPH,lam(0x4f9f3f),x,0.35,z,rand(0.9,1.6),rand(0.6,1.0),rand(0.9,1.6)));}}
     else if(k==='cloudScatter'){for(let i=0;i<step[1];i++)addCloud(rand(-44,32),rand(22,30),rand(-80,20),rand(1.5,3));}
-    else if(k==='clam')addClam(step[1],step[2],step[3]);
+    else if(k==='clam')addClam(step[1],step[2],step[3],step[4]);
     else if(k==='shark')addShark(step[1],step[2],step[3],step[4]);
     else if(k==='fishSchool')addFishSchool(step[1],step[2],step[3],step[4]);
     else if(k==='noteFish')addNoteFish(step[1],step[2],step[3]);
-    else if(k==='spikefish')addSpikefish(step[1],step[2],step[3],step[4],step[5],step[6],step[7]);
+    else if(k==='spikefish')addSpikefish(step[1],step[2],step[3],step[4],step[5],step[6],step[7],step[8]);
+    else if(k==='kelpCurtain')addKelpCurtain(step[1],step[2],step[3],step[4],step[5],step[6]);
+    else if(k==='coralWall')addCoralWall(step[1],step[2],step[3],step[4]);
+    else if(k==='coralScatter')addCoralScatter(step[1],step[2],step[3]);
+    else if(k==='sandPath')sandPath(step[1],step[2],step[3],step[4]);
+    else if(k==='snoozleShell')addSnoozleShell(step[1],step[2],step[3]);
+    else if(k==='sunRays')addSunRays(step[1],step[2],step[3]);
   }
   for(const t of L.trees)addTree(t[0],t[1]);
   for(const s of L.snoozles){const x=s[0]!=null?s[0]:TX,y=s[1],z=s[2]!=null?s[2]:TZ;addSnoozle(x,y,z,homes[s[3]],s[4]);}
@@ -637,6 +694,7 @@ function doGust(){const yaw=P.yaw,fx=Math.sin(yaw),fz=Math.cos(yaw);const mx=P.p
   for(const q of goos){if(!q.alive||q.ref||Math.abs(q.pos.y-P.pos.y)>3)continue;const s=k(q.pos.x,q.pos.z);if(s>0){q.ref=true;q.vel.x=fx*12;q.vel.z=fz*12;q.vel.y=Math.max(q.vel.y,3);q.life=3;q.m.material.color.setHex(0xd8ff9a);spawnRing(q.pos.x,q.pos.y,q.pos.z,0xd8ff9a,0.2,3,0.25);}}
   {if(WM){const s=k(WM.sailX,WM.sailZ);if(s>0)WM.spin+=s*7;}}
   {if(BOAT){const s=k(BOAT.pos.x,BOAT.pos.z);if(s>0){BOAT.vel.x+=fx*s*6;BOAT.vel.z+=fz*s*6;}}}
+  if(isUnderwater())gustHitKelp(mx,mz,k);
   rumble(60,0.2,0.4);
   if(isUnderwater()&&P.bubble)fireBubble();
 }
@@ -873,9 +931,12 @@ function updateCrates(dt){if(seenCrate)return;for(const c of crates){if(c.broken
 function updatePowers(dt){for(const w of powers){if(w.got)continue;w.t+=dt;w.g.position.y=w.y+Math.sin(time*3+w.ph)*0.13;w.g.rotation.y+=dt*2.2;
   const fl=1+Math.sin(time*17+w.ph)*0.12;w.g.scale.set(fl,Math.min(1,w.t*3)*(2-fl),fl);
   w.pt=(w.pt||0)-dt;if(w.pt<=0){w.pt=0.08;spawnP(w.g.position.x+rand(-0.1,0.1),w.g.position.y+0.2,w.g.position.z+rand(-0.1,0.1),rand(-0.2,0.2),rand(0.6,1.4),rand(-0.2,0.2),0.06,Math.random()<0.5?0xff8a2b:0xffe36b,0.35,0.3,0,0.6);}
-  if(!P.dead){tmpV.set(P.pos.x,P.pos.y+0.6,P.pos.z);if(w.g.position.distanceTo(tmpV)<1.1){w.got=true;w.g.visible=false;P.fire=true;SFX.powerUp();CAM.fovKick=Math.max(CAM.fovKick,5);
-    showToast('Fire slam! Ground pound for fireballs — keep it until a Gloop hits you.');
-    for(let i=0;i<16;i++)spawnP(w.g.position.x,w.g.position.y,w.g.position.z,rand(-3,3),rand(1,4),rand(-3,3),0.09,Math.random()<0.5?0xff8a2b:0xffe36b,0.8,0.3,-4,1);updateHUD();}}}}
+  if(!P.dead){tmpV.set(P.pos.x,P.pos.y+0.6,P.pos.z);if(w.g.position.distanceTo(tmpV)<1.1){w.got=true;w.g.visible=false;
+    if(w.kind==='bubble'){P.bubble=true;SFX.bubblePower();CAM.fovKick=Math.max(CAM.fovKick,5);showToast('Bubble power! Gust to trap fish — keep it until something hits you.');
+      for(let i=0;i<16;i++)spawnP(w.g.position.x,w.g.position.y,w.g.position.z,rand(-3,3),rand(1,4),rand(-3,3),0.07,0xc8f0ff,0.8,0.3,-4,1);}
+    else{P.fire=true;SFX.powerUp();CAM.fovKick=Math.max(CAM.fovKick,5);showToast('Fire slam! Ground pound for fireballs — keep it until a Gloop hits you.');
+      for(let i=0;i<16;i++)spawnP(w.g.position.x,w.g.position.y,w.g.position.z,rand(-3,3),rand(1,4),rand(-3,3),0.09,Math.random()<0.5?0xff8a2b:0xffe36b,0.8,0.3,-4,1);}
+    updateHUD();}}}}
 function updateHearts(dt){for(const h of hearts){if(h.got)continue;h.t+=dt;h.g.position.y=h.y+Math.sin(time*3+h.ph)*0.1;h.g.rotation.y+=dt*2;h.g.scale.setScalar(0.9*Math.min(1,h.t*3));
   if(!P.dead){tmpV.set(P.pos.x,P.pos.y+0.6,P.pos.z);if(h.g.position.distanceTo(tmpV)<1.05){h.got=true;h.g.visible=false;P.hp=Math.min(P.maxHp,P.hp+1);SFX.heal();for(let i=0;i<12;i++)spawnP(h.g.position.x,h.g.position.y,h.g.position.z,rand(-2,2),rand(1,4),rand(-2,2),0.07,0xff8fa8,0.7,0.3,-5,1);updateHUD();}}}}
 
@@ -929,10 +990,10 @@ function buildSpikefish(){
   g.add(mesh(SPH,lam(0x111111),0.12,0.08,0.18,0.05));
   return g;
 }
-function addSpikefish(x1,y1,z1,x2,y2,z2,withNote){
+function addSpikefish(x1,y1,z1,x2,y2,z2,withNote,role){
   const g=buildSpikefish();g.position.set(x1,y1,z1);scene.add(g);
   const note=withNote?addNote(x1,y1+0.5,z1,true):null;
-  spikefish.push({g,x:x1,y:y1,z:z1,x1,y1,z1,x2,y2,z2,pathT:0,pathDir:1,note,alive:true,warnT:0,ph:rand(0,TAU)});
+  spikefish.push({g,x:x1,y:y1,z:z1,x1,y1,z1,x2,y2,z2,pathT:0,pathDir:1,note,alive:true,warnT:0,ph:rand(0,TAU),role:role||null});
 }
 function buildClam(){
   const g=new THREE.Group();
@@ -944,9 +1005,9 @@ function buildClam(){
   g.userData.bubble.visible=false;g.add(g.userData.bubble);
   return g;
 }
-function addClam(x,y,z){
+function addClam(x,y,z,role){
   const g=buildClam();g.position.set(x,y,z);scene.add(g);
-  clams.push({g,x,y,z,open:true,cd:0,ph:rand(0,TAU),gave:false});
+  clams.push({g,x,y,z,open:true,cd:0,ph:rand(0,TAU),gave:false,role:role||null});
 }
 for(let i=0;i<16;i++){
   const m=new THREE.Mesh(BUBBLEGEO,new THREE.MeshPhongMaterial({color:0xc8f0ff,shininess:140,specular:0xffffff,transparent:true,opacity:0.72}));
@@ -1105,6 +1166,60 @@ function hitSharkSpinJet(s,dmg){
   killShark(s,false);
 }
 
+const kelps=[];let underwaterGroup=null;
+const CORALC=[0xff6b81,0xff8a65,0xffb347,0xf48fb1,0xce93d8,0x80cbc4,0xffee58];
+function beginLandLevel(){if(landGround)landGround.visible=true;if(underwaterGroup)underwaterGroup.visible=false;scene.background=new THREE.Color(0x9fdcff);scene.fog=new THREE.Fog(0x9fdcff,45,120);}
+function beginUnderwaterLevel(L){
+  if(landGround)landGround.visible=false;
+  scene.background=new THREE.Color(0x58c8e8);scene.fog=new THREE.Fog(0x58c8e8,18,85);
+  if(!underwaterGroup){underwaterGroup=new THREE.Group();scene.add(underwaterGroup);}
+  underwaterGroup.visible=true;while(underwaterGroup.children.length)underwaterGroup.remove(underwaterGroup.children[0]);
+  const sand=lam(0xe8dcc0);
+  const floor=new THREE.Mesh(new THREE.PlaneGeometry(140,160),sand);floor.rotation.x=-Math.PI/2;floor.position.set(0,-0.55,-48);underwaterGroup.add(floor);
+  const bright=lam(0xf5ecd7);const floor2=new THREE.Mesh(new THREE.PlaneGeometry(50,40),bright);floor2.rotation.x=-Math.PI/2;floor2.position.set(0,-0.48,4);underwaterGroup.add(floor2);
+}
+function sandPath(x1,z1,x2,z2){const cx=(x1+x2)/2,cz=(z1+z2)/2;underwaterGroup.add(mesh(BOXG,lam(0xf0e4c8),cx,-0.42,cz,Math.abs(x2-x1)+0.4,0.06,Math.abs(z2-z1)+0.4));}
+function addCoralWall(x1,z1,x2,z2){const cx=(x1+x2)/2,cz=(z1+z2)/2,w=Math.abs(x2-x1)+0.8,d=Math.abs(z2-z1)+0.8;
+  addSolid(cx,0,cz,w,1.6,d,0xff7043,{surf:'stone'});
+  const along=w>d,len=Math.max(w,d),n=Math.max(2,Math.round(len/1.0));
+  for(let i=0;i<n;i++){const t=(i+0.5)/n;const px=along?cx-w/2+t*w:cx,pz=along?cz:cz-d/2+t*d;
+    const c=CORALC[i%CORALC.length];scene.add(mesh(SPH,lam(c),px,0.55+rand(0,0.35),pz,rand(0.35,0.65),rand(0.35,0.75),rand(0.35,0.65)));
+    scene.add(mesh(CONE,lam(c),px+rand(-0.15,0.15),0.25,pz+rand(-0.15,0.15),rand(0.12,0.22),rand(0.35,0.75),rand(0.12,0.22)));}}
+function addCoralScatter(n,cx,cz,r){for(let i=0;i<n;i++){const a=rand(0,TAU),rr=Math.sqrt(Math.random())*r;const x=cx+Math.cos(a)*rr,z=cz+Math.sin(a)*rr,c=CORALC[i%CORALC.length];
+  scene.add(mesh(SPH,lam(c),x,0.35+rand(0,0.25),z,rand(0.25,0.55),rand(0.25,0.55),rand(0.25,0.55)));}}
+function buildKelpStrand(h){const g=new THREE.Group();const stem=mesh(CYL,lam(0x3d7a37),0,h/2,0,0.07,h,0.07);g.add(stem);
+  for(let i=0;i<4;i++){const y=0.5+i*(h/4);const fr=mesh(CONE,lam(0x4caf50),0,y,0,0.35,0.55,0.08);fr.rotation.z=(i%2?1:-1)*0.7;fr.rotation.y=i*0.9;g.add(fr);}return g;}
+function addKelpCurtain(id,cx,cz,w,h,secret){
+  const g=new THREE.Group();g.position.set(cx,0,cz);scene.add(g);
+  const strands=[];const n=Math.max(4,Math.round(w*1.4));
+  for(let i=0;i<n;i++){const t=(i+0.5)/n;const sx=(t-0.5)*w;const st=buildKelpStrand(h+rand(-0.4,0.6));st.position.set(sx,0,rand(-0.15,0.15));g.add(st);strands.push(st);}
+  const sol=addSolid(cx,0,cz,w+0.4,h+0.5,0.55,0x2e6b32,{surf:'grass'});
+  sol.mesh.visible=false;
+  kelps.push({id,g,strands,sol,cx,cz,w,h,secret:!!secret,parted:false,partT:0,openSide:secret?-1:1});
+}
+function addSnoozleShell(x,y,z){
+  const g=new THREE.Group();g.position.set(x,y,z);
+  const shell=lam(0xf5a8a8);
+  g.add(mesh(SPH,shell,-0.55,-0.05,0,0.75,0.18,0.55));g.add(mesh(SPH,shell,0.55,-0.05,0,0.75,0.18,0.55));
+  g.add(mesh(SPH,lam(0xfff0f0),0,0.08,0,0.55,0.12,0.45));scene.add(g);}
+function addSunRays(n,cx,cz){for(let i=0;i<n;i++){const m=new THREE.Mesh(new THREE.PlaneGeometry(0.35,8+rand(0,6)),new THREE.MeshBasicMaterial({color:0xffffff,transparent:true,opacity:0.07+Math.random()*0.05,depthWrite:false}));
+  m.position.set(cx+rand(-8,8),rand(6,14),cz+rand(-6,6));m.rotation.x=-0.35+rand(-0.1,0.1);m.rotation.z=rand(-0.2,0.2);if(underwaterGroup)underwaterGroup.add(m);else scene.add(m);}}
+function gustHitKelp(mx,mz,k){
+  for(const kp of kelps){if(kp.parted)continue;if(Math.abs(kp.cz-mz)>kp.h+2)continue;
+    const s=k(kp.cx,kp.cz);if(s>0.12)partKelp(kp,s);}}
+function partKelp(kp,s){
+  if(kp.parted)return;kp.parted=true;kp.partT=0;SFX.gust();
+  const i=solids.indexOf(kp.sol);if(i>=0)solids.splice(i,1);
+  spawnRing(kp.cx,kp.h*0.55,kp.cz,0xa5d6a7,0.35,5,0.35);
+  for(let j=0;j<10;j++)spawnP(kp.cx+rand(-1,1),rand(0.5,kp.h),kp.cz+rand(-1,1),rand(-2,2),rand(0.5,2),rand(-2,2),0.07,0xc8f0ff,0.5,0.3,-4,0.9);
+  if(kp.secret)showToast('The kelp wall parted!');}
+function updateKelp(dt){
+  for(const kp of kelps){
+    kp.strands.forEach((st,i)=>{st.rotation.z=Math.sin(time*1.4+i)*0.08;st.rotation.x=Math.sin(time*1.1+i*0.7)*0.05;
+      if(kp.parted){kp.partT+=dt;const k=smooth(Math.min(kp.partT/0.55,1));st.rotation.y=kp.openSide*(0.9+i*0.08)*k;}});
+    if(kp.parted&&kp.partT>0.15){const k=smooth(Math.min(kp.partT/0.7,1));kp.g.position.x=lerp(kp.cx,kp.cx+kp.openSide*2.0,k);}}
+}
+
 
 // ===== src/hud.js =====
 function updateHUD(){$('hp').textContent='❤️'.repeat(Math.max(P.hp,0))+'🤍'.repeat(P.maxHp-Math.max(P.hp,0));$('snz').textContent='😴 '+rescued+'/'+snoozles.length;$('nts').textContent='♪ '+gotNotes+'/'+notes.length;
@@ -1166,7 +1281,7 @@ updatePickerUI();
 // ===== src/game.js =====
 let time=0,rescued=0,gotNotes=0;
 let started=false;
-window.__W={solids,gloops,goos,hearts,crates,powers,fires,checks,snoozles,notes,dust,puddles,sharks,fish,spikefish,clams,bubbleShots,get won(){return won;},get WM(){return WM;},get RAINBOW(){return RAINBOW;}};
+window.__W={solids,gloops,goos,hearts,crates,powers,fires,checks,snoozles,notes,dust,puddles,sharks,fish,spikefish,clams,bubbleShots,kelps,get underwaterGroup(){return underwaterGroup;},get won(){return won;},get WM(){return WM;},get RAINBOW(){return RAINBOW;}};
 window.__started=()=>started;
 
 // ---------- camera ----------
@@ -1196,7 +1311,7 @@ function frame(now){requestAnimationFrame(frame);let dt=(now-last)/1000;last=now
   time+=dt;
   readKeys(dt);if(T.stickId!==null){IN.mx=T.jx;IN.mz=T.jy;}if(HELD.a)IN.jumpHeld=true;if(HELD.b)IN.bHeld=true;
   updatePlayer(dt);updateWobblers(dt);updatePinwheels(dt);updateToss(dt);updateNotes(dt);updateSnoozles(dt);updateBoat(dt);updateWindmill(dt);updateFans(dt);updateClouds(dt);updateGloops(dt);updateGoos(dt);updatePuddles(dt);updateFires(dt);updateCrates(dt);updatePowers(dt);updateHearts(dt);updateChecks(dt);
-  updateSharks(dt);updateFish(dt);updateSpikefish(dt);updateBubbleShots(dt);updateClams(dt);
+  updateSharks(dt);updateFish(dt);updateSpikefish(dt);updateBubbleShots(dt);updateClams(dt);updateKelp(dt);
   updateWin(dt);
   updateParticles(dt);updateRings(dt);updateZ(dt);updateCamera(dt);updatePlayerVisual(dt);
   IN.jump=IN.b=IN.y=false;IN.jumpHeld=IN.bHeld=false;IN.camDX=IN.camDY=0;IN.mx=IN.mz=0;
