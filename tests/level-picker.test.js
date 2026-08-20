@@ -105,4 +105,12 @@ function boot(opts){return require('./harness.js')(Object.assign({autostart:fals
   ok(H.pickerIdx()===1,'gamepad: stick right selects Level 2');
 }
 
+// ---- start overlay must not block touch A/B/Y while picker is open ----
+{
+  const css=require('fs').readFileSync(require('path').join(__dirname,'..','index.html'),'utf8');
+  ok(/#start\{[^}]*pointer-events\s*:\s*none/.test(css),'start overlay ignores pointer events outside the card');
+  ok(/#start \.card\{[^}]*pointer-events\s*:\s*auto/.test(css),'start card remains tappable for level selection');
+  ok(/\.tbtn\{[^}]*z-index\s*:\s*6/.test(css),'touch buttons stack above the start overlay');
+}
+
 report();
