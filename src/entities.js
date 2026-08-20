@@ -2,6 +2,8 @@ const solids=[],wobblers=[],pinwheels=[],toss=[],notes=[],dust=[],snoozles=[],fa
 let seenGloop=false,seenCrate=false;
 let BOAT=null,WM=null,player=null,shadow=null,RAINBOW=null;
 const checks=[];let won=false,winT=0,confT=0;
+const LEVELS=[LEVEL1,LEVEL2];
+let CURRENT_LEVEL=null;
 const POND={x0:-6,x1:6,z0:-33,z1:-25};
 function inPond(x,z){return x>POND.x0&&x<POND.x1&&z>POND.z0&&z<POND.z1;}
 function groundHeightAt(x,z){return inPond(x,z)?-0.4:0;}
@@ -127,16 +129,19 @@ const CONF=[0xff5a7a,0xffc94a,0x6fd45a,0x4fb4e6,0xa15ae0,0xffffff,0xff9a3c];
 function buildRainbow(x,z){const g=new THREE.Group();const cols=[0xff5a5a,0xff9a3c,0xffe14a,0x6fd45a,0x4fb4e6,0x5a6fe0,0xa15ae0];
   cols.forEach((c,i)=>{const t=new THREE.Mesh(new THREE.TorusGeometry(27-i*1.6,0.8,7,44,Math.PI),new THREE.MeshBasicMaterial({color:c,transparent:true,opacity:0.85}));g.add(t);});
   g.position.set(x,0.2,z);g.scale.setScalar(0.15);g.visible=false;scene.add(g);return g;}
-function triggerWin(){if(won)return;won=true;winT=0;WM.party=true;AU.win=true;SFX.fanfare();
+function triggerWin(){if(won)return;won=true;winT=0;if(WM)WM.party=true;AU.win=true;SFX.fanfare();
   if(RAINBOW)RAINBOW.visible=true;const w=$('win');w.style.display='flex';w.style.opacity=1;
   CAM.fovKick=Math.max(CAM.fovKick,7);CAM.shake=Math.max(CAM.shake,0.4);rumble(500,0.6,0.7);}
 function updateWin(dt){if(!won)return;winT+=dt;
   const k=smooth(Math.min(winT/1.3,1));if(RAINBOW){RAINBOW.scale.setScalar(0.15+k*0.85);RAINBOW.children.forEach(t=>{t.material.opacity=0.85*k;});}
-  confT-=dt;if(confT<=0&&winT<16){confT=0.05;const a=rand(0,TAU),r=rand(0,15);
+  confT-=dt;if(confT<=0&&winT<16&&WM){confT=0.05;const a=rand(0,TAU),r=rand(0,15);
     spawnP(WM.x+Math.cos(a)*r,rand(13,21),WM.z+Math.sin(a)*r,rand(-1.2,1.2),rand(-3,-1),rand(-1.2,1.2),rand(0.09,0.18),CONF[Math.floor(Math.random()*CONF.length)],rand(1.8,2.8),0,-2.2,1);}
   if(winT>9){const w=$('win');w.style.opacity=Math.max(0,1-(winT-9)/2.5);if(winT>11.7)w.style.display='none';}}
 
 function loadLevel(L){
+  if(L.physics)applyPhysics(L.physics);
+  CURRENT_LEVEL=L;
+  if(L.spawn){P.spawn.x=L.spawn.x;P.spawn.y=L.spawn.y;P.spawn.z=L.spawn.z;P.pos.set(L.spawn.x,L.spawn.y,L.spawn.z);P.vel.set(0,0,0);}
   const fence=L.fence;
   for(const s of L.fenceSolids)addSolid(s[0],s[1],s[2],s[3],s[4],s[5],fence);
   for(const p of L.pathTiles)pathTile(p[0],p[1],p[2],p[3]);
@@ -169,5 +174,6 @@ function loadLevel(L){
   for(const t of L.trees)addTree(t[0],t[1]);
   for(const s of L.snoozles){const x=s[0]!=null?s[0]:TX,y=s[1],z=s[2]!=null?s[2]:TZ;addSnoozle(x,y,z,homes[s[3]],s[4]);}
 }
-function buildLevel(){loadLevel(LEVEL1);}
+window.__LEVEL=()=>CURRENT_LEVEL;
+window.__LEVELS=LEVELS;
 

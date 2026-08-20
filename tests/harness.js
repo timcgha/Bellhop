@@ -9,6 +9,9 @@
 //   const H = require('./harness.js')();
 //   const {P, W, el, frames, tap, ok, kd, ku, report} = H;
 //
+// Options:
+//   { level: 0 | 1 | 'LEVEL1' | 'LEVEL2', autostart: true | false }
+//
 // Each require('./harness.js')() call boots a FRESH game. Tests that need a
 // clean world must live in their own file, because run.js gives every file its
 // own process. Sharing one instance across unrelated assertions caused false
@@ -68,7 +71,12 @@ const THREE = new Proxy({}, {
 // --- test hooks (game exports P, CAM, and W on window — see player.js and game.js)
 const HOOKS = [];
 
-module.exports = function boot() {
+function resolveLevelIdx(level) {
+  if (level === 'LEVEL2' || level === 1 || level === 'level2') return 1;
+  return 0;
+}
+
+module.exports = function boot(opts = {}) {
   const html = fs.readFileSync(GAME_HTML, 'utf8');
   let src = loadGameScript(html);
   for (const [from, to] of HOOKS) {
@@ -77,13 +85,32 @@ module.exports = function boot() {
   }
 
   const els = {};
-  function el(id) {
-    if (!els[id]) els[id] = {
-      id, listeners: {}, style: {}, textContent: '',
-      classList: { add() {} },
-      addEventListener(t, f) { (this.listeners[t] = this.listeners[t] || []).push(f); },
-      setPointerCapture() {}
+  function canvasStub() {
+    return {
+      width: 160, height: 100, style: {},
+      getContext() {
+        return {
+          scale() {}, fillRect() {}, fillStyle: '', strokeStyle: '', lineWidth: 0,
+          beginPath() {}, moveTo() {}, lineTo() {}, quadraticCurveTo() {}, closePath() {}, fill() {}, stroke() {}, arc() {},
+          createLinearGradient() { return { addColorStop() {} }; }
+        };
+      }
     };
+  }
+  function el(id) {
+    if (!els[id]) {
+      const isCanvas = id === 'art0' || id === 'art1';
+      els[id] = isCanvas ? canvasStub() : {
+        id, listeners: {}, style: {}, textContent: '',
+        classList: { add() {}, remove() {}, toggle() {} },
+        addEventListener(t, f) { (this.listeners[t] = this.listeners[t] || []).push(f); },
+        setPointerCapture() {},
+        querySelector(sel) {
+          if (sel === '.lvl-art') return canvasStub();
+          return null;
+        }
+      };
+    }
     return els[id];
   }
 
@@ -127,10 +154,29 @@ module.exports = function boot() {
     console.log('\nall passed');
   }
 
-  // start the game (the start card swallows the first input)
-  kd({ code: 'Space', preventDefault() {}, repeat: false });
-  frames(5);
-  ku({ code: 'Space' });
+  function selectLevel(level) {
+    window.__setPickerIdx(resolveLevelIdx(level));
+  }
+  function confirmStart() {
+    kd({ code: 'Space', preventDefault() {}, repeat: false });
+    frames(5);
+    ku({ code: 'Space' });
+  }
+  function startLevel(level) {
+    selectLevel(level);
+    confirmStart();
+  }
 
-  return { P, W, CAM, els, el, frames, tap, ok, report, kd, ku, timeouts };
+  if (opts.autostart !== false) {
+    startLevel(opts.level !== undefined ? opts.level : 0);
+  }
+
+  return {
+    P, W, CAM, els, el, frames, tap, ok, report, kd, ku, timeouts,
+    selectLevel, confirmStart, startLevel,
+    getLevel: () => window.__LEVEL && window.__LEVEL(),
+    getPhys: () => window.__PHYS && window.__PHYS(),
+    isStarted: () => window.__started && window.__started(),
+    pickerIdx: () => window.__pickerIdx && window.__pickerIdx()
+  };
 };

@@ -1,7 +1,7 @@
 let time=0,rescued=0,gotNotes=0;
 let started=false;
-buildLevel();
 window.__W={solids,gloops,goos,hearts,crates,powers,fires,checks,snoozles,notes,dust,puddles,get won(){return won;},get WM(){return WM;},get RAINBOW(){return RAINBOW;}};
+window.__started=()=>started;
 
 // ---------- camera ----------
 const CAM=window.__CAM={yaw:0,pitch:0.42,dist:8.5,pos:new THREE.Vector3(0,5,19),look:new THREE.Vector3(0,1,10),shake:0,fovKick:0,lastManual:-9};

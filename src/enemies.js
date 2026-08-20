@@ -28,7 +28,7 @@ function wakeSnoozle(s){if(s.state!=='sleep')return;s.state='wake';s.t=0;s.boat=
   if(rescued<snoozles.length)showToast('A Snoozle woke up! ♪ '+rescued+' of '+snoozles.length);else triggerWin();
   updateHUD();}
 function updateSnoozles(dt){for(const s of snoozles){const g=s.g;
-  if(s.state==='sleep'){if(s.boat){g.position.set(BOAT.pos.x,0.28,BOAT.pos.z);g.rotation.y=BOAT.yaw+Math.PI/2;}
+  if(s.state==='sleep'){if(s.boat&&BOAT){g.position.set(BOAT.pos.x,0.28,BOAT.pos.z);g.rotation.y=BOAT.yaw+Math.PI/2;}
     g.scale.set(1,1+Math.sin(time*2+s.ph)*0.03,1);s.zz-=dt;if(s.zz<=0){s.zz=rand(0.8,1.3);spawnZ(g.position.x+0.2,g.position.y+0.8,g.position.z);}}
   else if(s.state==='wake'){s.t+=dt;const k=Math.min(s.t/1.1,1);g.position.y=s.baseY+Math.sin(k*Math.PI)*1.3;g.rotation.y+=dt*10;if(s.t>1.1){s.state='zoom';s.t=0;s.fx=g.position.x;s.fy=s.baseY;s.fz=g.position.z;s.homeY=groundHeightAt(s.home.x,s.home.z);}}
   else if(s.state==='zoom'){s.t+=dt;const k=Math.min(s.t/1.7,1);
@@ -41,12 +41,12 @@ function updateSnoozles(dt){for(const s of snoozles){const g=s.g;
     let hy=0;if(s.hopT>0){s.hopT-=dt;hy=Math.sin((D-Math.max(s.hopT,0))/D*Math.PI)*(won?0.62:0.4);}
     g.position.y=s.baseY+hy;g.scale.set(1,1+Math.sin(time*(won?9:5)+s.ph)*(won?0.09:0.04),1);
     if(won)g.rotation.y+=dt*3.6;else g.rotation.y=angDamp(g.rotation.y,Math.atan2(P.pos.x-g.position.x,P.pos.z-g.position.z),2,dt);}}}
-function updateBoat(dt){const b=BOAT;b.pos.x+=b.vel.x*dt;b.pos.z+=b.vel.z*dt;b.vel.x=damp(b.vel.x,0,0.7,dt);b.vel.z=damp(b.vel.z,0,0.7,dt);
+function updateBoat(dt){if(!BOAT)return;const b=BOAT;b.pos.x+=b.vel.x*dt;b.pos.z+=b.vel.z*dt;b.vel.x=damp(b.vel.x,0,0.7,dt);b.vel.z=damp(b.vel.z,0,0.7,dt);
   const m=1.0;if(b.pos.x<POND.x0+m){b.pos.x=POND.x0+m;b.vel.x=Math.abs(b.vel.x)*0.5;}if(b.pos.x>POND.x1-m){b.pos.x=POND.x1-m;b.vel.x=-Math.abs(b.vel.x)*0.5;}
   if(b.pos.z<POND.z0+m){b.pos.z=POND.z0+m;b.vel.z=Math.abs(b.vel.z)*0.5;}if(b.pos.z>POND.z1-m){b.pos.z=POND.z1-m;b.vel.z=-Math.abs(b.vel.z)*0.5;}
   const sp=Math.hypot(b.vel.x,b.vel.z);if(sp>0.3)b.yaw=angDamp(b.yaw,Math.atan2(b.vel.x,b.vel.z),3,dt);
   b.g.position.set(b.pos.x,-0.1+Math.sin(time*2)*0.04,b.pos.z);b.g.rotation.set(Math.sin(time*1.7)*0.04,b.yaw,Math.sin(time*2.3)*0.05);}
-function updateWindmill(dt){WM.spin=damp(WM.spin,WM.party?3:0.45,0.8,dt);WM.sails.rotation.z-=WM.spin*dt;}
+function updateWindmill(dt){if(!WM)return;WM.spin=damp(WM.spin,WM.party?3:0.45,0.8,dt);WM.sails.rotation.z-=WM.spin*dt;}
 function updateFans(dt){for(const f of fans){f.blades.rotation.y+=18*dt;f.pt-=dt;if(f.pt<=0){f.pt=0.06;const a=rand(0,TAU),r=rand(0,f.r*0.9);spawnP(f.x+Math.cos(a)*r,0.4,f.z+Math.sin(a)*r,0,rand(5,8),0,rand(0.06,0.12),0xffffff,rand(0.9,1.3),0.35,0,0.35);}}}
 function updateClouds(dt){for(const c of clouds){c.g.position.x+=c.sp*dt;if(c.g.position.x>60)c.g.position.x=-60;}}
 

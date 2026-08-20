@@ -1,0 +1,21 @@
+const LEVEL2={
+id:'level2',
+spawn:{x:0,y:0,z:0},
+physics:{
+  speed:6.8,acc:44,dec:60,airAcc:20,
+  grav:-6,maxFall:-6,jumpV:5.5,puffV:9.4,
+  coyote:0.12,buffer:0.15,step:0.42,r:0.36,h:1.15,
+  hoverHeld:1.0,hoverReleased:0.5,hoverDrift:-1.6,
+  slamHang:0.14,slamFall:-34,slamRebound:8,
+  jetTime:0.38,bonkR:2.05,bonkCD:0.5
+},
+fence:0x4a7a8a,
+fenceSolids:[],
+pathTiles:[],
+hedges:[],
+checks:[],
+tower:{tx:0,tz:0},
+snoozleHomes:[],
+snoozles:[],
+trees:[],
+steps:[]};
