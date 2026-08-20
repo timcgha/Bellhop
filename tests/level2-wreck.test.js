@@ -104,6 +104,25 @@ const DECK_H=2.8;
   ok(Math.abs(sp.x2-sp.x1)<0.5&&Math.abs(sp.z2-sp.z1)<0.5,'shaft spikefish stays in the central shaft');
 }
 
+// ---- hull collision shell ----
+function push(H,x,y,z,vx,vz,n){
+  H.P.pos.set(x,y,z);H.P.vel.set(0,0,0);
+  for(let i=0;i<(n||90);i++){H.P.vel.x=vx;H.P.vel.z=vz;H.frames(1);}
+  return {x:H.P.pos.x,z:H.P.pos.z};
+}
+{
+  const H=boot();startL2(H);
+  ok(push(H,-10,1,-177,5,0).x<-7.3,'west hull wall blocks entry from outside');
+  ok(push(H,10,1,-177,-5,0).x>7.3,'east hull wall blocks entry from outside');
+  ok(push(H,0,1,-192,0,5).z<-188.5,'stern hull wall blocks entry from outside');
+  ok(push(H,5.4,0.8,-164,0,-5).z>-167.5,'bow face beside the entrance gap is solid');
+  ok(push(H,0,0.8,-164,0,-5).z<-169,'keel entrance gap admits the player');
+  ok(push(H,-5,3.3,-174,-5,0).x>-7.5,'interior west wall contains the lower ledge');
+  ok(push(H,5.5,6.1,-177,5,0).x<7.5,'interior east wall contains the shark bypass');
+  ok(maxSwimY(H,-10,0.8,-177)<8,'no exterior climbing route up the west hull');
+  ok(maxSwimY(H,10,0.8,-177)<8,'no exterior climbing route up the east hull');
+}
+
 // ---- recoverability (no-dive invariant) ----
 {
   const H=boot();startL2(H);
@@ -143,6 +162,11 @@ const DECK_H=2.8;
 {
   const H=boot();startL2(H);
   ok(canStand(H,0,-195,55),'route exits the Wreck toward the future Trench');
+  // real exit: from the crow's nest, swim south over the broken stern wall
+  H.P.pos.set(0,14.7,-184);H.P.vel.set(0,0,0);H.frames(5);
+  for(let i=0;i<40;i++){H.P.vel.z=-5;H.P.vel.y=0.5;H.frames(1);}
+  for(let i=0;i<160;i++){H.P.vel.z=-3;H.frames(1);}
+  ok(H.P.pos.z<-190&&H.P.pos.y<4,'player can swim out of the Wreck top toward Stage 6 ('+H.P.pos.z.toFixed(1)+')');
 }
 
 report();
