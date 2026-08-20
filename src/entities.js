@@ -194,6 +194,10 @@ function loadLevel(L){
     else if(k==='sandPath')sandPath(step[1],step[2],step[3],step[4]);
     else if(k==='snoozleShell')addSnoozleShell(step[1],step[2],step[3]);
     else if(k==='sunRays')addSunRays(step[1],step[2],step[3]);
+    else if(k==='kelpCluster')addKelpCluster(step[1],step[2],step[3],step[4],step[5]);
+    else if(k==='seabedScatter')addSeabedScatter(step[1],step[2],step[3],step[4]);
+    else if(k==='dressPlatform')dressPlatform(step[1],step[2],step[3],step[4],step[5],step[6]);
+    else if(k==='suspendMotes')addSuspendMotes(step[1]);
   }
   for(const t of L.trees)addTree(t[0],t[1]);
   for(const s of L.snoozles){const x=s[0]!=null?s[0]:TX,y=s[1],z=s[2]!=null?s[2]:TZ;addSnoozle(x,y,z,homes[s[3]],s[4]);}
