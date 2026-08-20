@@ -607,15 +607,17 @@ function inConchInterior(){
   return p.x>b.x0&&p.x<b.x1&&p.y<b.yMax&&p.z>b.z0&&p.z<b.z1;
 }
 function playerInConchTrigger(){
-  if(!CONCH||!CONCH.trigger)return false;
+  if(!CONCH||!CONCH.trigger||!CONCH.open)return false;
   const t=CONCH.trigger,p=P.pos;
+  // Must clear the doorway plane first — brushing the open mouth never wins.
+  if(p.z>CONCH.doorZ-1.4)return false;
   return Math.abs(p.x-t.x)<t.hx&&Math.abs(p.y-t.y)<t.hy&&Math.abs(p.z-t.z)<t.hz;
 }
 function setConchDoorOpen(open){
   if(!CONCH||!CONCH.doorSolid)return;
   const i=solids.indexOf(CONCH.doorSolid);
-  if(open){if(i>=0)solids.splice(i,1);CONCH.doorSolid.mesh.visible=false;if(CONCH.doorVis)CONCH.doorVis.visible=false;if(CONCH.openMouth)CONCH.openMouth.visible=true;}
-  else{if(i<0)solids.push(CONCH.doorSolid);CONCH.doorSolid.mesh.visible=false;if(CONCH.doorVis)CONCH.doorVis.visible=true;if(CONCH.openMouth)CONCH.openMouth.visible=false;}
+  if(open){if(i>=0)solids.splice(i,1);CONCH.doorSolid.mesh.visible=false;if(CONCH.doorVis)CONCH.doorVis.visible=false;if(CONCH.openMouth)CONCH.openMouth.visible=true;if(CONCH.closedSeam)CONCH.closedSeam.visible=false;}
+  else{if(i<0)solids.push(CONCH.doorSolid);CONCH.doorSolid.mesh.visible=false;if(CONCH.doorVis)CONCH.doorVis.visible=true;if(CONCH.openMouth)CONCH.openMouth.visible=false;if(CONCH.closedSeam)CONCH.closedSeam.visible=true;}
 }
 function openConch(){
   if(!CONCH||CONCH.open)return;
@@ -633,7 +635,7 @@ function updateConch(dt,winT){
   const glow=CONCH.open?(0.22+Math.min(CONCH.openT,1)*0.35):(0.06+Math.sin(time*0.8)*0.02);
   if(CONCH.spiralLights)for(const L of CONCH.spiralLights){L.m.material.opacity=glow*(0.55+0.45*Math.sin(time*1.6+L.ph));}
   if(CONCH.shellGlow)CONCH.shellGlow.material.opacity=CONCH.open?(0.12+Math.min(CONCH.openT,1)*0.18):(0.03+Math.sin(time*0.6)*0.015);
-  if(CONCH.interiorGlow)CONCH.interiorGlow.material.opacity=CONCH.open?(0.1+Math.min(CONCH.openT,1)*0.25):0.02;
+  if(CONCH.interiorGlow)CONCH.interiorGlow.material.opacity=CONCH.open?(0.12+Math.min(CONCH.openT,1)*0.28):0.03;
   if(winT>=0){
     if(CONCH.rainbow){const k=smooth(Math.min(winT/1.3,1));CONCH.rainbow.visible=true;CONCH.rainbow.scale.setScalar(0.2+k*1.1);
       CONCH.rainbow.children.forEach(r=>{r.material.opacity=0.85*k;});}
@@ -642,38 +644,59 @@ function updateConch(dt,winT){
     if(CONCH.interiorGlow)CONCH.interiorGlow.material.opacity=0.4+Math.sin(time*2.4)*0.1;
   }else if(CONCH.open&&!won&&playerInConchTrigger())triggerWin();
 }
+function addConchShellSolid(x,y,z,w,h,d){
+  const s=addSolid(x,y,z,w,h,d,0xd9a07a,{surf:'stone'});s.mesh.visible=false;CONCH.shellSolids.push(s);return s;
+}
 function buildConch(cx,cz){
-  CONCH={cx,cz,open:false,openT:0,spiralLights:[],doorX:cx,doorY:2.2,doorZ:cz+5.2};
+  // Doorway aperture facing +z (north / trench approach). Collision and visuals share these sizes.
+  const DOOR_W=3.6,DOOR_H=3.5,DOOR_D=0.85,DOOR_Y=0.35,DOOR_Z=5.15;
+  CONCH={cx,cz,open:false,openT:0,spiralLights:[],shellSolids:[],
+    doorX:cx,doorY:DOOR_Y+DOOR_H*0.5,doorZ:cz+DOOR_Z,
+    doorW:DOOR_W,doorH:DOOR_H};
   const g=new THREE.Group();g.position.set(cx,0,cz);scene.add(g);
-  const shell=lam(0xd9a07a),rib=lam(0xc4865c),lip=lam(0xe8b890),dark=lam(0x6a4030),inner=lam(0xf0c8a8);
-  // body: stacked tapered rings forming a readable spiral shell silhouette
+  const shell=lam(0xd9a07a),rib=lam(0xc4865c),lip=lam(0xe8b890),dark=lam(0x5a3020),inner=lam(0xf0c8a8);
+  // body: stacked tapered rings (decorative ridges — not individually collidable)
   for(let i=0;i<10;i++){
     const t=i/9,ang=-t*2.4,r=3.6-t*2.4,y=1.1+t*5.2,z=-1.2-t*3.4;
     const ring=mesh(SPH,shell,Math.sin(ang)*0.6,y,z,r*1.15,r*0.72,r*1.05);
     g.add(ring);
     if(i%2===0)g.add(mesh(SPH,rib,Math.sin(ang)*0.6,y+0.15,z-0.1,r*1.22,r*0.35,r*1.12));
   }
-  // mouth / aperture facing north (+z) — thinned so the doorway reads on a phone
-  g.add(mesh(SPH,lip,0,2.4,4.5,3.9,3.0,2.1));
-  g.add(mesh(SPH,inner,0,2.2,3.6,3.0,2.2,1.85));
-  // bright doorway rim (visual only) sits just outside the door collision
-  g.add(mesh(BOXG,lip,0,2.2,5.45,5.0,4.0,0.18));
-  g.add(mesh(BOXG,dark,0,2.3,5.55,4.4,3.6,0.22));
-  // closed door visual (dark plate) + matching collision proxy
-  const doorVis=mesh(BOXG,dark,0,2.2,5.25,4.4,3.6,0.35);g.add(doorVis);CONCH.doorVis=doorVis;
-  const openMouth=mesh(BOXG,new THREE.MeshBasicMaterial({color:0xfff0d0,transparent:true,opacity:0.45,depthWrite:false}),0,2.2,5.15,4.0,3.2,0.18);
+  // mouth frame: always-solid looking rim around the intended doorway
+  g.add(mesh(SPH,lip,0,2.3,4.35,3.6,2.8,1.7));
+  g.add(mesh(SPH,inner,0,2.15,3.5,2.7,2.1,1.55));
+  // left / right / top mouth cheeks (visual + collision below) so the opening reads as a door
+  g.add(mesh(BOXG,lip,-(DOOR_W*0.5+0.85),2.2,DOOR_Z,1.5,4.2,1.1));
+  g.add(mesh(BOXG,lip,DOOR_W*0.5+0.85,2.2,DOOR_Z,1.5,4.2,1.1));
+  g.add(mesh(BOXG,lip,0,DOOR_Y+DOOR_H+0.55,DOOR_Z,DOOR_W+2.6,1.0,1.0));
+  // closed door plate — fills the aperture; hidden when open
+  const doorVis=mesh(BOXG,dark,0,DOOR_Y+DOOR_H*0.5,DOOR_Z,DOOR_W,DOOR_H,DOOR_D*0.7);
+  g.add(doorVis);CONCH.doorVis=doorVis;
+  const closedSeam=mesh(BOXG,lam(0x3a2010),0,DOOR_Y+DOOR_H*0.5,DOOR_Z+0.28,0.12,DOOR_H*0.92,0.08);
+  g.add(closedSeam);CONCH.closedSeam=closedSeam;
+  // open mouth glow — only visible when the doorway is passable
+  const openMouth=mesh(BOXG,new THREE.MeshBasicMaterial({color:0xfff2d0,transparent:true,opacity:0.5,depthWrite:false}),0,DOOR_Y+DOOR_H*0.5,DOOR_Z-0.05,DOOR_W*0.95,DOOR_H*0.92,0.2);
   openMouth.visible=false;g.add(openMouth);CONCH.openMouth=openMouth;
-  const doorSolid=addSolid(cx,0.2,cz+5.25,4.8,4.2,0.7,0x6a4030,{surf:'stone'});doorSolid.mesh.visible=false;CONCH.doorSolid=doorSolid;
-  // major shell collision proxies (not every decorative ridge)
-  addSolid(cx-4.2,0,cz-1.5,2.4,7.5,8.5,0xd9a07a,{surf:'stone'}).mesh.visible=false;
-  addSolid(cx+4.2,0,cz-1.5,2.4,7.5,8.5,0xd9a07a,{surf:'stone'}).mesh.visible=false;
-  addSolid(cx,0,cz-5.6,8.5,8.5,2.4,0xd9a07a,{surf:'stone'}).mesh.visible=false;
-  addSolid(cx,6.8,cz-1.2,7.5,2.2,9.5,0xd9a07a,{surf:'stone'}).mesh.visible=false;
-  // interior floor strip so the player can rest after swimming in
-  addSolid(cx,0,cz+1.2,3.6,0.35,6.5,0xe8b890,{surf:'stone'});
+  // --- collision proxies (simple boxes; ridges stay decorative) ---
+  // Removable front door — matches visible closed plate
+  const doorSolid=addSolid(cx,DOOR_Y,cz+DOOR_Z,DOOR_W,DOOR_H,DOOR_D,0x5a3020,{surf:'stone'});
+  doorSolid.mesh.visible=false;CONCH.doorSolid=doorSolid;
+  // Always-solid mouth flanks + lintel (remain after open)
+  addConchShellSolid(cx-(DOOR_W*0.5+0.95),0,cz+DOOR_Z,1.7,4.6,1.2);
+  addConchShellSolid(cx+(DOOR_W*0.5+0.95),0,cz+DOOR_Z,1.7,4.6,1.2);
+  addConchShellSolid(cx,DOOR_Y+DOOR_H,cz+DOOR_Z,DOOR_W+2.8,1.3,1.15);
+  // Side shell walls (cover the visible left/right spiral body)
+  addConchShellSolid(cx-4.3,0,cz-0.8,3.0,8.0,11.5);
+  addConchShellSolid(cx+4.3,0,cz-0.8,3.0,8.0,11.5);
+  // Rear / stern shell
+  addConchShellSolid(cx,0,cz-6.0,9.2,9.0,3.2);
+  // Upper shell cap
+  addConchShellSolid(cx,6.6,cz-1.0,8.0,2.4,10.5);
+  // Floor strip inside so the player can rest after swimming in
+  addSolid(cx,0,cz+0.6,3.4,0.35,7.2,0xe8b890,{surf:'stone'});
   // spiral lights (dim when closed, bright when open)
   for(let i=0;i<8;i++){
-    const t=i/7,y=1.4+t*4.8,z=3.2-t*7.5;
+    const t=i/7,y=1.4+t*4.8,z=3.0-t*7.5;
     const m=new THREE.Mesh(SPH,new THREE.MeshBasicMaterial({color:0xffe39a,transparent:true,opacity:0.08,depthWrite:false}));
     m.position.set((i%2?0.5:-0.5),y,z);m.scale.setScalar(0.35+t*0.15);g.add(m);
     CONCH.spiralLights.push({m,ph:i*0.7});
@@ -681,11 +704,10 @@ function buildConch(cx,cz){
   const shellGlow=new THREE.Mesh(new THREE.SphereGeometry(1,10,8),new THREE.MeshBasicMaterial({color:0xffd28a,transparent:true,opacity:0.04,depthWrite:false}));
   shellGlow.position.set(0,3.5,-1);shellGlow.scale.set(5.5,4.2,6.2);g.add(shellGlow);CONCH.shellGlow=shellGlow;
   const interiorGlow=new THREE.Mesh(new THREE.SphereGeometry(1,8,6),new THREE.MeshBasicMaterial({color:0xfff0c8,transparent:true,opacity:0.04,depthWrite:false}));
-  interiorGlow.position.set(0,2.4,1.5);interiorGlow.scale.set(3.0,2.4,3.6);g.add(interiorGlow);CONCH.interiorGlow=interiorGlow;
-  // finish trigger deep enough inside that brushing the doorway does not win
-  CONCH.trigger={x:cx,y:2.0,z:cz-0.4,hx:1.8,hy:2.2,hz:1.6};
-  CONCH.interior={x0:cx-2.4,x1:cx+2.4,z0:cz-4.2,z1:cz+4.8,yMax:6.5};
-  // Level-2-owned rainbow (surface-brightening cue); not the Level 1 windmill rainbow
+  interiorGlow.position.set(0,2.2,0.2);interiorGlow.scale.set(2.6,2.2,3.2);g.add(interiorGlow);CONCH.interiorGlow=interiorGlow;
+  // Finish trigger deep inside — past the doorway plane, not the mouth lip
+  CONCH.trigger={x:cx,y:2.0,z:cz-1.6,hx:1.5,hy:2.0,hz:1.35};
+  CONCH.interior={x0:cx-2.2,x1:cx+2.2,z0:cz-4.5,z1:cz+DOOR_Z-0.6,yMax:6.2};
   const rainbow=buildRainbow(cx,cz);
   rainbow.position.set(cx,18,cz);rainbow.scale.setScalar(0.18);rainbow.visible=false;CONCH.rainbow=rainbow;
   CONCH.g=g;
