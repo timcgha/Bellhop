@@ -149,6 +149,23 @@ function canStand(H,x,z,frames){
   ok(H.P.bubble,'safety clam restores bubble power after a loss');
 }
 
+// ---- Shoal mandatory passage cannot be bypassed ----
+function push(H,x,y,z,vx,vz,n){
+  H.P.pos.set(x,y,z);H.P.vel.set(0,0,0);
+  for(let i=0;i<(n||110);i++){H.P.vel.x=vx;H.P.vel.z=vz;H.frames(1);}
+  return H.P.pos;
+}
+{
+  const H=boot();startL2(H);
+  ok(push(H,-8,0.5,-91,0,-5).z>-95.6,'west side of the Shoal passage is walled off');
+  ok(push(H,8,0.5,-91,0,-5).z>-95.6,'east side of the Shoal passage is walled off');
+  const walls=H.W.solids.filter(s=>Math.abs((s.min.z+s.max.z)/2+96)<1&&s.max.y>=5.5);
+  ok(walls.length>=2,'passage walls are too tall to swim over');
+  const mand=H.W.spikefish.find(s=>s.role==='mandatory');
+  mand.alive=false;
+  ok(push(H,0,0.5,-91,0,-5,140).z<-100,'center passage leads onward once the spikefish is dealt with');
+}
+
 // ---- Areas 1–3 traversable ----
 {
   const H=boot();startL2(H);
