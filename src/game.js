@@ -9,21 +9,31 @@ function updateCamera(dt){
   const inWreck=window.__inWreckInterior&&window.__inWreckInterior();
   const inConch=window.__inConchInterior&&window.__inConchInterior();
   const tight=inWreck||inConch;
-  const pitchMin=tight?0.22:0.08;
-  if(Math.abs(IN.camDX)>1e-4||Math.abs(IN.camDY)>1e-4){CAM.yaw+=IN.camDX;CAM.pitch=clamp(CAM.pitch+IN.camDY,pitchMin,1.05);CAM.lastManual=time;}
+  // Interiors: gentler pitch range so walls fill less of the phone screen.
+  const pitchMin=tight?0.16:0.08,pitchMax=tight?0.82:1.05;
+  if(Math.abs(IN.camDX)>1e-4||Math.abs(IN.camDY)>1e-4){CAM.yaw+=IN.camDX;CAM.pitch=clamp(CAM.pitch+IN.camDY,pitchMin,pitchMax);CAM.lastManual=time;}
+  else if(tight)CAM.pitch=clamp(CAM.pitch,pitchMin,pitchMax);
   const sp=Math.hypot(P.vel.x,P.vel.z);
   if(sp>2&&time-CAM.lastManual>1.2){const mvx=P.vel.x/sp,mvz=P.vel.z/sp;const fx=-Math.sin(CAM.yaw),fz=-Math.cos(CAM.yaw);const d=mvx*fx+mvz*fz;if(d>-0.3)CAM.yaw=angDamp(CAM.yaw,Math.atan2(-mvx,-mvz),1.2*(0.5+d*0.5),dt);}
-  const tx=P.pos.x,ty=P.pos.y+(tight?1.35:1.1),tz=P.pos.z;
+  // Prefer a slightly higher look target and a longer boom in tight spaces.
+  const tx=P.pos.x,ty=P.pos.y+(tight?1.6:1.1),tz=P.pos.z;
   const cp=Math.cos(CAM.pitch),spp=Math.sin(CAM.pitch);
-  const dist=inConch?9.2:(inWreck?10.8:8.5);
+  const dist=inConch?12.2:(inWreck?13.2:8.5);
   const dx=Math.sin(CAM.yaw)*cp*dist,dy=spp*dist,dz=Math.cos(CAM.yaw)*cp*dist;
-  let k=1;for(let i=1;i<=8;i++){const f=i/8;if(insideSolid(tx+dx*f,ty+dy*f,tz+dz*f,tight?0.2:0.35)){k=(i-1)/8;break;}}k=Math.max(k,tight?0.45:0.25);
-  const wx=tx+dx*k,wz=tz+dz*k,wy=Math.max(ty+dy*k,groundHeightAt(wx,wz)+0.6);
+  // Thinner probe + higher floor so the camera resists crushing into walls.
+  const probe=tight?0.1:0.35,kMin=tight?0.64:0.25;
+  let k=1;for(let i=1;i<=10;i++){const f=i/10;if(insideSolid(tx+dx*f,ty+dy*f+0.35,tz+dz*f,probe)){k=(i-1)/10;break;}}
+  k=Math.max(k,kMin);
+  let wx=tx+dx*k,wz=tz+dz*k,wy=Math.max(ty+dy*k,groundHeightAt(wx,wz)+0.6);
+  if(tight)wy=Math.max(wy,ty+1.35);
   CAM.pos.x=damp(CAM.pos.x,wx,10,dt);CAM.pos.y=damp(CAM.pos.y,wy,10,dt);CAM.pos.z=damp(CAM.pos.z,wz,10,dt);
   CAM.look.x=damp(CAM.look.x,tx,14,dt);CAM.look.y=damp(CAM.look.y,ty,10,dt);CAM.look.z=damp(CAM.look.z,tz,14,dt);
   CAM.shake=Math.max(0,CAM.shake-dt*2.2);const sh=CAM.shake*CAM.shake*0.35;
   camera.position.set(CAM.pos.x+rand(-sh,sh),CAM.pos.y+rand(-sh,sh),CAM.pos.z+rand(-sh,sh));camera.lookAt(CAM.look);
-  CAM.fovKick=damp(CAM.fovKick,0,9,dt);const fov=60+CAM.fovKick;if(Math.abs(camera.fov-fov)>0.01){camera.fov=fov;camera.updateProjectionMatrix();}
+  CAM.fovKick=damp(CAM.fovKick,0,9,dt);
+  // A touch more FOV in interiors gives breathing room without changing Level 1.
+  const baseFov=tight?68:60;
+  const fov=baseFov+CAM.fovKick;if(Math.abs(camera.fov-fov)>0.01){camera.fov=fov;camera.updateProjectionMatrix();}
 }
 
 // ---------- loop ----------
