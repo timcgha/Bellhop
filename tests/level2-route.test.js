@@ -42,10 +42,12 @@ function canStand(H,x,z,frames){
 // ---- snoozles in correct areas ----
 {
   const H=boot();startL2(H);
-  ok(H.W.snoozles.length===2,'Stage 4 has two snoozles so far');
+  ok(H.W.snoozles.length===3,'Stage 5 has three snoozles');
   ok(H.W.snoozles[0].g.position.z>-16,'Snoozle 1 is in The Shallows');
   ok(H.W.snoozles[1].g.position.z<-40&&H.W.snoozles[1].g.position.z>-70,'Snoozle 2 is in the Kelp Forest');
   ok(H.W.snoozles[1].g.position.y>2,'Snoozle 2 sits on a raised shelf');
+  ok(H.W.snoozles[2].g.position.y>12,'Snoozle 3 is in the crow\'s nest');
+  ok(H.W.snoozles[2].g.position.z<-175,'Snoozle 3 is in The Wreck');
 }
 
 // ---- kelp curtain and secret wall ----
@@ -89,7 +91,8 @@ function canStand(H,x,z,frames){
   const intro=H.W.crates.find(c=>c.item==='bubble');
   ok(intro&&intro.z<-25&&intro.z>-35,'first production bubble-power source is the Kelp Forest crate');
   ok(H.W.clams.filter(c=>c.role==='safety').length===1,'only one safety clam for progression');
-  ok(H.W.clams.every(c=>c.role==='safety'||!c.role),'no extra production clams besides the safety clam');
+  ok(H.W.clams.filter(c=>c.role==='wreck_entrance').length===1,'one optional wreck entrance clam after the Shoal');
+  ok(H.W.clams.every(c=>c.role==='safety'||c.role==='wreck_entrance'||!c.role),'no extra production clams besides safety and wreck entrance');
 }
 {
   const H=boot();startL2(H);
@@ -167,16 +170,16 @@ function wakeSnoozle(H,i){
   ok(!H.W.won,'Level 2 does not start in won state');
   ok(H.el('win').style.display!=='flex','win banner hidden at Level 2 start');
   for(let i=0;i<H.W.snoozles.length;i++)wakeSnoozle(H,i);
-  ok(H.el('snz').textContent==='😴 2/2','both Level 2 snoozles can be woken');
-  ok(!H.W.won,'waking both Level 2 snoozles does not set won');
+  ok(H.el('snz').textContent==='😴 3/3','all three Level 2 snoozles can be woken');
+  ok(!H.W.won,'waking all Level 2 snoozles does not set won');
   ok(H.el('win').style.display!=='flex','Level 1 congratulations banner never shown on Level 2');
   ok(!H.W.WM||!H.W.WM.party,'windmill party mode not invoked on Level 2');
   ok(!H.W.RAINBOW||H.W.RAINBOW.visible===false,'rainbow win FX not shown on Level 2');
 }
 {
   const H=boot();startL2(H);
-  H.P.pos.set(0,1,-108);H.P.vel.set(0,0,0);H.frames(120);
-  ok(!H.W.won,'reaching the Stage 4 end-cap does not win the game');
+  H.P.pos.set(0,1,-200);H.P.vel.set(0,0,0);H.frames(120);
+  ok(!H.W.won,'reaching the Stage 5 end-cap toward The Trench does not win the game');
   ok(H.el('win').style.display!=='flex','end-cap traversal does not show win banner');
 }
 

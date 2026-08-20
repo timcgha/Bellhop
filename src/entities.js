@@ -184,7 +184,7 @@ function loadLevel(L){
     else if(k==='bushScatter'){for(let i=0;i<step[1];i++){const x=rand(-46,34),z=rand(-82,24);if(x>-38&&x<24&&z>-74&&z<16)continue;scene.add(mesh(SPH,lam(0x4f9f3f),x,0.35,z,rand(0.9,1.6),rand(0.6,1.0),rand(0.9,1.6)));}}
     else if(k==='cloudScatter'){for(let i=0;i<step[1];i++)addCloud(rand(-44,32),rand(22,30),rand(-80,20),rand(1.5,3));}
     else if(k==='clam')addClam(step[1],step[2],step[3],step[4]);
-    else if(k==='shark')addShark(step[1],step[2],step[3],step[4]);
+    else if(k==='shark')addShark(step[1],step[2],step[3],step[4],step[5]);
     else if(k==='fishSchool')addFishSchool(step[1],step[2],step[3],step[4]);
     else if(k==='noteFish')addNoteFish(step[1],step[2],step[3]);
     else if(k==='spikefish')addSpikefish(step[1],step[2],step[3],step[4],step[5],step[6],step[7],step[8]);
@@ -198,6 +198,9 @@ function loadLevel(L){
     else if(k==='seabedScatter')addSeabedScatter(step[1],step[2],step[3],step[4]);
     else if(k==='dressPlatform')dressPlatform(step[1],step[2],step[3],step[4],step[5],step[6]);
     else if(k==='suspendMotes')addSuspendMotes(step[1]);
+    else if(k==='wreck')buildWreck(step[1],step[2]);
+    else if(k==='wreckDeck')wreckDeck(step[1],step[2],step[3],step[4],step[5],step[6]||0,step[7]||0,step[8]||0);
+    else if(k==='wreckLedge')wreckLedge(step[1],step[2],step[3],step[4],step[5],step[6]||'');
   }
   for(const t of L.trees)addTree(t[0],t[1]);
   for(const s of L.snoozles){const x=s[0]!=null?s[0]:TX,y=s[1],z=s[2]!=null?s[2]:TZ;addSnoozle(x,y,z,homes[s[3]],s[4]);}

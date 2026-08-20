@@ -18,10 +18,10 @@ function buildShark(){
   g.add(mesh(SPH,lam(0x111111),0.16,0.1,0.42,0.06));
   return g;
 }
-function addShark(x,y,z,withNote){
+function addShark(x,y,z,withNote,role){
   const g=buildShark();g.position.set(x,y,z);scene.add(g);
   const note=withNote?addNote(x,y+0.6,z,true):null;
-  sharks.push({g,x,y,z,yBase:y,note,alive:true,state:'swim',trapT:0,hurtT:0,ph:rand(0,TAU),face:0,bubble:null});
+  sharks.push({g,x,y,z,yBase:y,note,alive:true,state:'swim',trapT:0,hurtT:0,ph:rand(0,TAU),face:0,bubble:null,role:role||null});
 }
 function buildFish(col,gold){
   const g=new THREE.Group();
@@ -269,6 +269,7 @@ function beginUnderwaterLevel(L){
     underwaterGroup.add(mesh(SPH,lam(SANDC[i%SANDC.length]),x,-0.46+rand(0,0.06),z,rand(0.5,1.4),rand(0.08,0.18),rand(0.5,1.2)));}
   for(let i=0;i<24;i++){const z=rand(-100,12),x=rand(-10,10);
     underwaterGroup.add(mesh(SPH,lam(0xc8b898),x+rand(-3,3),-0.47,z+rand(-2,2),rand(0.8,2.2),rand(0.06,0.14),rand(0.8,2.2)));}
+  const deepSand=lam(0xc8b898);const floor3=new THREE.Mesh(new THREE.PlaneGeometry(60,90),deepSand);floor3.rotation.x=-Math.PI/2;floor3.position.set(0,-0.52,-165);underwaterGroup.add(floor3);
   addDistantSilhouettes();
 }
 function sandPath(x1,z1,x2,z2){
@@ -336,7 +337,7 @@ function dressPlatform(x,y,z,w,h,d){
 }
 function addDistantSilhouettes(){
   const rock=lam(0x3a6a7a);
-  [[-22,-30,1.2],[-26,-55,1.5],[-20,-82,1.3],[22,-35,1.1],[24,-68,1.4],[18,-95,1.6],[-16,-108,1.2],[0,-118,1.8]].forEach(([x,z,s])=>{
+  [[-22,-30,1.2],[-26,-55,1.5],[-20,-82,1.3],[22,-35,1.1],[24,-68,1.4],[18,-95,1.6],[-16,-108,1.2],[0,-118,1.8],[-18,-145,1.4],[18,-150,1.5],[0,-175,2.2]].forEach(([x,z,s])=>{
     ugrp().add(mesh(SPH,rock,x,1.2*s,-z,s*2.2,s*1.4,s*1.6));
     ugrp().add(mesh(CONE,rock,x+rand(-1,1),0.4*s,-z,rand(0.5,0.9)*s,rand(1.2,2)*s,rand(0.5,0.9)*s));});
 }
@@ -372,6 +373,50 @@ function updateDecorKelp(dt){
   for(const kp of decorKelps){kp.strands.forEach((st,i)=>{st.rotation.z=Math.sin(time*(1.2+kp.ph*0.1)+i*0.7)*0.12;st.rotation.x=Math.sin(time*0.9+i*0.5+kp.ph)*0.06;});}}
 function updateSuspendMotes(dt){
   for(const p of suspendMotes){p.m.position.y=p.y+Math.sin(time*p.sp+p.ph)*0.35;p.m.position.x=p.x+Math.sin(time*0.4+p.ph)*0.15;p.m.position.z=p.z+Math.cos(time*0.35+p.ph)*0.12;}}
+
+let WRECK=null;
+const WRECK_DECK_H=2.8;
+const WRECK_RECOVERY_MAX=3.2;
+function initWreck(cx,cz){
+  WRECK={cx,cz,deckH:WRECK_DECK_H,recoveryMax:WRECK_RECOVERY_MAX,ledges:[]};
+}
+function wreckDeck(x,y,z,w,d,holeW,holeD,holeOz){
+  if(!WRECK)initWreck(x,z);
+  const col=0x7a5a3a;
+  if(!holeW||holeW<=0){addSolid(x,y,z,w,0.5,d,col,{surf:'stone'});dressPlatform(x,y,z,w,0.5,d);return;}
+  const hw=holeW/2,hd=holeD/2,nw=(w-holeW)/2,hz=z+(holeOz||0);
+  if(nw>0.2){addSolid(x-nw/2-hw/2,y,z,w/2-hw/2,0.5,d,col,{surf:'stone'});addSolid(x+nw/2+hw/2,y,z,w/2-hw/2,0.5,d,col,{surf:'stone'});}
+  const south=hz-hd-(z-d/2),north=(z+d/2)-(hz+hd);
+  if(south>0.2)addSolid(x,y,z-d/2+south/2,w,0.5,south,col,{surf:'stone'});
+  if(north>0.2)addSolid(x,y,z+d/2-north/2,w,0.5,north,col,{surf:'stone'});
+  dressPlatform(x,y,z,w,0.5,d);
+}
+function wreckLedge(x,y,z,w,d,tag){
+  if(!WRECK)initWreck(x,z);
+  addSolid(x,y,z,w,0.42,d,0x8a6a4a,{surf:'stone'});
+  dressPlatform(x,y,z,w,0.42,d);
+  WRECK.ledges.push({x,y,z,w,d,tag:tag||''});
+}
+function buildWreck(cx,cz){
+  initWreck(cx,cz);
+  const g=new THREE.Group();g.position.set(cx,0,cz);scene.add(g);
+  const wood=lam(0x6b4a2a),dark=lam(0x4a3520),rust=lam(0x8a5a3a);
+  const hull=mesh(BOXG,wood,0,3.5,0,13,6.5,20);hull.rotation.z=0.12;g.add(hull);
+  g.add(mesh(BOXG,dark,0,1.2,8,10,2.2,3.5));
+  const mast=mesh(CYL,rust,4,9,-2,0.22,11,0.22);mast.rotation.z=0.35;g.add(mast);
+  const crows=mesh(BOXG,rust,0,13.5,-4,3.2,0.35,3.2);g.add(crows);
+  for(let i=0;i<5;i++){const rb=mesh(BOXG,dark,-5+i*2.5,2+i*0.4,-3-i*0.8,0.18,3.5+rand(0,1.5),0.18);rb.rotation.z=0.25+rand(-0.1,0.1);g.add(rb);}
+  for(let i=0;i<4;i++){const bh=mesh(BOXG,wood,0,1.5+i*2.2,-6-i*2,11,0.22,0.22);bh.rotation.x=0.08;g.add(bh);}
+  addCoralScatter(6,cx+7,cz-4,3);addCoralScatter(5,cx-8,cz+2,3);
+  addKelpCluster(cx-9,cz+6,2.5,4,3.5);addKelpCluster(cx+9,cz+4,2.5,4,3.2);
+  addKelpCluster(cx-8,cz-8,2,3,4.5);addKelpCluster(cx+8,cz-10,2,3,4.2);
+  addFishSchool(cx+6,2.5,cz+8,6);
+  for(let i=0;i<3;i++){const m=new THREE.Mesh(new THREE.PlaneGeometry(1.2,5+rand(0,3)),new THREE.MeshBasicMaterial({color:0xffffff,transparent:true,opacity:0.06+Math.random()*0.04,depthWrite:false}));
+    m.position.set(cx+rand(-4,4),rand(4,10),cz+rand(-6,6));m.rotation.y=rand(-0.3,0.3);m.rotation.x=-0.2;g.add(m);}
+  WRECK.g=g;WRECK.entrance={x:cx,z:cz+10};
+}
+window.__WRECK=()=>WRECK;
+window.__WRECK_RECOVERY_MAX=()=>WRECK_RECOVERY_MAX;
 window.__TEST={
   addClam:(x,y,z,r)=>{addClam(x,y,z,r);return clams[clams.length-1];},
   addShark:(x,y,z,n)=>{addShark(x,y,z,n);return sharks[sharks.length-1];},
