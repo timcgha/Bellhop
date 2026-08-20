@@ -105,6 +105,21 @@ function boot(opts){return require('./harness.js')(Object.assign({autostart:fals
   ok(H.pickerIdx()===1,'gamepad: stick right selects Level 2');
 }
 
+// ---- gamepad: right stick on the picker must not store camera motion ----
+{
+  const H=boot();
+  const idle=[0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0];
+  H.setGamepad(H.mkGamepad(idle,[0,0,1,0.6]));
+  H.frames(300);
+  ok(!H.isStarted(),'gamepad: stick wiggle on picker does not start the game');
+  const yaw0=H.CAM.yaw;
+  H.gamepadTick([1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],[0,0,0,0]);
+  H.setGamepad(H.mkGamepad(idle,[0,0,0,0]));
+  H.frames(3);
+  ok(H.isStarted(),'gamepad: A starts after stick wiggle');
+  ok(Math.abs(H.CAM.yaw-yaw0)<0.05,`gamepad: no stored camera jump on start (yaw moved ${Math.abs(H.CAM.yaw-yaw0).toFixed(3)})`);
+}
+
 // ---- start overlay must not block touch A/B/Y while picker is open ----
 {
   const css=require('fs').readFileSync(require('path').join(__dirname,'..','index.html'),'utf8');

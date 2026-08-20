@@ -29,8 +29,7 @@ function pollGamepad(dt){
   if(!gp)return;
   const dz=v=>Math.abs(v)<0.18?0:v;const ax=gp.axes;
   const lx=dz(ax[0]||0),ly=dz(ax[1]||0),rx=dz(ax[2]||0),ry=dz(ax[3]||0);
-  if(started){if(lx||ly){IN.mx=lx;IN.mz=ly;}}
-  IN.camDX+=rx*2.8*dt;IN.camDY+=ry*1.8*dt;
+  if(started){if(lx||ly){IN.mx=lx;IN.mz=ly;}IN.camDX+=rx*2.8*dt;IN.camDY+=ry*1.8*dt;}
   const b=gp.buttons.map(x=>x.pressed);const edge=i=>b[i]&&!GP.prev[i];
   if(!started){
     if(edge(14)||lx<-0.55)setPickerIdx(pickerIdx-1);
