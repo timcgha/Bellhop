@@ -71,12 +71,64 @@ function boot(opts){return require('./harness.js')(Object.assign({autostart:fals
   ok(H.pickerIdx()===0,'touch: default highlight is Level 1');
   H.tapCard(1);
   ok(H.pickerIdx()===1,'touch: tapping Level 2 card selects it');
-  ok(!H.isStarted(),'touch: tapping a card does not start the game');
+  ok(!H.isStarted(),'touch: tapping an unselected card does not start the game');
   H.tapBtn('bB');
   ok(!H.isStarted(),'touch: B button does not start the game');
   H.tapBtn('bA');
   ok(H.isStarted(),'touch: A button confirms and starts');
   ok(H.getLevel()&&H.getLevel().id==='level2','touch: confirmed Level 2 boots LEVEL2');
+}
+
+// ---- touch: two physical taps required; default Meadow highlight does not count ----
+{
+  const H=boot();
+  ok(H.pickerIdx()===0,'fresh: default highlight is Level 1');
+  ok(!H.touchArmed(),'fresh: default highlight is not touch-armed');
+  H.tapCard(0);
+  ok(!H.isStarted(),'fresh: first tap on default-highlighted Meadow does NOT start');
+  ok(H.pickerIdx()===0&&H.touchArmed(),'fresh: first Meadow tap arms selection only');
+  H.tapCard(0);
+  ok(H.isStarted(),'fresh: second Meadow tap starts');
+  ok(H.getLevel()&&H.getLevel().id==='level1','fresh: Level 1 loads after two Meadow taps');
+}
+{
+  const H=boot();
+  H.tapCard(1);
+  ok(H.pickerIdx()===1&&!H.isStarted(),'deep: first tap on The Deep selects only');
+  ok(H.touchArmed(),'deep: first Deep tap arms it');
+  H.tapCard(1);
+  ok(H.isStarted(),'deep: second Deep tap starts');
+  ok(H.getLevel()&&H.getLevel().id==='level2','deep: Level 2 loads through tap-again flow');
+}
+{
+  const H=boot();
+  H.tapCard(1);
+  ok(H.pickerIdx()===1&&!H.isStarted(),'switch: first tap selects Level 2');
+  H.tapCard(0);
+  ok(H.pickerIdx()===0&&!H.isStarted(),'switch: tapping the other card changes selection without starting');
+  ok(H.touchArmed(),'switch: newly selected card is armed, prior confirm reset');
+  H.tapCard(0);
+  ok(H.isStarted(),'switch: tapping newly selected Level 1 again starts it');
+  ok(H.getLevel()&&H.getLevel().id==='level1','switch: Level 1 loads after re-arming');
+}
+{
+  const H=boot();
+  H.tapCard(0);
+  ok(!H.isStarted(),'rearm: Meadow armed after first tap');
+  H.tapCard(1);
+  ok(H.pickerIdx()===1&&!H.isStarted(),'rearm: switching to Deep resets confirm (no start)');
+  H.tapCard(1);
+  ok(H.isStarted()&&H.getLevel().id==='level2','rearm: Deep needs a fresh second tap to start');
+}
+
+// ---- keyboard confirm still works after the touch UX change ----
+{
+  const H=boot();
+  H.selectLevel(1);
+  ok(!H.isStarted(),'keyboard: selecting a card alone does not start');
+  ok(!H.touchArmed(),'keyboard: arrow/select does not touch-arm');
+  H.confirmStart();
+  ok(H.isStarted()&&H.getLevel().id==='level2','keyboard: Space still confirms the highlighted level');
 }
 
 // ---- gamepad picker: dpad/stick moves highlight, A confirms, B does not start ----
@@ -126,6 +178,10 @@ function boot(opts){return require('./harness.js')(Object.assign({autostart:fals
   ok(/#start\{[^}]*pointer-events\s*:\s*none/.test(css),'start overlay ignores pointer events outside the card');
   ok(/#start \.card\{[^}]*pointer-events\s*:\s*auto/.test(css),'start card remains tappable for level selection');
   ok(/\.tbtn\{[^}]*z-index\s*:\s*6/.test(css),'touch buttons stack above the start overlay');
+  ok(/lvlPulse/.test(css),'selected level card has a pulse animation for touch feedback');
+  const hud=require('fs').readFileSync(require('path').join(__dirname,'..','src','hud.js'),'utf8');
+  ok(/tap it again to play/.test(hud),'touch pick hint no longer requires pressing A');
+  ok(/function tapLevelCard/.test(hud),'level cards use tapLevelCard for select-or-start');
 }
 
 report();

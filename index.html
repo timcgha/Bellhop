@@ -27,7 +27,10 @@ canvas{display:block;touch-action:none}
 #start .level-pick{display:flex;gap:12px;justify-content:center;margin:14px 0 8px;flex-wrap:wrap}
 #start .lvl-card{flex:1 1 140px;max-width:180px;padding:8px;border-radius:18px;border:4px solid #b8d4d8;background:#e9f6f7;cursor:pointer;transition:border-color .15s,box-shadow .15s,transform .1s}
 #start .lvl-card.sel{border-color:#f5b400;background:#fff3c4;box-shadow:0 0 0 3px rgba(245,180,0,.35),0 6px 16px rgba(10,60,90,.2);transform:scale(1.04)}
+#start .lvl-card.sel.pulse{animation:lvlPulse .38s cubic-bezier(.2,1.4,.4,1)}
+@keyframes lvlPulse{0%{transform:scale(1.04)}40%{transform:scale(1.12)}100%{transform:scale(1.04)}}
 #start .lvl-card:active{transform:scale(0.98)}
+#start .lvl-card.sel:active{transform:scale(1.0)}
 #start .lvl-art{display:block;width:100%;height:auto;border-radius:10px;background:#fff}
 #start .lvl-label{display:block;margin-top:6px;font-size:12px;font-weight:800;color:#1e7f85;letter-spacing:.3px}
 #start .pick-hint{font-size:14px;font-weight:800;color:#1e7f85;margin:4px 0 10px}
@@ -55,7 +58,7 @@ body.touch .tbtn{display:flex}
 <div id="hint"></div>
 <div id="start"><div class="card">
 <h1>BELLHOP</h1>
-<div class="sub">v18 · conch door + deep song</div>
+<div class="sub">v19 · tap again to play</div>
 <div class="level-pick">
 <div class="lvl-card sel" id="lvl0"><canvas class="lvl-art" id="art0" width="160" height="100"></canvas><span class="lvl-label">Meadow</span></div>
 <div class="lvl-card" id="lvl1"><canvas class="lvl-art" id="art1" width="160" height="100"></canvas><span class="lvl-label">The Deep</span></div>
@@ -1953,18 +1956,37 @@ function updateTouchLabels(){
 }
 let toastTO=null;function showToast(t){const el=$('toast');el.textContent=t;el.style.opacity=1;clearTimeout(toastTO);toastTO=setTimeout(()=>{el.style.opacity=0;},2400);}
 const CTLTEXT=isTouch?'Left thumb moves · right thumb looks · A jump — blue jet burns anything under him (tap again in the air for an air-puff, hold to float) · B slam in the air, gust on the ground · Y spin':'WASD or arrows move · Space jumps — the blue jet burns anything under him (again in the air for an air-puff, hold to float) · J or Shift: slam in the air, gust on the ground · K spins · drag or Q/E turns the camera · M mutes';
-const PICKHINT=isTouch?'Tap a picture · A to start':'← → choose a level · Space or A to start';
+const PICKHINT=isTouch?'Tap a picture · tap it again to play':'← → choose a level · Space or A to start';
 $('ctlText').textContent=CTLTEXT;$('hint').textContent=CTLTEXT;$('pickHint').textContent=PICKHINT;
 
-let pickerIdx=0;
-function updatePickerUI(){
+let pickerIdx=0,touchArmed=false;
+function updatePickerUI(pulse){
   for(let i=0;i<LEVELS.length;i++){
-    const el=$('lvl'+i);
-    if(el)el.classList.toggle('sel',i===pickerIdx);
+    const el=$('lvl'+i);if(!el)continue;
+    const on=i===pickerIdx;
+    el.classList.toggle('sel',on);
+    if(pulse&&on){el.classList.remove('pulse');void el.offsetWidth;el.classList.add('pulse');}
+    else if(!on)el.classList.remove('pulse');
   }
 }
-function setPickerIdx(i){pickerIdx=clamp(i,0,LEVELS.length-1);updatePickerUI();}
+function setPickerIdx(i){
+  const next=clamp(i,0,LEVELS.length-1);
+  const changed=next!==pickerIdx;
+  pickerIdx=next;
+  // Keyboard/gamepad navigation is not a touch arm — first card tap still only selects.
+  if(changed)touchArmed=false;
+  updatePickerUI(changed);
+}
+function tapLevelCard(i){
+  if(started)return;
+  // Touch needs two physical taps on the same card. Default Meadow highlight does not count.
+  if(i===pickerIdx&&touchArmed){startGame();return;}
+  pickerIdx=clamp(i,0,LEVELS.length-1);
+  touchArmed=true;
+  updatePickerUI(true);
+}
 window.__pickerIdx=()=>pickerIdx;
+window.__touchArmed=()=>touchArmed;
 window.__setPickerIdx=setPickerIdx;
 
 function drawLevelArt(){
@@ -1994,7 +2016,7 @@ function drawLevelArt(){
 }
 drawLevelArt();
 for(let i=0;i<LEVELS.length;i++){
-  $('lvl'+i).addEventListener('pointerdown',e=>{e.stopPropagation();e.preventDefault();setPickerIdx(i);});
+  $('lvl'+i).addEventListener('pointerdown',e=>{e.stopPropagation();e.preventDefault();tapLevelCard(i);});
 }
 
 function startGame(){if(started)return;loadLevel(LEVELS[pickerIdx]);started=true;$('start').style.display='none';initAudio();IN.jump=false;IN.b=false;IN.y=false;updateHUD();
