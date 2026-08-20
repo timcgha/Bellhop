@@ -32,6 +32,11 @@ const body=parts.join('\n\n');
 const html=fs.readFileSync(HTML,'utf8');
 const i=html.indexOf(START),j=html.indexOf(END);
 if(i<0||j<0){console.error(`index.html is missing the ${START} / ${END} markers`);process.exit(1);}
+const committed=html.slice(i+START.length,j);
+if(process.argv.includes('--check')&&!committed.trim()){
+  console.error('index.html BUILD section is empty — run: node build.js');
+  process.exit(1);
+}
 const out=html.slice(0,i+START.length)+'\n'+body+'\n'+html.slice(j);
 if(process.argv.includes('--check')){
   if(out!==html){console.error('index.html is out of date — run: node build.js');process.exit(1);}

@@ -51,6 +51,23 @@ function bubbleShark(H,s){
     if(i===3)H.ku({code:'KeyJ'});
   }
 }
+function bubbleSharkUntilTrapped(H,s){
+  grantBubble(H);
+  aim(H,s.x,s.z);
+  H.P.pos.set(s.x-2*Math.sin(H.P.yaw),s.y-0.5,s.z-2*Math.cos(H.P.yaw));
+  aim(H,s.x,s.z);
+  const fx=Math.sin(H.P.yaw),fz=Math.cos(H.P.yaw);
+  const mx=H.P.pos.x+fx*0.35,my=H.P.pos.y+0.85,mz=H.P.pos.z+fz*0.35;
+  H.P.gustCD=0;
+  H.kd({code:'KeyJ',preventDefault(){},repeat:false});
+  for(let i=0;i<240;i++){
+    s.x=mx;s.y=my;s.z=mz;s.yBase=my;
+    H.frames(1);
+    if(s.state==='trapped')return true;
+    if(i===3)H.ku({code:'KeyJ'});
+  }
+  return false;
+}
 
 // ---- powered / unpowered underwater gust ----
 {
@@ -114,6 +131,14 @@ testSharkNoteReveal((H,s)=>{
   H.kd({code:'Space',preventDefault(){},repeat:false});H.frames(2);H.ku({code:'Space'});H.frames(20);
 },'jump-jet defeat');
 testSharkNoteReveal((H,s)=>{bubbleShark(H,s);},'bubble defeat');
+
+// ---- bubble shark trap sequence ----
+{
+  const H=boot();startL2(H);
+  const s=H.W.sharks.find(x=>!x.note);
+  ok(bubbleSharkUntilTrapped(H,s),'bubble-hit shark enters trapped state before pop/removal');
+  ok(s.alive&&s.state==='trapped','shark stays alive in trapped state before float/pop');
+}
 
 // ---- shark combat ----
 {
