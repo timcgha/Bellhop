@@ -140,7 +140,8 @@ const CONF=[0xff5a7a,0xffc94a,0x6fd45a,0x4fb4e6,0xa15ae0,0xffffff,0xff9a3c];
 function buildRainbow(x,z){const g=new THREE.Group();const cols=[0xff5a5a,0xff9a3c,0xffe14a,0x6fd45a,0x4fb4e6,0x5a6fe0,0xa15ae0];
   cols.forEach((c,i)=>{const t=new THREE.Mesh(new THREE.TorusGeometry(27-i*1.6,0.8,7,44,Math.PI),new THREE.MeshBasicMaterial({color:c,transparent:true,opacity:0.85}));g.add(t);});
   g.position.set(x,0.2,z);g.scale.setScalar(0.15);g.visible=false;scene.add(g);return g;}
-function triggerWin(){if(won)return;won=true;winT=0;if(WM)WM.party=true;AU.win=true;SFX.fanfare();
+function levelHasWin(){return !!(CURRENT_LEVEL&&CURRENT_LEVEL.win);}
+function triggerWin(){if(won||!levelHasWin())return;won=true;winT=0;if(WM)WM.party=true;AU.win=true;SFX.fanfare();
   if(RAINBOW)RAINBOW.visible=true;const w=$('win');w.style.display='flex';w.style.opacity=1;
   CAM.fovKick=Math.max(CAM.fovKick,7);CAM.shake=Math.max(CAM.shake,0.4);rumble(500,0.6,0.7);}
 function updateWin(dt){if(!won)return;winT+=dt;

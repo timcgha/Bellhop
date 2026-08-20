@@ -3,12 +3,19 @@ const BUBBLEGEO=new THREE.SphereGeometry(1,10,8);
 
 function buildShark(){
   const g=new THREE.Group();
-  const body=mesh(SPH,lam(0x6a7a8a),0,0,0,0.55,0.28,1.1);
-  body.scale.set(1,0.7,1.4);g.add(body);
-  g.add(mesh(CONE,lam(0x5a6a7a),0,0.05,0.72,0.18,0.18,0.5)); // nose
-  g.add(mesh(SPH,lam(0x111111),-0.18,0.12,0.35,0.07));
-  g.add(mesh(SPH,lam(0x111111),0.18,0.12,0.35,0.07));
-  g.add(mesh(CONE,lam(0x4a5a6a),0,0.18,-0.75,0.32,0.05,0.45)); // tail
+  const bodyCol=lam(0x6a7a8a),belly=lam(0x8a9aaa),fin=lam(0x5a6a7a);
+  const body=mesh(SPH,bodyCol,0,0,0,0.42,0.32,1.35);body.scale.set(1,0.75,1);g.add(body);
+  g.add(mesh(SPH,belly,0,-0.08,0.05,0.34,0.18,1.05));
+  g.add(mesh(CONE,fin,0,0.06,0.82,0.2,0.22,0.55)); // nose
+  g.add(mesh(CONE,fin,0,0.34,-0.05,0.08,0.28,0.04)); // dorsal
+  const tail=new THREE.Group();tail.position.set(0,0.02,-0.82);
+  tail.add(mesh(CONE,fin,0,0.12,0,0.04,0.38,0.22));tail.children[0].rotation.x=0.55;
+  tail.add(mesh(CONE,fin,0,-0.12,0,0.04,0.38,0.22));tail.children[1].rotation.x=-0.55;
+  g.add(tail);
+  g.add(mesh(BOXG,fin,-0.28,-0.04,0.15,0.22,0.04,0.12));g.children[g.children.length-1].rotation.z=0.45;
+  g.add(mesh(BOXG,fin,0.28,-0.04,0.15,0.22,0.04,0.12));g.children[g.children.length-1].rotation.z=-0.45;
+  g.add(mesh(SPH,lam(0x111111),-0.16,0.1,0.42,0.06));
+  g.add(mesh(SPH,lam(0x111111),0.16,0.1,0.42,0.06));
   return g;
 }
 function addShark(x,y,z,withNote){
@@ -18,10 +25,21 @@ function addShark(x,y,z,withNote){
 }
 function buildFish(col,gold){
   const g=new THREE.Group();
-  const m=gold?pho(0xffd54a,120,0xffffff):lam(col);
-  g.add(mesh(SPH,m,0,0,0,0.14,0.1,0.28));
-  g.add(mesh(CONE,m,0,0,0.16,0.08,0.08,0.16));
-  if(gold){const sh=mesh(SPH,new THREE.MeshBasicMaterial({color:0xfff8c4,transparent:true,opacity:0.45}),0,0.02,0,0.2,0.12,0.32);g.add(sh);}
+  const m=gold?pho(0xffd54a,160,0xffffff):lam(col);
+  const belly=gold?pho(0xffee88,120,0xffffff):lam(0xffffff);
+  g.add(mesh(BOXG,m,0,0,0,0.24,0.15,0.4));
+  g.add(mesh(BOXG,belly,0,-0.05,0.02,0.18,0.06,0.28));
+  const tail=new THREE.Group();tail.position.set(0,0,-0.22);
+  tail.add(mesh(CONE,m,0,0.06,0,0.04,0.14,0.06));tail.children[0].rotation.x=0.65;
+  tail.add(mesh(CONE,m,0,-0.06,0,0.04,0.14,0.06));tail.children[1].rotation.x=-0.65;
+  g.add(tail);
+  g.add(mesh(CONE,m,0,0.11,-0.02,0.04,0.1,0.02));
+  g.add(mesh(BOXG,m,-0.1,-0.02,0.06,0.08,0.03,0.06));g.children[g.children.length-1].rotation.z=0.35;
+  g.add(mesh(SPH,lam(0x111111),0.1,0.04,0.14,0.035));
+  if(gold){
+    g.add(mesh(SPH,new THREE.MeshBasicMaterial({color:0xfff8c4,transparent:true,opacity:0.5}),0,0.02,0,0.26,0.16,0.44));
+    g.add(mesh(SPH,new THREE.MeshBasicMaterial({color:0xffffff,transparent:true,opacity:0.35}),0.12,0.08,0.08,0.05));
+  }
   return g;
 }
 function addFishSchool(x,y,z,n){
@@ -39,10 +57,19 @@ function addNoteFish(x,y,z){
 }
 function buildSpikefish(){
   const g=new THREE.Group();
-  g.add(mesh(SPH,lam(0x7a5a8a),0,0,0,0.38,0.28,0.55));
-  for(let i=0;i<6;i++){const a=i/6*TAU;const sp=mesh(CONE,lam(0xd8c8e8),Math.cos(a)*0.28,Math.sin(a)*0.12,0,0.06,0.22,0.06);sp.rotation.z=a-Math.PI/2;g.add(sp);}
-  g.add(mesh(SPH,lam(0x111111),-0.12,0.08,0.18,0.05));
-  g.add(mesh(SPH,lam(0x111111),0.12,0.08,0.18,0.05));
+  const body=lam(0x7a5a8a),spk=lam(0xf0e0ff),tip=lam(0xffffff);
+  g.add(mesh(SPH,body,0,0,0,0.42,0.36,0.48));
+  g.add(mesh(SPH,lam(0x9a7ab8),0,-0.06,0.02,0.34,0.28,0.38));
+  for(let i=0;i<10;i++){
+    const a=i/10*TAU;
+    const sp=mesh(CONE,spk,Math.cos(a)*0.34,Math.sin(a)*0.16,0,0.07,0.28,0.07);
+    sp.rotation.z=a-Math.PI/2;sp.rotation.y=Math.sin(a)*0.2;g.add(sp);
+    g.add(mesh(SPH,tip,Math.cos(a)*0.46,Math.sin(a)*0.22,0,0.03));
+  }
+  g.add(mesh(CONE,tip,0,0.36,0,0.06,0.16,0.06));
+  g.add(mesh(CONE,tip,0,-0.34,0,0.06,0.14,0.06));g.children[g.children.length-1].rotation.x=Math.PI;
+  g.add(mesh(SPH,lam(0x111111),-0.14,0.08,0.16,0.055));
+  g.add(mesh(SPH,lam(0x111111),0.14,0.08,0.16,0.055));
   return g;
 }
 function addSpikefish(x1,y1,z1,x2,y2,z2,withNote,role){

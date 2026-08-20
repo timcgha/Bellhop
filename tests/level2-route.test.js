@@ -155,4 +155,38 @@ function canStand(H,x,z,frames){
   ok(stuck.length===0,'Areas 1–3 route samples are traversable ('+(stuck.join(' | ')||'all clear')+')');
 }
 
+function wakeSnoozle(H,i){
+  const s=H.W.snoozles[i];
+  H.P.pos.set(s.g.position.x,s.g.position.y,s.g.position.z+1);H.P.vel.set(0,0,0);H.frames(2);
+  H.tap('KeyK',2);H.frames(150);
+}
+
+// ---- Level 2 must not invoke Level 1 win flow ----
+{
+  const H=boot();startL2(H);
+  ok(!H.W.won,'Level 2 does not start in won state');
+  ok(H.el('win').style.display!=='flex','win banner hidden at Level 2 start');
+  for(let i=0;i<H.W.snoozles.length;i++)wakeSnoozle(H,i);
+  ok(H.el('snz').textContent==='😴 2/2','both Level 2 snoozles can be woken');
+  ok(!H.W.won,'waking both Level 2 snoozles does not set won');
+  ok(H.el('win').style.display!=='flex','Level 1 congratulations banner never shown on Level 2');
+  ok(!H.W.WM||!H.W.WM.party,'windmill party mode not invoked on Level 2');
+  ok(!H.W.RAINBOW||H.W.RAINBOW.visible===false,'rainbow win FX not shown on Level 2');
+}
+{
+  const H=boot();startL2(H);
+  H.P.pos.set(0,1,-108);H.P.vel.set(0,0,0);H.frames(120);
+  ok(!H.W.won,'reaching the Stage 4 end-cap does not win the game');
+  ok(H.el('win').style.display!=='flex','end-cap traversal does not show win banner');
+}
+
+// ---- Level 2 touch B label ----
+{
+  const H=boot();startL2(H);
+  ok(H.el('bBLbl').textContent==='gust','Level 2 B label shows gust when unpowered');
+  H.test.addClam(35,0,35);
+  H.P.pos.set(35,0,35);H.P.vel.set(0,0,0);H.frames(12);
+  ok(H.el('bBLbl').textContent==='bubble','Level 2 B label shows bubble when powered');
+}
+
 report();

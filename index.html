@@ -46,7 +46,7 @@ body.touch .tbtn{display:flex}
 <div id="ctl"></div>
 <div id="stick"><div id="knob"></div></div>
 <div id="bA" class="tbtn">A<small>jump</small></div>
-<div id="bB" class="tbtn">B<small>slam · gust</small></div>
+<div id="bB" class="tbtn">B<small id="bBLbl">slam · gust</small></div>
 <div id="bY" class="tbtn">Y<small>spin</small></div>
 <div id="hud"><span class="pill" id="hp">❤️❤️❤️❤️</span><span class="pill" id="snz">😴 0/4</span><span class="pill" id="nts">♪ 0/12</span><span class="pill" id="fire" style="display:none">🔥 0</span><span class="pill" id="bubble" style="display:none">🫧</span></div>
 <button id="mute">🔊</button>
@@ -75,6 +75,7 @@ if(!window.THREE){$('ctlText').textContent='Three.js did not load. Check the con
 // ===== levels/level1.js =====
 const LEVEL1={
 id:'level1',
+win:'windmill',
 spawn:{x:0,y:0,z:10},
 physics:{
   speed:6.8,acc:44,dec:60,airAcc:20,
@@ -541,7 +542,8 @@ const CONF=[0xff5a7a,0xffc94a,0x6fd45a,0x4fb4e6,0xa15ae0,0xffffff,0xff9a3c];
 function buildRainbow(x,z){const g=new THREE.Group();const cols=[0xff5a5a,0xff9a3c,0xffe14a,0x6fd45a,0x4fb4e6,0x5a6fe0,0xa15ae0];
   cols.forEach((c,i)=>{const t=new THREE.Mesh(new THREE.TorusGeometry(27-i*1.6,0.8,7,44,Math.PI),new THREE.MeshBasicMaterial({color:c,transparent:true,opacity:0.85}));g.add(t);});
   g.position.set(x,0.2,z);g.scale.setScalar(0.15);g.visible=false;scene.add(g);return g;}
-function triggerWin(){if(won)return;won=true;winT=0;if(WM)WM.party=true;AU.win=true;SFX.fanfare();
+function levelHasWin(){return !!(CURRENT_LEVEL&&CURRENT_LEVEL.win);}
+function triggerWin(){if(won||!levelHasWin())return;won=true;winT=0;if(WM)WM.party=true;AU.win=true;SFX.fanfare();
   if(RAINBOW)RAINBOW.visible=true;const w=$('win');w.style.display='flex';w.style.opacity=1;
   CAM.fovKick=Math.max(CAM.fovKick,7);CAM.shake=Math.max(CAM.shake,0.4);rumble(500,0.6,0.7);}
 function updateWin(dt){if(!won)return;winT+=dt;
@@ -848,7 +850,9 @@ function wakeSnoozle(s){if(s.state!=='sleep')return;s.state='wake';s.t=0;s.boat=
   s.g.userData.closed.visible=false;s.g.userData.open.visible=true;s.g.userData.mouth.scale.set(0.1,0.1,0.02);setTimeout(()=>{s.g.userData.mouth.scale.set(0.08,0.03,0.02);},900);
   rescued++;AU.layers=rescued;SFX.wake();
   for(let i=0;i<12;i++)spawnP(s.g.position.x,s.g.position.y+0.6,s.g.position.z,rand(-2,2),rand(1,4),rand(-2,2),0.08,0xffe36b,0.7,0.2,-5,1);
-  if(rescued<snoozles.length)showToast('A Snoozle woke up! ♪ '+rescued+' of '+snoozles.length);else triggerWin();
+  if(rescued<snoozles.length)showToast('A Snoozle woke up! ♪ '+rescued+' of '+snoozles.length);
+  else if(levelHasWin())triggerWin();
+  else showToast('All Snoozles awake! ♪ '+rescued+' of '+snoozles.length);
   updateHUD();}
 function updateSnoozles(dt){for(const s of snoozles){const g=s.g;
   if(s.state==='sleep'){if(s.boat&&BOAT){g.position.set(BOAT.pos.x,0.28,BOAT.pos.z);g.rotation.y=BOAT.yaw+Math.PI/2;}
@@ -939,12 +943,19 @@ const BUBBLEGEO=new THREE.SphereGeometry(1,10,8);
 
 function buildShark(){
   const g=new THREE.Group();
-  const body=mesh(SPH,lam(0x6a7a8a),0,0,0,0.55,0.28,1.1);
-  body.scale.set(1,0.7,1.4);g.add(body);
-  g.add(mesh(CONE,lam(0x5a6a7a),0,0.05,0.72,0.18,0.18,0.5)); // nose
-  g.add(mesh(SPH,lam(0x111111),-0.18,0.12,0.35,0.07));
-  g.add(mesh(SPH,lam(0x111111),0.18,0.12,0.35,0.07));
-  g.add(mesh(CONE,lam(0x4a5a6a),0,0.18,-0.75,0.32,0.05,0.45)); // tail
+  const bodyCol=lam(0x6a7a8a),belly=lam(0x8a9aaa),fin=lam(0x5a6a7a);
+  const body=mesh(SPH,bodyCol,0,0,0,0.42,0.32,1.35);body.scale.set(1,0.75,1);g.add(body);
+  g.add(mesh(SPH,belly,0,-0.08,0.05,0.34,0.18,1.05));
+  g.add(mesh(CONE,fin,0,0.06,0.82,0.2,0.22,0.55)); // nose
+  g.add(mesh(CONE,fin,0,0.34,-0.05,0.08,0.28,0.04)); // dorsal
+  const tail=new THREE.Group();tail.position.set(0,0.02,-0.82);
+  tail.add(mesh(CONE,fin,0,0.12,0,0.04,0.38,0.22));tail.children[0].rotation.x=0.55;
+  tail.add(mesh(CONE,fin,0,-0.12,0,0.04,0.38,0.22));tail.children[1].rotation.x=-0.55;
+  g.add(tail);
+  g.add(mesh(BOXG,fin,-0.28,-0.04,0.15,0.22,0.04,0.12));g.children[g.children.length-1].rotation.z=0.45;
+  g.add(mesh(BOXG,fin,0.28,-0.04,0.15,0.22,0.04,0.12));g.children[g.children.length-1].rotation.z=-0.45;
+  g.add(mesh(SPH,lam(0x111111),-0.16,0.1,0.42,0.06));
+  g.add(mesh(SPH,lam(0x111111),0.16,0.1,0.42,0.06));
   return g;
 }
 function addShark(x,y,z,withNote){
@@ -954,10 +965,21 @@ function addShark(x,y,z,withNote){
 }
 function buildFish(col,gold){
   const g=new THREE.Group();
-  const m=gold?pho(0xffd54a,120,0xffffff):lam(col);
-  g.add(mesh(SPH,m,0,0,0,0.14,0.1,0.28));
-  g.add(mesh(CONE,m,0,0,0.16,0.08,0.08,0.16));
-  if(gold){const sh=mesh(SPH,new THREE.MeshBasicMaterial({color:0xfff8c4,transparent:true,opacity:0.45}),0,0.02,0,0.2,0.12,0.32);g.add(sh);}
+  const m=gold?pho(0xffd54a,160,0xffffff):lam(col);
+  const belly=gold?pho(0xffee88,120,0xffffff):lam(0xffffff);
+  g.add(mesh(BOXG,m,0,0,0,0.24,0.15,0.4));
+  g.add(mesh(BOXG,belly,0,-0.05,0.02,0.18,0.06,0.28));
+  const tail=new THREE.Group();tail.position.set(0,0,-0.22);
+  tail.add(mesh(CONE,m,0,0.06,0,0.04,0.14,0.06));tail.children[0].rotation.x=0.65;
+  tail.add(mesh(CONE,m,0,-0.06,0,0.04,0.14,0.06));tail.children[1].rotation.x=-0.65;
+  g.add(tail);
+  g.add(mesh(CONE,m,0,0.11,-0.02,0.04,0.1,0.02));
+  g.add(mesh(BOXG,m,-0.1,-0.02,0.06,0.08,0.03,0.06));g.children[g.children.length-1].rotation.z=0.35;
+  g.add(mesh(SPH,lam(0x111111),0.1,0.04,0.14,0.035));
+  if(gold){
+    g.add(mesh(SPH,new THREE.MeshBasicMaterial({color:0xfff8c4,transparent:true,opacity:0.5}),0,0.02,0,0.26,0.16,0.44));
+    g.add(mesh(SPH,new THREE.MeshBasicMaterial({color:0xffffff,transparent:true,opacity:0.35}),0.12,0.08,0.08,0.05));
+  }
   return g;
 }
 function addFishSchool(x,y,z,n){
@@ -975,10 +997,19 @@ function addNoteFish(x,y,z){
 }
 function buildSpikefish(){
   const g=new THREE.Group();
-  g.add(mesh(SPH,lam(0x7a5a8a),0,0,0,0.38,0.28,0.55));
-  for(let i=0;i<6;i++){const a=i/6*TAU;const sp=mesh(CONE,lam(0xd8c8e8),Math.cos(a)*0.28,Math.sin(a)*0.12,0,0.06,0.22,0.06);sp.rotation.z=a-Math.PI/2;g.add(sp);}
-  g.add(mesh(SPH,lam(0x111111),-0.12,0.08,0.18,0.05));
-  g.add(mesh(SPH,lam(0x111111),0.12,0.08,0.18,0.05));
+  const body=lam(0x7a5a8a),spk=lam(0xf0e0ff),tip=lam(0xffffff);
+  g.add(mesh(SPH,body,0,0,0,0.42,0.36,0.48));
+  g.add(mesh(SPH,lam(0x9a7ab8),0,-0.06,0.02,0.34,0.28,0.38));
+  for(let i=0;i<10;i++){
+    const a=i/10*TAU;
+    const sp=mesh(CONE,spk,Math.cos(a)*0.34,Math.sin(a)*0.16,0,0.07,0.28,0.07);
+    sp.rotation.z=a-Math.PI/2;sp.rotation.y=Math.sin(a)*0.2;g.add(sp);
+    g.add(mesh(SPH,tip,Math.cos(a)*0.46,Math.sin(a)*0.22,0,0.03));
+  }
+  g.add(mesh(CONE,tip,0,0.36,0,0.06,0.16,0.06));
+  g.add(mesh(CONE,tip,0,-0.34,0,0.06,0.14,0.06));g.children[g.children.length-1].rotation.x=Math.PI;
+  g.add(mesh(SPH,lam(0x111111),-0.14,0.08,0.16,0.055));
+  g.add(mesh(SPH,lam(0x111111),0.14,0.08,0.16,0.055));
   return g;
 }
 function addSpikefish(x1,y1,z1,x2,y2,z2,withNote,role){
@@ -1222,7 +1253,13 @@ window.__TEST={
 // ===== src/hud.js =====
 function updateHUD(){$('hp').textContent='❤️'.repeat(Math.max(P.hp,0))+'🤍'.repeat(P.maxHp-Math.max(P.hp,0));$('snz').textContent='😴 '+rescued+'/'+snoozles.length;$('nts').textContent='♪ '+gotNotes+'/'+notes.length;
   const f=$('fire');f.style.display=P.fire?'':'none';f.textContent='🔥';
-  const b=$('bubble');if(b){b.style.display=(P.bubble&&isUnderwater())?'':'none';b.textContent='🫧';}}
+  const b=$('bubble');if(b){b.style.display=(P.bubble&&isUnderwater())?'':'none';b.textContent='🫧';}
+  updateTouchLabels();}
+function updateTouchLabels(){
+  const lbl=$('bBLbl');if(!lbl)return;
+  if(isUnderwater())lbl.textContent=P.bubble?'bubble':'gust';
+  else lbl.textContent='slam · gust';
+}
 let toastTO=null;function showToast(t){const el=$('toast');el.textContent=t;el.style.opacity=1;clearTimeout(toastTO);toastTO=setTimeout(()=>{el.style.opacity=0;},2400);}
 const CTLTEXT=isTouch?'Left thumb moves · right thumb looks · A jump — blue jet burns anything under him (tap again in the air for an air-puff, hold to float) · B slam in the air, gust on the ground · Y spin':'WASD or arrows move · Space jumps — the blue jet burns anything under him (again in the air for an air-puff, hold to float) · J or Shift: slam in the air, gust on the ground · K spins · drag or Q/E turns the camera · M mutes';
 const PICKHINT=isTouch?'Tap a picture · A to start':'← → choose a level · Space or A to start';
