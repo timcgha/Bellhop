@@ -70,6 +70,25 @@ function canStand(H,x,z,frames){
   ok(s.parted,'secret kelp wall opens on gust');
 }
 
+// ---- secret alcove is sealed until the curtain opens ----
+{
+  const H=boot();startL2(H);
+  const s=kelp(H,'secret');
+  const alcove=H.W.notes.filter(n=>!n.hidden);
+  ok(alcove.length===2,'two visible notes sit in the secret alcove');
+  push(H,0,0.5,-64.5,0,-5);ok(H.P.pos.z>-67.6,'closed curtain blocks the alcove entrance');
+  push(H,-6,0.5,-70.5,5,0);ok(H.P.pos.x<-3.6,'west flank of the alcove is enclosed');
+  push(H,6,0.5,-70.5,-5,0);ok(H.P.pos.x>3.6,'east flank of the alcove is enclosed');
+  push(H,0,0.5,-76,0,5);ok(H.P.pos.z<-72.2,'south flank of the alcove is enclosed');
+  ok(alcove.every(n=>!n.got),'alcove notes cannot be collected before the curtain opens');
+  H.P.pos.set(s.cx,1.5,s.cz+3);H.P.vel.set(0,0,0);H.P.yaw=Math.PI;H.frames(4);
+  gust(H);H.frames(25);
+  ok(s.parted,'gust opens the secret curtain');
+  push(H,0,0.5,-64.5,0,-5,80);
+  push(H,-1.2,0.5,-69,0,-3,40);push(H,1.2,0.5,-69.5,0,-3,40);
+  ok(alcove.every(n=>n.got),'both alcove notes are collectible through the opened curtain');
+}
+
 // ---- Kelp Forest teaching: bubble, fish, note fish ----
 {
   const H=boot();startL2(H);

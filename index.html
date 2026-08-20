@@ -192,9 +192,21 @@ steps:[
   ['dressPlatform',4,2.2,-62,5.5,0.55,4.5],
   ['kelpCluster',-5,-62,2,4,4.8],
   ['kelpCluster',7,-64,1.8,3,4.2],
-  ['kelpCurtain','secret',0,-68,5.5,4.5,true],
-  ['note',-5.5,1.2,-70,false],
-  ['note',-5.5,1.8,-71,false],
+  ['kelpCurtain','secret',0,-68,5.5,6,true],
+  // enclosed alcove behind the secret curtain: kelp-dressed walls, curtain is the only way in
+  ['solid',-3.4,0,-70.4,0.9,6.5,5.6,0x2e6b32,{invisible:true}],
+  ['solid',3.4,0,-70.4,0.9,6.5,5.6,0x2e6b32,{invisible:true}],
+  ['solid',0,0,-72.9,7.8,6.5,0.9,0x2e6b32,{invisible:true}],
+  ['kelpCluster',-3.4,-68.8,1.2,3,5.5],
+  ['kelpCluster',-3.4,-70.6,1.2,3,5.8],
+  ['kelpCluster',-3.4,-72.2,1.2,3,5.5],
+  ['kelpCluster',3.4,-68.8,1.2,3,5.5],
+  ['kelpCluster',3.4,-70.6,1.2,3,5.8],
+  ['kelpCluster',3.4,-72.2,1.2,3,5.5],
+  ['kelpCluster',-1.8,-72.9,3.5,4,5.6],
+  ['kelpCluster',1.8,-72.9,3.5,4,5.6],
+  ['note',-1.2,1.2,-70,false],
+  ['note',1.2,1.8,-70.8,false],
   ['coralScatter',6,-55,5,4],
   ['seabedScatter',-4,-68,3,6],
   // --- Area 3: The Shoal ---
@@ -487,7 +499,7 @@ function inPond(x,z){return x>POND.x0&&x<POND.x1&&z>POND.z0&&z<POND.z1;}
 function groundHeightAt(x,z){if(isUnderwater())return 0;return inPond(x,z)?-0.4:0;}
 function surfaceHeightAt(x,z,belowY,r){r=r||0.2;let h=groundHeightAt(x,z);for(const s of solids){if(x+r>s.min.x&&x-r<s.max.x&&z+r>s.min.z&&z-r<s.max.z&&s.max.y<=belowY+0.05&&s.max.y>h)h=s.max.y;}return h;}
 function insideSolid(x,y,z,m){for(const s of solids){if(x>s.min.x-m&&x<s.max.x+m&&y>s.min.y-m&&y<s.max.y+m&&z>s.min.z-m&&z<s.max.z+m)return true;}return false;}
-function addSolid(x,y,z,w,h,d,color,opts){const m=new THREE.Mesh(BOXG,lam(color));m.scale.set(w,h,d);m.position.set(x,y+h/2,z);scene.add(m);
+function addSolid(x,y,z,w,h,d,color,opts){const m=new THREE.Mesh(BOXG,lam(color));m.scale.set(w,h,d);m.position.set(x,y+h/2,z);if(opts&&opts.invisible)m.visible=false;scene.add(m);
   const s={min:new THREE.Vector3(x-w/2,y,z-d/2),max:new THREE.Vector3(x+w/2,y+h,z+d/2),mesh:m,surf:(opts&&opts.surf)||'wood'};solids.push(s);return s;}
 
 // ground with a hole for the pond
