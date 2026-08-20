@@ -65,4 +65,44 @@ function boot(opts){return require('./harness.js')(Object.assign({autostart:fals
   ok(H.getLevel()&&H.getLevel().id==='level2','confirmed Level 2 card boots LEVEL2');
 }
 
+// ---- touch picker: tap card selects, A confirms, other buttons do not start ----
+{
+  const H=boot();
+  ok(H.pickerIdx()===0,'touch: default highlight is Level 1');
+  H.tapCard(1);
+  ok(H.pickerIdx()===1,'touch: tapping Level 2 card selects it');
+  ok(!H.isStarted(),'touch: tapping a card does not start the game');
+  H.tapBtn('bB');
+  ok(!H.isStarted(),'touch: B button does not start the game');
+  H.tapBtn('bA');
+  ok(H.isStarted(),'touch: A button confirms and starts');
+  ok(H.getLevel()&&H.getLevel().id==='level2','touch: confirmed Level 2 boots LEVEL2');
+}
+
+// ---- gamepad picker: dpad/stick moves highlight, A confirms, B does not start ----
+{
+  const H=boot();
+  H.setGamepad(H.mkGamepad([0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0]));
+  H.frames(1);
+  ok(H.pickerIdx()===0,'gamepad: default highlight is Level 1');
+  H.gamepadTick([0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1,0,0]);
+  ok(H.pickerIdx()===1,'gamepad: dpad right selects Level 2');
+  ok(!H.isStarted(),'gamepad: dpad does not start the game');
+  H.gamepadTick([0,0,0,0,0,0,0,0,0,0,0,0,0,0,1,0,0,0]);
+  ok(H.pickerIdx()===0,'gamepad: dpad left selects Level 1');
+  H.gamepadTick([0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1,0,0]);
+  ok(H.pickerIdx()===1,'gamepad: back on Level 2 for confirm test');
+  H.gamepadTick([0,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0]);
+  ok(!H.isStarted(),'gamepad: B button does not start the game');
+  H.gamepadTick([1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0]);
+  ok(H.isStarted(),'gamepad: A button confirms and starts');
+  ok(H.getLevel()&&H.getLevel().id==='level2','gamepad: confirmed Level 2 boots LEVEL2');
+}
+{
+  const H=boot();
+  H.setGamepad(H.mkGamepad([0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],[0.7,0,0,0]));
+  H.frames(1);
+  ok(H.pickerIdx()===1,'gamepad: stick right selects Level 2');
+}
+
 report();

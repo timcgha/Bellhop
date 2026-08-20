@@ -115,6 +115,7 @@ module.exports = function boot(opts = {}) {
   }
 
   const winListeners = {}, rafs = [], timeouts = [];
+  let gamepads = [];
   const window = {
     THREE,
     matchMedia: () => ({ matches: false }),
@@ -126,7 +127,7 @@ module.exports = function boot(opts = {}) {
       createElement() { return pf(); },
       addEventListener() {}
     },
-    navigator: { getGamepads: () => [] },
+    navigator: { getGamepads: () => gamepads },
     performance: { now: () => 0 },
     requestAnimationFrame(f) { rafs.push(f); },
     setInterval: () => 0,
@@ -167,13 +168,35 @@ module.exports = function boot(opts = {}) {
     confirmStart();
   }
 
+  function firePointer(id, type) {
+    const node = el(id);
+    const fn = node.listeners && node.listeners.pointerdown && node.listeners.pointerdown[0];
+    if (!fn) throw new Error(`no pointerdown on #${id}`);
+    fn({ stopPropagation() {}, preventDefault() {}, pointerType: 'touch', pointerId: 1, clientX: 0, clientY: 0 });
+  }
+  function tapCard(idx) { firePointer('lvl' + idx); }
+  function tapBtn(id) { firePointer(id); }
+
+  function mkGamepad(buttons, axes) {
+    return {
+      connected: true,
+      axes: axes || [0, 0, 0, 0],
+      buttons: buttons.map(p => ({ pressed: !!p }))
+    };
+  }
+  function setGamepad(gp) { gamepads = gp ? [gp] : []; }
+  function gamepadTick(buttons, axes) {
+    setGamepad(mkGamepad(buttons, axes));
+    frames(1);
+  }
+
   if (opts.autostart !== false) {
     startLevel(opts.level !== undefined ? opts.level : 0);
   }
 
   return {
     P, W, CAM, els, el, frames, tap, ok, report, kd, ku, timeouts,
-    selectLevel, confirmStart, startLevel,
+    selectLevel, confirmStart, startLevel, tapCard, tapBtn, setGamepad, gamepadTick, mkGamepad,
     getLevel: () => window.__LEVEL && window.__LEVEL(),
     getPhys: () => window.__PHYS && window.__PHYS(),
     isStarted: () => window.__started && window.__started(),
