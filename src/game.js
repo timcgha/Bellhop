@@ -1,6 +1,6 @@
 let time=0,rescued=0,gotNotes=0;
 let started=false;
-window.__W={solids,gloops,goos,hearts,crates,powers,fires,checks,snoozles,notes,dust,puddles,sharks,fish,spikefish,clams,bubbleShots,kelps,steamVents,lavas,cinders,embers,wisps,salamanders,geysers,scorches,celebrationParticles:PART,get underwaterGroup(){return underwaterGroup;},get won(){return won;},get WM(){return WM;},get RAINBOW(){return RAINBOW;},get FINISH(){return FINISH;},get sfx(){return SFX;},get wreck(){return WRECK;},get conch(){return CONCH;}};
+window.__W={solids,gloops,goos,hearts,crates,powers,fires,checks,snoozles,notes,dust,puddles,sharks,fish,spikefish,clams,bubbleShots,kelps,steamVents,lavas,cinders,embers,wisps,salamanders,geysers,scorches,protoEndpoints,celebrationParticles:PART,get underwaterGroup(){return underwaterGroup;},get won(){return won;},get WM(){return WM;},get RAINBOW(){return RAINBOW;},get FINISH(){return FINISH;},get sfx(){return SFX;},get wreck(){return WRECK;},get conch(){return CONCH;}};
 window.__started=()=>started;
 
 // ---------- camera ----------

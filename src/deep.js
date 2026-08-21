@@ -287,6 +287,11 @@ const SEASHELLC=[0xf5a8a8,0xffccbc,0xe0f2f1,0xffe082,0xce93d8,0xb2dfdb];
 const BIOLUMC=[0x66ffe0,0x88aaff,0xc48cff,0x6ef0a8];
 function ugrp(){return underwaterGroup||scene;}
 function beginLandLevel(){if(landGround)landGround.visible=true;if(underwaterGroup)underwaterGroup.visible=false;scene.background=new THREE.Color(0x9fdcff);scene.fog=new THREE.Fog(0x9fdcff,45,120);}
+function beginPeakLevel(){
+  if(landGround)landGround.visible=true;if(underwaterGroup)underwaterGroup.visible=false;
+  // Warm volcanic sky — friendly adventure, not hellish.
+  scene.background=new THREE.Color(0xffc48a);scene.fog=new THREE.Fog(0xffb878,50,155);
+}
 function beginUnderwaterLevel(L){
   if(landGround)landGround.visible=false;
   // Clearer, warmer water so the Deep reads colorful on a phone.
