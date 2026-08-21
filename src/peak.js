@@ -11,20 +11,6 @@ for(let i=0;i<20;i++){const m=new THREE.Mesh(EMBGEO,new THREE.MeshBasicMaterial(
 const SCORCHG=new THREE.CylinderGeometry(1,1,0.02,12);SCORCHG.translate(0,0.01,0);
 for(let i=0;i<10;i++){const m=new THREE.Mesh(SCORCHG,new THREE.MeshBasicMaterial({color:0x3a1a10,transparent:true,opacity:0.7}));m.visible=false;scene.add(m);scorches.push({m,life:0,alive:false});}
 
-function clearPeakWorld(){
-  const rem=m=>{
-    if(!m)return;
-    if(m.parent&&typeof m.parent.remove==='function')m.parent.remove(m);
-    else if(typeof scene.remove==='function')scene.remove(m);
-    else if(m.visible!=null)m.visible=false;
-  };
-  for(const o of cinders)rem(o.g);cinders.length=0;
-  for(const o of wisps)rem(o.g);wisps.length=0;
-  for(const o of salamanders)rem(o.g);salamanders.length=0;
-  for(const o of geysers)rem(o.g);geysers.length=0;
-  for(const e of embers){e.alive=false;e.m.visible=false;}
-  for(const s of scorches){s.alive=false;s.m.visible=false;}
-}
 function buildCinder(size){
   const g=new THREE.Group();
   const shell=new THREE.Mesh(SPH,pho(0x5a3a2a,40,0x2a1810));shell.scale.set(0.55,0.42,0.55);shell.position.y=0.42;g.add(shell);
@@ -231,4 +217,101 @@ function updateGeysers(dt){
     }
   }
 }
-function updatePeak(dt){updateCinders(dt);updateEmbers(dt);updateWisps(dt);updateSalamanders(dt);updateGeysers(dt);}
+function updatePeak(dt){
+  updateCinders(dt);updateEmbers(dt);updateWisps(dt);updateSalamanders(dt);updateGeysers(dt);
+  updateDriftSparks(dt);updateProtoEndpoints(dt);
+}
+
+// ---- Stage 4 presentation + temporary endpoint (easy to remove in Stage 5) ----
+const protoEndpoints=[],driftSparks=[];
+function clearPeakWorld(){
+  const rem=m=>{
+    if(!m)return;
+    if(m.parent&&typeof m.parent.remove==='function')m.parent.remove(m);
+    else if(typeof scene.remove==='function')scene.remove(m);
+    else if(m.visible!=null)m.visible=false;
+  };
+  for(const o of cinders)rem(o.g);cinders.length=0;
+  for(const o of wisps)rem(o.g);wisps.length=0;
+  for(const o of salamanders)rem(o.g);salamanders.length=0;
+  for(const o of geysers)rem(o.g);geysers.length=0;
+  for(const e of embers){e.alive=false;e.m.visible=false;}
+  for(const s of scorches){s.alive=false;s.m.visible=false;}
+  for(const e of protoEndpoints)rem(e.g);protoEndpoints.length=0;
+  for(const s of driftSparks)rem(s.m);driftSparks.length=0;
+}
+function addVolcanoLandmark(x,y,z,scale){
+  scale=scale||1;
+  const g=new THREE.Group();g.position.set(x,y,z);
+  g.add(mesh(CONE,lam(0x4a3530),0,8*scale,0,14*scale,18*scale,14*scale));
+  g.add(mesh(CONE,lam(0x6a3a2a),0,14*scale,0,7*scale,10*scale,7*scale));
+  g.add(mesh(CYL,new THREE.MeshBasicMaterial({color:0xff6a18,transparent:true,opacity:0.55}),0,20*scale,0,2.2*scale,4*scale,2.2*scale));
+  // Soft smoke puffs (decorative only)
+  for(let i=0;i<3;i++)g.add(mesh(SPH,new THREE.MeshBasicMaterial({color:0xffe0c0,transparent:true,opacity:0.35}),rand(-1.5,1.5)*scale,(22+i*2.2)*scale,rand(-1.5,1.5)*scale,(2.4-i*0.3)*scale));
+  scene.add(g);levelDecor.push(g);
+}
+function addPeakTuft(x,z,s){
+  s=s||1;const g=new THREE.Group();g.position.set(x,groundHeightAt(x,z),z);
+  const col=Math.random()<0.5?0x5aaa3a:0x3f8a2e;
+  g.add(mesh(SPH,lam(col),0,0.25*s,0,0.35*s,0.4*s,0.28*s));
+  g.add(mesh(SPH,lam(0x6ab84a),0.2*s,0.35*s,0.05*s,0.22*s,0.45*s,0.18*s));
+  scene.add(g);levelDecor.push(g);
+}
+function addBasaltRock(x,y,z,s){
+  s=s||1;const g=new THREE.Group();g.position.set(x,y,z);
+  g.add(mesh(BOXG,lam(0x3a3538),0,0.35*s,0,0.9*s,0.7*s,0.7*s));
+  g.add(mesh(BOXG,lam(0x5a2e2a),0.15*s,0.55*s,0.1*s,0.45*s,0.35*s,0.4*s));
+  scene.add(g);levelDecor.push(g);
+}
+function addDriftSparks(n){
+  n=n||18;
+  for(let i=0;i<n;i++){
+    const m=mesh(SPH,new THREE.MeshBasicMaterial({color:Math.random()<0.5?0xff9a3c:0xffe9d0}),0,0,0,0.06);
+    m.position.set(rand(-18,18),rand(1,10),rand(-140,30));
+    scene.add(m);
+    driftSparks.push({m,vx:rand(-0.15,0.15),vy:rand(0.35,0.9),vz:rand(-0.1,0.1),ph:rand(0,TAU)});
+  }
+}
+function updateDriftSparks(dt){
+  for(const s of driftSparks){
+    s.m.position.x+=s.vx*dt;s.m.position.y+=s.vy*dt;s.m.position.z+=s.vz*dt;
+    if(s.m.position.y>16){s.m.position.y=0.6;s.m.position.x=rand(-16,16);s.m.position.z=rand(-150,28);}
+    s.m.material.opacity=0.45+0.35*Math.sin(time*4+s.ph);
+  }
+}
+function addProtoEndpoint(x,y,z){
+  // Temporary blocked geode mouth — unmistakably not the Steam Organ finish.
+  const g=new THREE.Group();g.position.set(x,y,z);
+  g.add(mesh(BOXG,lam(0x4a3a55),0,2.2,0,7.5,4.4,1.6));
+  g.add(mesh(BOXG,lam(0x2a2035),0,1.6,0.55,4.2,3.2,0.5));
+  g.add(mesh(CONE,pho(0x88ccff,40,0xffffff),-1.6,2.8,0.3,0.35,1.1,0.35));
+  g.add(mesh(CONE,pho(0xc48cff,40,0xffffff),1.4,3.0,0.25,0.3,1.0,0.3));
+  g.add(mesh(CONE,pho(0x66ffe0,40,0xffffff),0.2,3.4,0.35,0.28,0.9,0.28));
+  // Wall sits on the landmark; trigger zone is the approach pad in front (+Z).
+  addSolid(x,y,z,7.8,4.6,1.8,0x4a3a55,{surf:'stone',invisible:true});
+  scene.add(g);
+  protoEndpoints.push({g,x,y,z,trigZ:z+2.4,triggered:false,fxT:0});
+}
+function updateProtoEndpoints(dt){
+  for(const e of protoEndpoints){
+    if(e.triggered){
+      e.fxT+=dt;
+      if(e.fxT>0.08&&e.fxT<0.9){
+        e.pt=(e.pt||0)-dt;if(e.pt<=0){e.pt=0.06;
+          spawnP(e.x+rand(-1.5,1.5),e.y+rand(0.5,3.5),e.z+rand(-0.4,0.4),rand(-1,1),rand(1,4),rand(-1,1),rand(0.08,0.14),Math.random()<0.5?0x88ccff:0xffe9d0,0.55,0.4,-2,0.8);
+        }
+      }
+      if(e.fxT>1.15){e.triggered=false;e.fxT=0;softReturnToPicker();}
+      continue;
+    }
+    if(P.dead||won)continue;
+    // Approach from the playable side (+Z). Keep the trigger off the blocking wall volume.
+    if(Math.abs(P.pos.x-e.x)<4.2&&Math.abs(P.pos.y-e.y)<3.2&&P.pos.z>e.z&&P.pos.z<e.trigZ+1.6){
+      e.triggered=true;e.fxT=0;e.pt=0;
+      CAM.shake=Math.max(CAM.shake,0.35);CAM.fovKick=Math.max(CAM.fovKick,6);
+      rumble(120,0.4,0.35);SFX.checkpoint();
+      spawnRing(e.x,e.y+1.2,e.z,0xaaccff,0.4,7,0.55);
+      for(let i=0;i<22;i++)spawnP(e.x,e.y+1.5,e.z,rand(-3,3),rand(2,6),rand(-2,2),rand(0.08,0.16),Math.random()<0.5?0xc48cff:0xffe36b,0.7,0.5,-4,0.9);
+    }
+  }
+}

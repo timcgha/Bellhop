@@ -3,6 +3,10 @@ const sharks=[],fish=[],spikefish=[],clams=[],bubbleShots=[],steamVents=[],lavas
 // Peak arrays live in peak.js (cinders, embers, wisps, salamanders, geysers).
 let seenGloop=false,seenCrate=false;
 let BOAT=null,WM=null,player=null,shadow=null,RAINBOW=null,FINISH=null;
+// Intended Snoozle total for the level (may exceed placed count on a partial slice).
+let SNOOZLE_GOAL=0;
+function snoozleGoalCount(){return SNOOZLE_GOAL>0?SNOOZLE_GOAL:snoozles.length;}
+window.__snoozleGoal=()=>snoozleGoalCount();
 const checks=[];let won=false,winT=0,confT=0;
 const LEVELS=[LEVEL1,LEVEL2,LEVEL3];
 let CURRENT_LEVEL=null;
@@ -118,7 +122,7 @@ function clearLevelWorld(){
   if(RAINBOW){rem(RAINBOW);RAINBOW=null;}
   if(WM&&WM.parts)WM.parts.forEach(rem);WM=null;
   if(BOAT&&BOAT.g)rem(BOAT.g);BOAT=null;
-  FINISH=null;seenGloop=false;seenCrate=false;
+  FINISH=null;SNOOZLE_GOAL=0;seenGloop=false;seenCrate=false;
 }
 function buildWindmill(x,z){const col=addSolid(x,0,z,3.4,6.6,3.4,0xffffff,{surf:'stone'});col.mesh.visible=false;
   const body=new THREE.Mesh(new THREE.CylinderGeometry(1.25,1.75,6.4,18),lam(0xf1e3c2));body.position.set(x,3.2,z);scene.add(body);
@@ -136,11 +140,27 @@ function buildWindmill(x,z){const col=addSolid(x,0,z,3.4,6.6,3.4,0xffffff,{surf:
   });}
 function registerUnfinishedFinish(x,z,top){
   registerFinish({x,z,top,
-    onAllAwake(){showToast('All Snoozles awake! ♪ '+rescued+' of '+snoozles.length);},
+    onAllAwake(){showToast('A Snoozle woke up! ♪ '+rescued+' of '+snoozleGoalCount());},
     onWin(){},
     update(){}
   });
 }
+// Soft return used by the Stage 4 temporary Peak endpoint — no win banner, no level-complete mark.
+function softReturnToPicker(){
+  if(!started)return;
+  clearLevelWorld();
+  won=false;winT=0;confT=0;started=false;rescued=0;gotNotes=0;time=0;
+  AU.win=false;
+  P.hp=P.maxHp;P.dead=false;P.inv=0;P.fire=false;P.bubble=false;P.hasSkyBlast=false;clearLeapBoost();P.vel.set(0,0,0);
+  P.pos.set(P.spawn.x,P.spawn.y,P.spawn.z);
+  beginLandLevel();
+  const w=$('win');if(w){w.style.display='none';w.style.opacity=1;}
+  $('start').style.display='flex';
+  touchArmed=false;updatePickerUI();
+  const hint=$('hint');if(hint){hint.textContent=CTLTEXT;hint.style.opacity=0.95;}
+  updateHUD();
+}
+window.__softReturnToPicker=softReturnToPicker;
 function buildBoat(x,z){const g=new THREE.Group();g.add(mesh(BOXG,lam(0x8b5a2b),0,0.15,0,0.9,0.3,1.7));g.add(mesh(BOXG,lam(0xa86b32),0,0.32,0,1.0,0.06,1.8));g.add(mesh(CYL,lam(0x5b3a1a),0,1.0,-0.1,0.04,1.4,0.04));
   g.add(mesh(BOXG,lam(0xffffff),0,1.15,-0.1,0.9,0.9,0.02));g.add(mesh(BOXG,lam(0xe74c3c),0,1.15,-0.1,0.9,0.25,0.021));scene.add(g);g.position.set(x,-0.1,z);
   BOAT={g,pos:new THREE.Vector3(x,0,z),vel:new THREE.Vector3(),yaw:0};}
@@ -290,8 +310,9 @@ function loadLevel(L){
   applySkyBlastTuning(L.skyBlast);
   applyLavaTuning(L);
   CURRENT_LEVEL=L;
+  SNOOZLE_GOAL=L.snoozleGoal||0;
   setSong(L.music||'meadow');
-  if(L.underwater)beginUnderwaterLevel(L);else beginLandLevel();
+  if(L.underwater)beginUnderwaterLevel(L);else if(L.peakAtmosphere)beginPeakLevel();else beginLandLevel();
   P.fire=false;P.bubble=false;P.hasSkyBlast=false;clearLeapBoost();P.puff=true;P.puffAir=0;endHover();P.slam=0;P.lavaRecT=0;P.anchorSettleT=0;
   if(L.spawn){P.spawn.x=L.spawn.x;P.spawn.y=L.spawn.y;P.spawn.z=L.spawn.z;P.pos.set(L.spawn.x,L.spawn.y,L.spawn.z);P.vel.set(0,0,0);initSafeAnchor(L.spawn.x,L.spawn.y,L.spawn.z);}
   const fence=L.fence;
@@ -317,6 +338,11 @@ function loadLevel(L){
     else if(k==='wisp')addWisp(step[1],step[2]);
     else if(k==='salamander')addSalamander(step[1],step[2],step[3]||{});
     else if(k==='geyser')addGeyser(step[1],step[2],step[3],step[4]);
+    else if(k==='volcanoLandmark')addVolcanoLandmark(step[1],step[2],step[3],step[4]);
+    else if(k==='peakTuft')addPeakTuft(step[1],step[2],step[3]);
+    else if(k==='basaltRock')addBasaltRock(step[1],step[2],step[3],step[4]);
+    else if(k==='driftSparks')addDriftSparks(step[1]);
+    else if(k==='protoEndpoint')addProtoEndpoint(step[1],step[2],step[3]);
     else if(k==='windmill')buildWindmill(step[1],step[2]);
     else if(k==='rainbow')RAINBOW=buildRainbow(step[1],step[2]);
     else if(k==='pinwheelRow'){for(let i=0;i<step[4];i++)addPinwheel(step[1]+i*step[5],step[2]+i*step[6],step[3]);}

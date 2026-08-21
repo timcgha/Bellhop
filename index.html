@@ -58,7 +58,7 @@ body.touch .tbtn{display:flex}
 <div id="hint"></div>
 <div id="start"><div class="card">
 <h1>BELLHOP</h1>
-<div class="sub">v28 · peak systems</div>
+<div class="sub">v29 · peak slice</div>
 <div class="level-pick">
 <div class="lvl-card sel" id="lvl0"><canvas class="lvl-art" id="art0" width="160" height="100"></canvas><span class="lvl-label">Meadow</span></div>
 <div class="lvl-card" id="lvl1"><canvas class="lvl-art" id="art1" width="160" height="100"></canvas><span class="lvl-label">The Deep</span></div>
@@ -400,8 +400,9 @@ steps:[
 const LEVEL3={
 id:'level3',
 music:'meadow',
-spawn:{x:0,y:0.4,z:12},
-// Explicit Level 1 land profile — Stage 1 identity is Sky Blast, not new gravity.
+peakAtmosphere:true,
+// Warm Slopes start — production boot, not the Stage 1–3 prototype arena.
+spawn:{x:0,y:0.4,z:24},
 physics:{
   speed:6.8,acc:44,dec:60,airAcc:20,
   grav:-30,maxFall:-32,jumpV:10.5,puffV:9.4,
@@ -410,83 +411,205 @@ physics:{
   slamHang:0.14,slamFall:-34,slamRebound:8,
   jetTime:0.38,bonkR:2.05,bonkCD:0.5
 },
-// Stage 1 prototype values — do not retune in Stage 2; phone playtest owns the next pass.
-skyBlast:{
-  puffVMul:1.4,
-  boostMax:12.5,
-  boostDecay:1.6
-},
-// Safe-anchor settling (seconds of continuous grounded stand on eligible safe ground).
+// Phone feel pass still owns the next Sky Blast retune — do not change here.
+skyBlast:{puffVMul:1.4,boostMax:12.5,boostDecay:1.6},
 anchorSettle:0.22,
-// Horizontal inset from lava AABBs required before an anchor may update (not a speed gate).
 anchorClear:0.85,
-// Lava recovery owns motion for at most this long (must stay ≤ hurt inv duration 1.4).
 lavaRecovery:0.42,
-// Prototype gap the unpowered run cannot clear; powered running leap should.
-protoGap:{nearZ:0,farZ:-10,farEndZ:-22},
-// Mandatory Sky Blast crossings — CI iterates this list for vent/anchor/depth invariants.
-// Coordinates must match the prototype solids/lava below: near pad ends ~z=0, far pad
-// spans z=-22..-10 (edgeZ/farZ), gap lava currently z≈-8.8..-0.4, vent at takeoff.
-mandatoryLeaps:[{
-  id:'protoLavaCross',
-  takeoff:{x:0,z:1.5,ventReach:5},
-  landing:{x:0,z:-14,edgeZ:-10,farZ:-22,minDepth:8},
-  nearSafe:{x:0,y:0.4,z:3},
-  farSafe:{x:0,y:0.4,z:-14}
+snoozleGoal:4,
+teachGaps:[{
+  id:'teachFail',nearLipZ:-38,farEdgeZ:-47.5,failFloorY:1.6,failFloorZ:-42.5
+},{
+  id:'teachPower',nearLipZ:-58,farEdgeZ:-67.5
 }],
+protoGap:{nearZ:-58,farZ:-67.5,farEndZ:-78},
+// Flat-height mandatory leaps (~9.5u). Vertical climb is on stairs between leaps.
+mandatoryLeaps:[{
+  id:'firstLavaLeap',
+  takeoff:{x:0,z:-72,ventReach:5},
+  landing:{x:0,z:-92.5,edgeZ:-86.5,farZ:-98.5,minDepth:8},
+  nearSafe:{x:0,y:8.4,z:-70},
+  farSafe:{x:0,y:8.4,z:-92}
+},{
+  id:'islandA',
+  takeoff:{x:0,z:-104,ventReach:5},
+  landing:{x:0,z:-123.5,edgeZ:-117.5,farZ:-129.5,minDepth:8},
+  nearSafe:{x:0,y:11.4,z:-102},
+  farSafe:{x:0,y:11.4,z:-123}
+},{
+  id:'islandB',
+  takeoff:{x:0,z:-134,ventReach:5},
+  landing:{x:0,z:-153.5,edgeZ:-147.5,farZ:-159.5,minDepth:8},
+  nearSafe:{x:0,y:13.4,z:-132},
+  farSafe:{x:0,y:13.4,z:-153}
+},{
+  id:'wideRiver',
+  takeoff:{x:0,z:-164,ventReach:5},
+  landing:{x:0,z:-184.5,edgeZ:-177.5,farZ:-191.5,minDepth:8},
+  nearSafe:{x:0,y:15.4,z:-162},
+  farSafe:{x:0,y:15.4,z:-184}
+},{
+  id:'geyserApproach',
+  takeoff:{x:0,z:-196,ventReach:5},
+  landing:{x:0,z:-215.5,edgeZ:-209.5,farZ:-221.5,minDepth:8},
+  nearSafe:{x:0,y:17.4,z:-194},
+  farSafe:{x:0,y:17.4,z:-215}
+}],
+route:{
+  sideLava:{x:10,z:10},
+  snoozle1:{x:-5,z:6},
+  cinderTerrace:{x:-2,z:-24},
+  skyCrate:{x:0,z:-52},
+  snoozle2:{x:-9,z:-78},
+  wispOpen:{x:6,z:-230},
+  wispCorridor:{x:0,z:-248},
+  geyser:{x:0,y:17.4,z:-216},
+  endpoint:{x:0,y:20.4,z:-265}
+},
 fence:0x5a2e1a,
-fenceSolids:[[0,0,16,30,1.2,0.6],[0,0,-28,30,1.2,0.6],[-15,0,-6,0.6,1.2,44],[15,0,-6,0.6,1.2,44]],
+fenceSolids:[
+  [0,0,30,36,2.2,0.7],[0,0,-278,36,2.2,0.7],
+  [-18,0,-124,0.7,2.2,312],[18,0,-124,0.7,2.2,312]
+],
 pathTiles:[],
 hedges:[],
-checks:[[0,12]],
-tower:{tx:0,tz:0},
-snoozleHomes:[[0,-24]],
-snoozles:[],
+checks:[[0,22],[0,-4,2.2],[0,-34,5.2],[0,-70,8.2],[0,-100,11.2],[0,-134,13.2],[0,-168,15.2],[0,-240,19.2]],
+tower:{tx:0,tz:-260},
+snoozleHomes:[[-3,-258],[3,-258],[-2,-266],[2,-266]],
+snoozles:[[-5,0.55,6,0,false],[-9,8.55,-78,1,false]],
 trees:[],
-// Stage 3 temporary note set for held-note CI — not the final production count.
 steps:[
-  // Broad start terrace
-  ['solid',0,0,9,20,0.4,18,0xc45a28,{surf:'stone'}],
-  // Far landing pad — deliberately generous depth beyond the arrival edge
-  ['solid',0,0,-16,20,0.4,12,0xe07a3a,{surf:'stone'}],
-  // Marked landing strip
-  ['solid',0,0.4,-12,6,0.08,2.2,0xffd24a,{surf:'stone'}],
-  // Side practice pads
-  ['solid',-8,0,6,4,0.4,4,0xa84a22,{surf:'stone'}],
-  ['solid',8,0,6,4,0.4,4,0xa84a22,{surf:'stone'}],
-  // Stage 3 systems terrace (away from the lava gap)
-  ['solid',-10,0,12,8,0.4,6,0xb85a2a,{surf:'stone'}],
-  ['solid',10,0,12,8,0.4,6,0xb85a2a,{surf:'stone'}],
-  // Ember-red edges at the mandatory leap lips (readable, still safe stone)
-  ['solid',0,0.4,-0.15,18,0.06,0.35,0x8a2010,{surf:'stone'}],
-  ['solid',0,0.4,-10.15,18,0.06,0.35,0x8a2010,{surf:'stone'}],
-  // Small avoidable lava pool beside the path (teach touch safely)
-  ['lava',7.5,-0.15,8,3.2,0.35,3.2],
-  // Mandatory lava crossing in the gap (near pad ends ~0, far begins ~-10).
-  // Far edge stops short of the landing pad so a clean powered leap is not a skim-hit.
-  ['lava',0,-0.2,-4.6,16,0.45,8.4],
-  // Far-side lava puddle for far-anchor recovery tests (off the main landing line)
-  ['lava',-7.5,-0.15,-16,3.0,0.35,3.0],
-  // Sky Blast crate
-  ['crate',0,0.4,8,'sky'],
-  // Take-off vent for the mandatory leap
-  ['steamVent',0,0.4,1.5,1.4],
-  // Gloop for enemy power-loss tests
-  ['gloop',-8,6,'small'],
-  // ---- Stage 3 interaction systems (prototype only) ----
-  ['cinder',-10,12,'mid'],
+  ['volcanoLandmark',0,0,-290,1.35],
+  ['driftSparks',22],
+  ['solid',0,28,-124,38,2,312,0xffc48a,{invisible:true}],
+  ['solid',0,6,30,36.5,28,0.7,0x5a2e1a,{invisible:true}],
+  ['solid',0,6,-278,36.5,28,0.7,0x5a2e1a,{invisible:true}],
+  ['solid',-18,6,-124,0.7,28,312,0x5a2e1a,{invisible:true}],
+  ['solid',18,6,-124,0.7,28,312,0x5a2e1a,{invisible:true}],
+
+  // ========== AREA 1 — The Warm Slopes ==========
+  ['solid',0,0,12,26,0.4,28,0x2a2218,{surf:'stone'}],
+  ['solid',0,0.4,18,8,0.06,6,0x3a3028,{surf:'stone'}],
+  ['solid',0,0.42,8,5.5,0.05,18,0x6a4a32,{surf:'stone'}],
+  ['solid',6,1.2,0,10,0.4,8,0x3a3530,{surf:'stone'}],
+  ['solid',-4,2.0,-8,12,0.4,8,0x4a3a32,{surf:'stone'}],
+  ['solid',-5,0,6,4.5,0.45,4.5,0xc45a28,{surf:'stone'}],
+  ['solid',-5,0.45,6,3.2,0.08,3.2,0xe07a3a,{surf:'stone'}],
+  ['lava',10,-0.15,10,4.0,0.4,4.0],
+  ['salamander',4,14,{}],
+  ['salamander',-8,10,{path:[{x:-9,z:11},{x:-6,z:9},{x:-8,z:12}]}],
+  ['salamander',7,4,{note:true}],
+  ['note',3,1.1,16,false],
+  ['note',-6,1.0,12,false],
+  ['peakTuft',8,18,1.1],['peakTuft',-9,16,0.9],['peakTuft',5,6,1.0],
+  ['peakTuft',-7,2,1.2],['peakTuft',9,-2,0.85],
+  ['basaltRock',-10,0,14,1.2],['basaltRock',11,0,4,1.0],['basaltRock',-8,0,-2,1.4],
+
+  // ========== AREA 2 — The Cinder Steps ==========
+  ['solid',0,3.5,-18,18,0.4,12,0x3a3538,{surf:'stone'}],
+  ['solid',0,4.0,-18,6,0.08,4,0x8a4a2a,{surf:'stone'}],
+  ['solid',-2,4.5,-26,16,0.4,12,0x4a3a35,{surf:'stone'}],
+  ['cinder',-2,-26,'mid'],
+  ['basaltRock',6,4.5,-22,0.9],['basaltRock',-8,4.5,-28,1.1],
+  ['peakTuft',5,-20,0.7],
+  // Teach gap A (flat 5.9 tops, safe floor below)
+  ['solid',0,5.5,-34,16,0.4,8,0x5a4a40,{surf:'stone'}],
+  ['solid',0,5.9,-37.7,14,0.06,0.35,0x8a2010,{surf:'stone'}],
+  ['solid',0,5.5,-52,16,0.4,9,0x5a4a40,{surf:'stone'}],
+  ['solid',0,5.9,-47.7,14,0.06,0.35,0x8a2010,{surf:'stone'}],
+  ['solid',0,1.4,-42.5,18,0.4,12,0x3a3028,{surf:'stone'}],
+  ['solid',12,2.0,-42,6,0.4,16,0x4a3a32,{surf:'stone'}],
+  ['solid',12,3.5,-48,6,0.4,8,0x4a3a32,{surf:'stone'}],
+  ['solid',12,5.0,-52,6,0.4,6,0x5a4a40,{surf:'stone'}],
+  ['solid',8,5.5,-50,8,0.4,6,0x5a4a40,{surf:'stone'}],
+  ['crate',0,5.9,-52,'sky'],
+  // Teach gap B
+  ['solid',0,6.5,-54,16,0.4,8,0x5a4a40,{surf:'stone'}],
+  ['solid',0,6.9,-57.7,14,0.06,0.35,0x8a2010,{surf:'stone'}],
+  ['solid',0,6.5,-72,16,0.4,9,0x5a4a40,{surf:'stone'}],
+  ['solid',0,6.9,-67.7,14,0.06,0.35,0x8a2010,{surf:'stone'}],
+  ['solid',0,2.2,-62.5,18,0.4,12,0x3a3028,{surf:'stone'}],
+  ['solid',-12,3.5,-62,6,0.4,14,0x4a3a32,{surf:'stone'}],
+  ['solid',-12,5.5,-68,6,0.4,8,0x5a4a40,{surf:'stone'}],
+  // Snoozle 2 ledge
+  ['solid',0,7.5,-70,10,0.4,6,0x5a4a40,{surf:'stone'}],
+  ['steamVent',0,7.9,-70,1.35],
+  ['solid',-9,8.0,-78,5.5,0.4,5.5,0xe07a3a,{surf:'stone'}],
+  ['solid',-9,2.5,-74,8,0.4,10,0x3a3028,{surf:'stone'}],
+
+  // First mandatory lava leap — SAME height 8.4 both sides
+  ['solid',0,8.0,-72,16,0.4,10,0x5a4a40,{surf:'stone'}],
+  ['solid',0,8.4,-76.7,14,0.06,0.35,0x8a2010,{surf:'stone'}],
+  ['steamVent',0,8.4,-72,1.4],
+  ['solid',0,8.0,-92.5,16,0.4,12,0x6a4a38,{surf:'stone'}],
+  ['solid',0,8.4,-86.65,14,0.06,0.35,0x8a2010,{surf:'stone'}],
+  ['solid',0,8.4,-90,5,0.08,2.2,0xffd24a,{surf:'stone'}],
+  ['lava',0,7.2,-81.75,14,0.55,8.0],
+
+  // ========== AREA 3 — stairs up, then flat leaps ==========
+  // Stair climb to islandA height
+  ['solid',0,9.0,-100,14,0.4,6,0x4a3a35,{surf:'stone'}],
+  ['solid',0,10.0,-102,14,0.4,4,0x4a3a35,{surf:'stone'}],
+  ['solid',0,11.0,-104,16,0.4,8,0x4a3a35,{surf:'stone'}],
+  ['steamVent',0,11.4,-104,1.35],
+  ['solid',0,11.4,-107.7,12,0.06,0.35,0x8a2010,{surf:'stone'}],
+  ['solid',0,11.0,-123.5,12,0.4,12,0x5a4a40,{surf:'stone'}],
+  ['solid',0,11.4,-117.65,10,0.06,0.35,0x8a2010,{surf:'stone'}],
+  ['lava',0,10.2,-112.75,14,0.55,8.0],
+
+  // Stair to islandB
+  ['solid',0,12.0,-130,12,0.4,4,0x5a4a40,{surf:'stone'}],
+  ['solid',0,13.0,-134,12,0.4,8,0x5a4a40,{surf:'stone'}],
+  ['steamVent',0,13.4,-134,1.3],
+  ['solid',0,13.4,-137.7,10,0.06,0.35,0x8a2010,{surf:'stone'}],
+  ['solid',0,13.0,-153.5,12,0.4,12,0x5a4a40,{surf:'stone'}],
+  ['solid',0,13.4,-147.65,10,0.06,0.35,0x8a2010,{surf:'stone'}],
+  ['lava',0,12.2,-142.75,14,0.55,8.0],
+
+  // Stair to wideRiver
+  ['solid',0,14.0,-160,14,0.4,4,0x5a4a40,{surf:'stone'}],
+  ['solid',0,15.0,-164,14,0.4,8,0x5a4a40,{surf:'stone'}],
+  ['steamVent',0,15.4,-164,1.4],
+  ['solid',0,15.4,-167.7,12,0.06,0.35,0x8a2010,{surf:'stone'}],
+  ['solid',0,15.0,-184.5,16,0.4,14,0x6a4a38,{surf:'stone'}],
+  ['solid',0,15.4,-177.65,14,0.06,0.35,0x8a2010,{surf:'stone'}],
+  ['solid',0,15.4,-182,5,0.08,2.2,0xffd24a,{surf:'stone'}],
+  ['lava',0,14.2,-172.75,16,0.6,8.0],
+
+  // Stair to geyserApproach
+  ['solid',0,16.0,-192,14,0.4,4,0x5a4a40,{surf:'stone'}],
+  ['solid',0,17.0,-196,14,0.4,8,0x5a4a40,{surf:'stone'}],
+  ['steamVent',0,17.4,-196,1.35],
+  ['solid',0,17.4,-199.7,12,0.06,0.35,0x8a2010,{surf:'stone'}],
+  ['solid',0,17.0,-215.5,14,0.4,12,0x6a4a38,{surf:'stone'}],
+  ['solid',0,17.4,-209.65,12,0.06,0.35,0x8a2010,{surf:'stone'}],
+  ['lava',0,16.2,-204.75,14,0.55,8.0],
+  ['geyser',0,17.4,-216,1.2],
+  ['solid',0,21.0,-220,12,0.4,8,0x5a4a40,{surf:'stone'}],
+
+  // Open Wisp terrace
+  ['solid',0,19.0,-228,16,0.4,6,0x4a3a35,{surf:'stone'}],
+  ['solid',0,19.5,-234,18,0.4,14,0x4a3a35,{surf:'stone'}],
   ['wisp',[
-    {x:10,y:0.9,z:14},{x:12,y:1.1,z:12},{x:10,y:0.9,z:10},{x:8,y:1.0,z:12}
-  ],{speed:2.0}],
+    {x:6,y:20.4,z:-230},{x:8,y:20.6,z:-234},{x:6,y:20.4,z:-238},{x:4,y:20.5,z:-234}
+  ],{speed:1.9}],
   ['wisp',[
-    {x:11,y:0.85,z:11},{x:9,y:0.95,z:13}
-  ],{speed:1.8,note:true}],
-  ['salamander',-12,11,{}],
-  ['salamander',-11,13,{path:[{x:-12,z:12},{x:-10,z:14},{x:-11,z:11}]}],
-  ['salamander',-9,11,{note:true}],
-  ['geyser',4,0.4,11,1.15],
-  ['note',2,1.2,13,false],
-  ['unfinishedFinish',0,-24,8]
+    {x:-5,y:20.3,z:-232},{x:-7,y:20.5,z:-236}
+  ],{speed:1.7,note:true}],
+  ['note',-4,20.3,-228,false],
+  ['salamander',4,-236,{}],
+  ['cinder',-6,-232,'small'],
+  // Forced Wisp corridor
+  ['solid',-5,19.5,-248,6,3.2,0.7,0x3a3538,{surf:'stone'}],
+  ['solid',5,19.5,-248,6,3.2,0.7,0x3a3538,{surf:'stone'}],
+  ['solid',0,19.5,-256,10,0.4,16,0x4a3a35,{surf:'stone'}],
+  ['wisp',[
+    {x:0,y:20.3,z:-246},{x:0,y:20.5,z:-250},{x:0,y:20.3,z:-254}
+  ],{speed:1.6}],
+  ['solid',0,20.0,-262,14,0.4,10,0x3a3538,{surf:'stone'}],
+  ['basaltRock',-6,20.0,-258,1.2],['basaltRock',6,20.0,-260,1.0],
+  ['protoEndpoint',0,20.0,-265],
+  ['unfinishedFinish',0,-262,28]
 ]
 };
 
@@ -770,6 +893,10 @@ const sharks=[],fish=[],spikefish=[],clams=[],bubbleShots=[],steamVents=[],lavas
 // Peak arrays live in peak.js (cinders, embers, wisps, salamanders, geysers).
 let seenGloop=false,seenCrate=false;
 let BOAT=null,WM=null,player=null,shadow=null,RAINBOW=null,FINISH=null;
+// Intended Snoozle total for the level (may exceed placed count on a partial slice).
+let SNOOZLE_GOAL=0;
+function snoozleGoalCount(){return SNOOZLE_GOAL>0?SNOOZLE_GOAL:snoozles.length;}
+window.__snoozleGoal=()=>snoozleGoalCount();
 const checks=[];let won=false,winT=0,confT=0;
 const LEVELS=[LEVEL1,LEVEL2,LEVEL3];
 let CURRENT_LEVEL=null;
@@ -885,7 +1012,7 @@ function clearLevelWorld(){
   if(RAINBOW){rem(RAINBOW);RAINBOW=null;}
   if(WM&&WM.parts)WM.parts.forEach(rem);WM=null;
   if(BOAT&&BOAT.g)rem(BOAT.g);BOAT=null;
-  FINISH=null;seenGloop=false;seenCrate=false;
+  FINISH=null;SNOOZLE_GOAL=0;seenGloop=false;seenCrate=false;
 }
 function buildWindmill(x,z){const col=addSolid(x,0,z,3.4,6.6,3.4,0xffffff,{surf:'stone'});col.mesh.visible=false;
   const body=new THREE.Mesh(new THREE.CylinderGeometry(1.25,1.75,6.4,18),lam(0xf1e3c2));body.position.set(x,3.2,z);scene.add(body);
@@ -903,11 +1030,27 @@ function buildWindmill(x,z){const col=addSolid(x,0,z,3.4,6.6,3.4,0xffffff,{surf:
   });}
 function registerUnfinishedFinish(x,z,top){
   registerFinish({x,z,top,
-    onAllAwake(){showToast('All Snoozles awake! ♪ '+rescued+' of '+snoozles.length);},
+    onAllAwake(){showToast('A Snoozle woke up! ♪ '+rescued+' of '+snoozleGoalCount());},
     onWin(){},
     update(){}
   });
 }
+// Soft return used by the Stage 4 temporary Peak endpoint — no win banner, no level-complete mark.
+function softReturnToPicker(){
+  if(!started)return;
+  clearLevelWorld();
+  won=false;winT=0;confT=0;started=false;rescued=0;gotNotes=0;time=0;
+  AU.win=false;
+  P.hp=P.maxHp;P.dead=false;P.inv=0;P.fire=false;P.bubble=false;P.hasSkyBlast=false;clearLeapBoost();P.vel.set(0,0,0);
+  P.pos.set(P.spawn.x,P.spawn.y,P.spawn.z);
+  beginLandLevel();
+  const w=$('win');if(w){w.style.display='none';w.style.opacity=1;}
+  $('start').style.display='flex';
+  touchArmed=false;updatePickerUI();
+  const hint=$('hint');if(hint){hint.textContent=CTLTEXT;hint.style.opacity=0.95;}
+  updateHUD();
+}
+window.__softReturnToPicker=softReturnToPicker;
 function buildBoat(x,z){const g=new THREE.Group();g.add(mesh(BOXG,lam(0x8b5a2b),0,0.15,0,0.9,0.3,1.7));g.add(mesh(BOXG,lam(0xa86b32),0,0.32,0,1.0,0.06,1.8));g.add(mesh(CYL,lam(0x5b3a1a),0,1.0,-0.1,0.04,1.4,0.04));
   g.add(mesh(BOXG,lam(0xffffff),0,1.15,-0.1,0.9,0.9,0.02));g.add(mesh(BOXG,lam(0xe74c3c),0,1.15,-0.1,0.9,0.25,0.021));scene.add(g);g.position.set(x,-0.1,z);
   BOAT={g,pos:new THREE.Vector3(x,0,z),vel:new THREE.Vector3(),yaw:0};}
@@ -1057,8 +1200,9 @@ function loadLevel(L){
   applySkyBlastTuning(L.skyBlast);
   applyLavaTuning(L);
   CURRENT_LEVEL=L;
+  SNOOZLE_GOAL=L.snoozleGoal||0;
   setSong(L.music||'meadow');
-  if(L.underwater)beginUnderwaterLevel(L);else beginLandLevel();
+  if(L.underwater)beginUnderwaterLevel(L);else if(L.peakAtmosphere)beginPeakLevel();else beginLandLevel();
   P.fire=false;P.bubble=false;P.hasSkyBlast=false;clearLeapBoost();P.puff=true;P.puffAir=0;endHover();P.slam=0;P.lavaRecT=0;P.anchorSettleT=0;
   if(L.spawn){P.spawn.x=L.spawn.x;P.spawn.y=L.spawn.y;P.spawn.z=L.spawn.z;P.pos.set(L.spawn.x,L.spawn.y,L.spawn.z);P.vel.set(0,0,0);initSafeAnchor(L.spawn.x,L.spawn.y,L.spawn.z);}
   const fence=L.fence;
@@ -1084,6 +1228,11 @@ function loadLevel(L){
     else if(k==='wisp')addWisp(step[1],step[2]);
     else if(k==='salamander')addSalamander(step[1],step[2],step[3]||{});
     else if(k==='geyser')addGeyser(step[1],step[2],step[3],step[4]);
+    else if(k==='volcanoLandmark')addVolcanoLandmark(step[1],step[2],step[3],step[4]);
+    else if(k==='peakTuft')addPeakTuft(step[1],step[2],step[3]);
+    else if(k==='basaltRock')addBasaltRock(step[1],step[2],step[3],step[4]);
+    else if(k==='driftSparks')addDriftSparks(step[1]);
+    else if(k==='protoEndpoint')addProtoEndpoint(step[1],step[2],step[3]);
     else if(k==='windmill')buildWindmill(step[1],step[2]);
     else if(k==='rainbow')RAINBOW=buildRainbow(step[1],step[2]);
     else if(k==='pinwheelRow'){for(let i=0;i<step[4];i++)addPinwheel(step[1]+i*step[5],step[2]+i*step[6],step[3]);}
@@ -1568,7 +1717,9 @@ function wakeSnoozle(s){if(s.state!=='sleep')return;s.state='wake';s.t=0;s.boat=
   s.g.userData.closed.visible=false;s.g.userData.open.visible=true;s.g.userData.mouth.scale.set(0.1,0.1,0.02);setTimeout(()=>{s.g.userData.mouth.scale.set(0.08,0.03,0.02);},900);
   rescued++;AU.layers=rescued;SFX.wake();
   for(let i=0;i<12;i++)spawnP(s.g.position.x,s.g.position.y+0.6,s.g.position.z,rand(-2,2),rand(1,4),rand(-2,2),0.08,0xffe36b,0.7,0.2,-5,1);
-  if(rescued<snoozles.length)showToast('A Snoozle woke up! ♪ '+rescued+' of '+snoozles.length);
+  // snoozleGoal lets a partial Level 3 slice place fewer Snoozles than the finished design (4).
+  const goal=(typeof snoozleGoalCount==='function')?snoozleGoalCount():snoozles.length;
+  if(rescued<goal)showToast('A Snoozle woke up! ♪ '+rescued+' of '+goal);
   else FINISH.onAllAwake();
   updateHUD();}
 function updateSnoozles(dt){for(const s of snoozles){const g=s.g;
@@ -1682,20 +1833,6 @@ for(let i=0;i<20;i++){const m=new THREE.Mesh(EMBGEO,new THREE.MeshBasicMaterial(
 const SCORCHG=new THREE.CylinderGeometry(1,1,0.02,12);SCORCHG.translate(0,0.01,0);
 for(let i=0;i<10;i++){const m=new THREE.Mesh(SCORCHG,new THREE.MeshBasicMaterial({color:0x3a1a10,transparent:true,opacity:0.7}));m.visible=false;scene.add(m);scorches.push({m,life:0,alive:false});}
 
-function clearPeakWorld(){
-  const rem=m=>{
-    if(!m)return;
-    if(m.parent&&typeof m.parent.remove==='function')m.parent.remove(m);
-    else if(typeof scene.remove==='function')scene.remove(m);
-    else if(m.visible!=null)m.visible=false;
-  };
-  for(const o of cinders)rem(o.g);cinders.length=0;
-  for(const o of wisps)rem(o.g);wisps.length=0;
-  for(const o of salamanders)rem(o.g);salamanders.length=0;
-  for(const o of geysers)rem(o.g);geysers.length=0;
-  for(const e of embers){e.alive=false;e.m.visible=false;}
-  for(const s of scorches){s.alive=false;s.m.visible=false;}
-}
 function buildCinder(size){
   const g=new THREE.Group();
   const shell=new THREE.Mesh(SPH,pho(0x5a3a2a,40,0x2a1810));shell.scale.set(0.55,0.42,0.55);shell.position.y=0.42;g.add(shell);
@@ -1902,7 +2039,104 @@ function updateGeysers(dt){
     }
   }
 }
-function updatePeak(dt){updateCinders(dt);updateEmbers(dt);updateWisps(dt);updateSalamanders(dt);updateGeysers(dt);}
+function updatePeak(dt){
+  updateCinders(dt);updateEmbers(dt);updateWisps(dt);updateSalamanders(dt);updateGeysers(dt);
+  updateDriftSparks(dt);updateProtoEndpoints(dt);
+}
+
+// ---- Stage 4 presentation + temporary endpoint (easy to remove in Stage 5) ----
+const protoEndpoints=[],driftSparks=[];
+function clearPeakWorld(){
+  const rem=m=>{
+    if(!m)return;
+    if(m.parent&&typeof m.parent.remove==='function')m.parent.remove(m);
+    else if(typeof scene.remove==='function')scene.remove(m);
+    else if(m.visible!=null)m.visible=false;
+  };
+  for(const o of cinders)rem(o.g);cinders.length=0;
+  for(const o of wisps)rem(o.g);wisps.length=0;
+  for(const o of salamanders)rem(o.g);salamanders.length=0;
+  for(const o of geysers)rem(o.g);geysers.length=0;
+  for(const e of embers){e.alive=false;e.m.visible=false;}
+  for(const s of scorches){s.alive=false;s.m.visible=false;}
+  for(const e of protoEndpoints)rem(e.g);protoEndpoints.length=0;
+  for(const s of driftSparks)rem(s.m);driftSparks.length=0;
+}
+function addVolcanoLandmark(x,y,z,scale){
+  scale=scale||1;
+  const g=new THREE.Group();g.position.set(x,y,z);
+  g.add(mesh(CONE,lam(0x4a3530),0,8*scale,0,14*scale,18*scale,14*scale));
+  g.add(mesh(CONE,lam(0x6a3a2a),0,14*scale,0,7*scale,10*scale,7*scale));
+  g.add(mesh(CYL,new THREE.MeshBasicMaterial({color:0xff6a18,transparent:true,opacity:0.55}),0,20*scale,0,2.2*scale,4*scale,2.2*scale));
+  // Soft smoke puffs (decorative only)
+  for(let i=0;i<3;i++)g.add(mesh(SPH,new THREE.MeshBasicMaterial({color:0xffe0c0,transparent:true,opacity:0.35}),rand(-1.5,1.5)*scale,(22+i*2.2)*scale,rand(-1.5,1.5)*scale,(2.4-i*0.3)*scale));
+  scene.add(g);levelDecor.push(g);
+}
+function addPeakTuft(x,z,s){
+  s=s||1;const g=new THREE.Group();g.position.set(x,groundHeightAt(x,z),z);
+  const col=Math.random()<0.5?0x5aaa3a:0x3f8a2e;
+  g.add(mesh(SPH,lam(col),0,0.25*s,0,0.35*s,0.4*s,0.28*s));
+  g.add(mesh(SPH,lam(0x6ab84a),0.2*s,0.35*s,0.05*s,0.22*s,0.45*s,0.18*s));
+  scene.add(g);levelDecor.push(g);
+}
+function addBasaltRock(x,y,z,s){
+  s=s||1;const g=new THREE.Group();g.position.set(x,y,z);
+  g.add(mesh(BOXG,lam(0x3a3538),0,0.35*s,0,0.9*s,0.7*s,0.7*s));
+  g.add(mesh(BOXG,lam(0x5a2e2a),0.15*s,0.55*s,0.1*s,0.45*s,0.35*s,0.4*s));
+  scene.add(g);levelDecor.push(g);
+}
+function addDriftSparks(n){
+  n=n||18;
+  for(let i=0;i<n;i++){
+    const m=mesh(SPH,new THREE.MeshBasicMaterial({color:Math.random()<0.5?0xff9a3c:0xffe9d0}),0,0,0,0.06);
+    m.position.set(rand(-18,18),rand(1,10),rand(-140,30));
+    scene.add(m);
+    driftSparks.push({m,vx:rand(-0.15,0.15),vy:rand(0.35,0.9),vz:rand(-0.1,0.1),ph:rand(0,TAU)});
+  }
+}
+function updateDriftSparks(dt){
+  for(const s of driftSparks){
+    s.m.position.x+=s.vx*dt;s.m.position.y+=s.vy*dt;s.m.position.z+=s.vz*dt;
+    if(s.m.position.y>16){s.m.position.y=0.6;s.m.position.x=rand(-16,16);s.m.position.z=rand(-150,28);}
+    s.m.material.opacity=0.45+0.35*Math.sin(time*4+s.ph);
+  }
+}
+function addProtoEndpoint(x,y,z){
+  // Temporary blocked geode mouth — unmistakably not the Steam Organ finish.
+  const g=new THREE.Group();g.position.set(x,y,z);
+  g.add(mesh(BOXG,lam(0x4a3a55),0,2.2,0,7.5,4.4,1.6));
+  g.add(mesh(BOXG,lam(0x2a2035),0,1.6,0.55,4.2,3.2,0.5));
+  g.add(mesh(CONE,pho(0x88ccff,40,0xffffff),-1.6,2.8,0.3,0.35,1.1,0.35));
+  g.add(mesh(CONE,pho(0xc48cff,40,0xffffff),1.4,3.0,0.25,0.3,1.0,0.3));
+  g.add(mesh(CONE,pho(0x66ffe0,40,0xffffff),0.2,3.4,0.35,0.28,0.9,0.28));
+  // Wall sits on the landmark; trigger zone is the approach pad in front (+Z).
+  addSolid(x,y,z,7.8,4.6,1.8,0x4a3a55,{surf:'stone',invisible:true});
+  scene.add(g);
+  protoEndpoints.push({g,x,y,z,trigZ:z+2.4,triggered:false,fxT:0});
+}
+function updateProtoEndpoints(dt){
+  for(const e of protoEndpoints){
+    if(e.triggered){
+      e.fxT+=dt;
+      if(e.fxT>0.08&&e.fxT<0.9){
+        e.pt=(e.pt||0)-dt;if(e.pt<=0){e.pt=0.06;
+          spawnP(e.x+rand(-1.5,1.5),e.y+rand(0.5,3.5),e.z+rand(-0.4,0.4),rand(-1,1),rand(1,4),rand(-1,1),rand(0.08,0.14),Math.random()<0.5?0x88ccff:0xffe9d0,0.55,0.4,-2,0.8);
+        }
+      }
+      if(e.fxT>1.15){e.triggered=false;e.fxT=0;softReturnToPicker();}
+      continue;
+    }
+    if(P.dead||won)continue;
+    // Approach from the playable side (+Z). Keep the trigger off the blocking wall volume.
+    if(Math.abs(P.pos.x-e.x)<4.2&&Math.abs(P.pos.y-e.y)<3.2&&P.pos.z>e.z&&P.pos.z<e.trigZ+1.6){
+      e.triggered=true;e.fxT=0;e.pt=0;
+      CAM.shake=Math.max(CAM.shake,0.35);CAM.fovKick=Math.max(CAM.fovKick,6);
+      rumble(120,0.4,0.35);SFX.checkpoint();
+      spawnRing(e.x,e.y+1.2,e.z,0xaaccff,0.4,7,0.55);
+      for(let i=0;i<22;i++)spawnP(e.x,e.y+1.5,e.z,rand(-3,3),rand(2,6),rand(-2,2),rand(0.08,0.16),Math.random()<0.5?0xc48cff:0xffe36b,0.7,0.5,-4,0.9);
+    }
+  }
+}
 
 
 // ===== src/deep.js =====
@@ -2195,6 +2429,11 @@ const SEASHELLC=[0xf5a8a8,0xffccbc,0xe0f2f1,0xffe082,0xce93d8,0xb2dfdb];
 const BIOLUMC=[0x66ffe0,0x88aaff,0xc48cff,0x6ef0a8];
 function ugrp(){return underwaterGroup||scene;}
 function beginLandLevel(){if(landGround)landGround.visible=true;if(underwaterGroup)underwaterGroup.visible=false;scene.background=new THREE.Color(0x9fdcff);scene.fog=new THREE.Fog(0x9fdcff,45,120);}
+function beginPeakLevel(){
+  if(landGround)landGround.visible=true;if(underwaterGroup)underwaterGroup.visible=false;
+  // Warm volcanic sky — friendly adventure, not hellish.
+  scene.background=new THREE.Color(0xffc48a);scene.fog=new THREE.Fog(0xffb878,50,155);
+}
 function beginUnderwaterLevel(L){
   if(landGround)landGround.visible=false;
   // Clearer, warmer water so the Deep reads colorful on a phone.
@@ -2862,7 +3101,7 @@ window.__TEST={
 
 
 // ===== src/hud.js =====
-function updateHUD(){$('hp').textContent='❤️'.repeat(Math.max(P.hp,0))+'🤍'.repeat(P.maxHp-Math.max(P.hp,0));$('snz').textContent='😴 '+rescued+'/'+snoozles.length;$('nts').textContent='♪ '+gotNotes+'/'+notes.length;
+function updateHUD(){$('hp').textContent='❤️'.repeat(Math.max(P.hp,0))+'🤍'.repeat(P.maxHp-Math.max(P.hp,0));$('snz').textContent='😴 '+rescued+'/'+((typeof snoozleGoalCount==='function')?snoozleGoalCount():snoozles.length);$('nts').textContent='♪ '+gotNotes+'/'+notes.length;
   const f=$('fire');f.style.display=P.fire?'':'none';f.textContent='🔥';
   const b=$('bubble');if(b){b.style.display=(P.bubble&&isUnderwater())?'':'none';b.textContent='🫧';}
   updateTouchLabels();}
@@ -2954,7 +3193,7 @@ updatePickerUI();
 // ===== src/game.js =====
 let time=0,rescued=0,gotNotes=0;
 let started=false;
-window.__W={solids,gloops,goos,hearts,crates,powers,fires,checks,snoozles,notes,dust,puddles,sharks,fish,spikefish,clams,bubbleShots,kelps,steamVents,lavas,cinders,embers,wisps,salamanders,geysers,scorches,celebrationParticles:PART,get underwaterGroup(){return underwaterGroup;},get won(){return won;},get WM(){return WM;},get RAINBOW(){return RAINBOW;},get FINISH(){return FINISH;},get sfx(){return SFX;},get wreck(){return WRECK;},get conch(){return CONCH;}};
+window.__W={solids,gloops,goos,hearts,crates,powers,fires,checks,snoozles,notes,dust,puddles,sharks,fish,spikefish,clams,bubbleShots,kelps,steamVents,lavas,cinders,embers,wisps,salamanders,geysers,scorches,protoEndpoints,celebrationParticles:PART,get underwaterGroup(){return underwaterGroup;},get won(){return won;},get WM(){return WM;},get RAINBOW(){return RAINBOW;},get FINISH(){return FINISH;},get sfx(){return SFX;},get wreck(){return WRECK;},get conch(){return CONCH;}};
 window.__started=()=>started;
 
 // ---------- camera ----------
