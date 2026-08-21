@@ -74,8 +74,10 @@ const SHARK_AGGRO=7;
 // ---- no mandatory bubble on main route ----
 {
   const H=boot();startL2(H);
-  ok(!H.W.spikefish.some(s=>s.role!=='trench_alcove'&&s.z1<-205&&s.z1>-290),
+  ok(!H.W.spikefish.some(s=>s.role!=='trench_alcove'&&s.role!=='trench_mid'&&s.z1<-205&&s.z1>-290),
     'no main-route spikefish gate in The Trench');
+  ok(H.W.spikefish.some(s=>s.role==='trench_mid')&&H.W.clams.some(c=>c.role==='trench_mid'),
+    'optional trench_mid spikefish sits with a renewable clam');
   const mainLegs=[[0,-220],[0,-235],[0,-250],[0,-265],[0,-272]];
   let needBubble=false;
   for(const L of mainLegs){
@@ -161,10 +163,10 @@ const SHARK_AGGRO=7;
 // ---- counted notes stable from build ----
 {
   const H=boot();startL2(H);
-  ok(H.W.notes.length===6,'production Level 2 counted-note total is 6 after The Trench');
+  ok(H.W.notes.length===9,'production Level 2 counted-note total is 9 after The Trench');
   const hidden=H.W.notes.filter(n=>n.hidden).length;
   const visible=H.W.notes.filter(n=>!n.hidden).length;
-  ok(hidden===1&&visible===5,'note breakdown: one held note fish + two secret + three trench alcove');
+  ok(hidden===4&&visible===5,'note breakdown: four held (note fish / note-spikefish) + five visible alcove notes');
   const n0=H.W.notes.length;
   const sp=H.W.spikefish.find(s=>s.role==='trench_alcove');
   sp.alive=false;H.frames(4);

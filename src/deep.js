@@ -2,20 +2,27 @@ const FISHC=[0xff6b81,0x4fb4e6,0xffe57f,0xa5d6a7,0xce93d8,0xffab91,0x80d8ff];
 const BUBBLEGEO=new THREE.SphereGeometry(1,10,8);
 
 function buildShark(){
+  // Clear phone-readable shark: tapered body, pointed nose, tall dorsal, crescent tail.
   const g=new THREE.Group();
-  const bodyCol=lam(0x6a7a8a),belly=lam(0x8a9aaa),fin=lam(0x5a6a7a);
-  const body=mesh(SPH,bodyCol,0,0,0,0.42,0.32,1.35);body.scale.set(1,0.75,1);g.add(body);
-  g.add(mesh(SPH,belly,0,-0.08,0.05,0.34,0.18,1.05));
-  g.add(mesh(CONE,fin,0,0.06,0.82,0.2,0.22,0.55)); // nose
-  g.add(mesh(CONE,fin,0,0.34,-0.05,0.08,0.28,0.04)); // dorsal
-  const tail=new THREE.Group();tail.position.set(0,0.02,-0.82);
-  tail.add(mesh(CONE,fin,0,0.12,0,0.04,0.38,0.22));tail.children[0].rotation.x=0.55;
-  tail.add(mesh(CONE,fin,0,-0.12,0,0.04,0.38,0.22));tail.children[1].rotation.x=-0.55;
+  const bodyCol=lam(0x5f7388),belly=lam(0xb8c8d4),fin=lam(0x4a5a6c),dark=lam(0x2a3340);
+  g.add(mesh(SPH,bodyCol,0,0.02,0.05,0.38,0.28,0.95));          // main torso
+  g.add(mesh(SPH,bodyCol,0,0.0,0.55,0.28,0.22,0.55));            // forward taper
+  g.add(mesh(SPH,belly,0,-0.1,0.15,0.30,0.14,0.85));             // pale underside
+  const nose=mesh(CONE,bodyCol,0,0.0,1.05,0.18,0.55,0.18);nose.rotation.x=Math.PI/2;g.add(nose);
+  g.add(mesh(SPH,dark,0,-0.02,1.28,0.06,0.04,0.08));             // snout tip / mouth cue
+  const dorsal=mesh(CONE,fin,0,0.42,-0.05,0.07,0.48,0.14);dorsal.rotation.x=-0.15;g.add(dorsal);
+  // pectoral fins
+  const pL=mesh(CONE,fin,-0.36,-0.06,0.25,0.06,0.42,0.16);pL.rotation.z=1.05;pL.rotation.y=0.35;g.add(pL);
+  const pR=mesh(CONE,fin,0.36,-0.06,0.25,0.06,0.42,0.16);pR.rotation.z=-1.05;pR.rotation.y=-0.35;g.add(pR);
+  // crescent tail
+  const tail=new THREE.Group();tail.position.set(0,0.02,-0.95);
+  const tU=mesh(CONE,fin,0,0.22,0,0.05,0.48,0.18);tU.rotation.x=0.7;tail.add(tU);
+  const tL=mesh(CONE,fin,0,-0.16,0,0.045,0.34,0.15);tL.rotation.x=-0.75;tail.add(tL);
   g.add(tail);
-  g.add(mesh(BOXG,fin,-0.28,-0.04,0.15,0.22,0.04,0.12));g.children[g.children.length-1].rotation.z=0.45;
-  g.add(mesh(BOXG,fin,0.28,-0.04,0.15,0.22,0.04,0.12));g.children[g.children.length-1].rotation.z=-0.45;
-  g.add(mesh(SPH,lam(0x111111),-0.16,0.1,0.42,0.06));
-  g.add(mesh(SPH,lam(0x111111),0.16,0.1,0.42,0.06));
+  g.add(mesh(SPH,lam(0x111111),-0.14,0.1,0.72,0.055));
+  g.add(mesh(SPH,lam(0x111111),0.14,0.1,0.72,0.055));
+  g.add(mesh(SPH,lam(0xffffff),-0.14,0.11,0.76,0.02));
+  g.add(mesh(SPH,lam(0xffffff),0.14,0.11,0.76,0.02));
   return g;
 }
 const SHARK_AGGRO=7,SHARK_LEASH=9;
@@ -152,17 +159,16 @@ function updateSharks(dt){
       }
       continue;
     }
-    s.y=s.yBase+Math.sin(time*1.1+s.ph)*0.28;
     const dx=P.pos.x-s.x,dz=P.pos.z-s.z,d=Math.hypot(dx,dz)||0.01;
     const hx=s.hx-s.x,hz=s.hz-s.z,dHome=Math.hypot(hx,hz)||0.001;
     if(s.backT>0)s.backT-=dt;
-    let mx=0,mz=0,sp=0;
+    let mx=0,mz=0,sp=0,chasing=false;
     if(s.backT>0){
       // just bit: retreat toward home instead of chain-biting
       if(dHome>1){mx=hx/dHome;mz=hz/dHome;sp=2.4;s.face=Math.atan2(mx,mz);}
       else s.face=Math.atan2(-dx,-dz);
     }else if(!P.dead&&d<SHARK_AGGRO&&dHome<SHARK_LEASH){
-      s.face=Math.atan2(dx,dz);
+      chasing=true;s.face=Math.atan2(dx,dz);
       if(d>0.8){mx=dx/d;mz=dz/d;sp=2.4;}
     }else if(dHome>0.6){
       mx=hx/dHome;mz=hz/dHome;sp=2.0;s.face=Math.atan2(mx,mz);
@@ -170,10 +176,20 @@ function updateSharks(dt){
       s.face=s.ph+Math.sin(time*0.35+s.ph)*0.9;
     }
     if(sp>0){s.x+=mx*sp*dt;s.z+=mz*sp*dt;}
+    // Dive toward the player while chasing so seabed swimming is threatened,
+    // but stay near home height so a high wreck shark does not dive onto low ledges.
+    const bob=Math.sin(time*1.1+s.ph)*0.18;
+    let wantY=s.yBase+bob;
+    if(chasing){
+      const lo=Math.max(0.85,s.yBase-1.15),hi=s.yBase+0.55;
+      wantY=clamp(P.pos.y+0.25,lo,hi)+bob*0.4;
+    }else if(s.backT>0)wantY=s.yBase+0.2+bob;
+    s.y=damp(s.y,wantY,5.5,dt);
     s.g.rotation.y=angDamp(s.g.rotation.y,s.face,4,dt);
     s.g.position.set(s.x,s.y,s.z);
     if(s.hurtT>0)s.hurtT-=dt;
-    if(!P.dead&&P.inv<=0&&s.backT<=0&&d<0.85&&Math.abs(P.pos.y-s.y)<1.1){
+    // Vertical reach covers a grounded/swimming child without needing a jump.
+    if(!P.dead&&P.inv<=0&&s.backT<=0&&d<0.9&&Math.abs(P.pos.y-s.y)<1.45){
       hurtPlayer(dx/d*4,dz/d*4,0x6a7a8a);SFX.sharkBite();s.backT=2.2;
     }
   }
@@ -266,7 +282,8 @@ function hitSharkSpinJet(s,dmg){
 const kelps=[];let underwaterGroup=null;
 const decorKelps=[],suspendMotes=[],biolumGlows=[];
 const CORALC=[0xff6b81,0xff8a65,0xffb347,0xf48fb1,0xce93d8,0x80cbc4,0xffee58];
-const SANDC=[0xf5ecd7,0xe8dcc0,0xd9c08a,0xc8b898,0xf0e4c8];
+const SANDC=[0xf5ecd7,0xe8dcc0,0xd9c08a,0xc8b898,0xf0e4c8,0xf2d4b0,0xe8c4a0,0xd4c8b0];
+const SEASHELLC=[0xf5a8a8,0xffccbc,0xe0f2f1,0xffe082,0xce93d8,0xb2dfdb];
 const BIOLUMC=[0x66ffe0,0x88aaff,0xc48cff,0x6ef0a8];
 function ugrp(){return underwaterGroup||scene;}
 function beginLandLevel(){if(landGround)landGround.visible=true;if(underwaterGroup)underwaterGroup.visible=false;scene.background=new THREE.Color(0x9fdcff);scene.fog=new THREE.Fog(0x9fdcff,45,120);}
@@ -276,26 +293,32 @@ function beginUnderwaterLevel(L){
   decorKelps.length=0;suspendMotes.length=0;biolumGlows.length=0;CONCH=null;
   if(!underwaterGroup){underwaterGroup=new THREE.Group();scene.add(underwaterGroup);}
   underwaterGroup.visible=true;while(underwaterGroup.children.length)underwaterGroup.remove(underwaterGroup.children[0]);
-  for(let i=0;i<5;i++){const c=SANDC[i%SANDC.length];const px=rand(-55,55),pz=rand(-105,18);
-    const pw=rand(12,28),pd=rand(10,22);
+  for(let i=0;i<12;i++){const c=SANDC[i%SANDC.length];const px=rand(-55,55),pz=rand(-200,18);
+    const pw=rand(10,26),pd=rand(8,20);
     const patch=new THREE.Mesh(new THREE.PlaneGeometry(pw,pd),lam(c));patch.rotation.x=-Math.PI/2;patch.position.set(px,-0.54+rand(-0.02,0.01),pz);patch.rotation.z=rand(0,TAU);underwaterGroup.add(patch);}
-  const floor=new THREE.Mesh(new THREE.PlaneGeometry(140,160),lam(0xd9c8a8));floor.rotation.x=-Math.PI/2;floor.position.set(0,-0.55,-48);underwaterGroup.add(floor);
-  const bright=lam(0xf5ecd7);const floor2=new THREE.Mesh(new THREE.PlaneGeometry(52,42),bright);floor2.rotation.x=-Math.PI/2;floor2.position.set(0,-0.48,4);underwaterGroup.add(floor2);
-  for(let i=0;i<18;i++){const a=rand(0,TAU),r=rand(2,16);const x=Math.cos(a)*r,z=4+Math.sin(a)*r*0.6;
-    underwaterGroup.add(mesh(SPH,lam(SANDC[i%SANDC.length]),x,-0.46+rand(0,0.06),z,rand(0.5,1.4),rand(0.08,0.18),rand(0.5,1.2)));}
-  for(let i=0;i<24;i++){const z=rand(-100,12),x=rand(-10,10);
-    underwaterGroup.add(mesh(SPH,lam(0xc8b898),x+rand(-3,3),-0.47,z+rand(-2,2),rand(0.8,2.2),rand(0.06,0.14),rand(0.8,2.2)));}
-  const deepSand=lam(0xc8b898);const floor3=new THREE.Mesh(new THREE.PlaneGeometry(60,90),deepSand);floor3.rotation.x=-Math.PI/2;floor3.position.set(0,-0.52,-165);underwaterGroup.add(floor3);
+  const floor=new THREE.Mesh(new THREE.PlaneGeometry(140,160),lam(0xd4b898));floor.rotation.x=-Math.PI/2;floor.position.set(0,-0.55,-48);underwaterGroup.add(floor);
+  const bright=lam(0xf2e0c0);const floor2=new THREE.Mesh(new THREE.PlaneGeometry(52,42),bright);floor2.rotation.x=-Math.PI/2;floor2.position.set(0,-0.48,4);underwaterGroup.add(floor2);
+  for(let i=0;i<28;i++){const a=rand(0,TAU),r=rand(2,18);const x=Math.cos(a)*r,z=4+Math.sin(a)*r*0.6;
+    underwaterGroup.add(mesh(SPH,lam(SANDC[i%SANDC.length]),x,-0.46+rand(0,0.06),z,rand(0.5,1.5),rand(0.08,0.2),rand(0.5,1.3)));}
+  for(let i=0;i<36;i++){const z=rand(-200,12),x=rand(-11,11);
+    underwaterGroup.add(mesh(SPH,lam(SANDC[(i+3)%SANDC.length]),x+rand(-3,3),-0.47,z+rand(-2,2),rand(0.7,2.0),rand(0.06,0.14),rand(0.7,2.0)));}
+  // Soft teal / rose tint patches so the floor is not one flat beige
+  for(let i=0;i<8;i++){const c=i%2?0xd8ebe6:0xf0d4c8;const px=rand(-40,40),pz=rand(-180,10);
+    const patch=new THREE.Mesh(new THREE.PlaneGeometry(rand(8,16),rand(6,12)),lam(c));patch.rotation.x=-Math.PI/2;patch.position.set(px,-0.51,pz);patch.rotation.z=rand(0,TAU);underwaterGroup.add(patch);}
+  const deepSand=lam(0xc4a888);const floor3=new THREE.Mesh(new THREE.PlaneGeometry(60,90),deepSand);floor3.rotation.x=-Math.PI/2;floor3.position.set(0,-0.52,-165);underwaterGroup.add(floor3);
   addDistantSilhouettes();
 }
 function sandPath(x1,z1,x2,z2){
   const cx=(x1+x2)/2,cz=(z1+z2)/2,lw=Math.abs(x2-x1)+0.4,ld=Math.abs(z2-z1)+0.4;
-  ugrp().add(mesh(BOXG,lam(0xf0e4c8),cx,-0.43,cz,lw,0.05,ld));
-  ugrp().add(mesh(BOXG,lam(0xe8dcc0),cx,-0.41,cz,lw*0.82,0.03,ld*0.88));
-  const steps=Math.max(4,Math.round(Math.max(lw,ld)/1.6));
+  // Bright readable path with a soft warm edge so it stands out from the seabed.
+  ugrp().add(mesh(BOXG,lam(0xf7ebc8),cx,-0.43,cz,lw,0.05,ld));
+  ugrp().add(mesh(BOXG,lam(0xfff6dc),cx,-0.40,cz,lw*0.78,0.03,ld*0.84));
+  ugrp().add(mesh(BOXG,lam(0xe8c890),cx,-0.44,cz,lw*1.08,0.02,ld*1.08));
+  const steps=Math.max(5,Math.round(Math.max(lw,ld)/1.4));
   for(let i=0;i<steps;i++){const t=(i+0.5)/steps;const along=lw>ld;
-    const px=along?cx-lw/2+t*lw:cx+rand(-0.3,0.3),pz=along?cz+rand(-0.3,0.3):cz-ld/2+t*ld;
-    ugrp().add(mesh(SPH,lam(0xb8a888),px,-0.4,pz,rand(0.06,0.14),rand(0.04,0.08),rand(0.06,0.14)));}
+    const px=along?cx-lw/2+t*lw:cx+rand(-0.35,0.35),pz=along?cz+rand(-0.35,0.35):cz-ld/2+t*ld;
+    const c=i%3===0?SEASHELLC[i%SEASHELLC.length]:0xb8a888;
+    ugrp().add(mesh(SPH,lam(c),px,-0.4,pz,rand(0.06,0.15),rand(0.04,0.08),rand(0.06,0.15)));}
 }
 function addCoralWall(x1,z1,x2,z2){
   const cx=(x1+x2)/2,cz=(z1+z2)/2,w=Math.abs(x2-x1)+0.8,d=Math.abs(z2-z1)+0.8;
@@ -303,9 +326,9 @@ function addCoralWall(x1,z1,x2,z2){
   const along=w>d,len=Math.max(w,d),n=Math.max(4,Math.round(len/0.75));
   for(let i=0;i<n;i++){const t=(i+0.5)/n;const px=along?cx-w/2+t*w:cx+rand(-0.25,0.25),pz=along?cz+rand(-0.25,0.25):cz-d/2+t*d;
     const c=CORALC[i%CORALC.length];const bh=0.45+rand(0,0.55);
-    scene.add(mesh(SPH,lam(c),px,bh,pz,rand(0.4,0.85),rand(0.35,0.9),rand(0.4,0.85)));
-    scene.add(mesh(CONE,lam(c),px+rand(-0.2,0.2),0.2,pz+rand(-0.2,0.2),rand(0.14,0.26),rand(0.4,0.95),rand(0.14,0.26)));
-    if(i%2===0)scene.add(mesh(CONE,lam(c),px,bh+0.35,pz,rand(0.08,0.16),rand(0.25,0.45),rand(0.08,0.16)));}
+    ugrp().add(mesh(SPH,lam(c),px,bh,pz,rand(0.4,0.85),rand(0.35,0.9),rand(0.4,0.85)));
+    ugrp().add(mesh(CONE,lam(c),px+rand(-0.2,0.2),0.2,pz+rand(-0.2,0.2),rand(0.14,0.26),rand(0.4,0.95),rand(0.14,0.26)));
+    if(i%2===0)ugrp().add(mesh(CONE,lam(c),px,bh+0.35,pz,rand(0.08,0.16),rand(0.25,0.45),rand(0.08,0.16)));}
   const kn=Math.max(3,Math.round(len/1.4));
   for(let i=0;i<kn;i++){const t=(i+0.5)/kn;const px=along?cx-w/2+t*w:cx,pz=along?cz:cz-d/2+t*d;
     const side=along?(px>cx?1:-1):(pz>cz?1:-1);
@@ -313,9 +336,9 @@ function addCoralWall(x1,z1,x2,z2){
 }
 function addCoralScatter(n,cx,cz,r){for(let i=0;i<n;i++){const a=rand(0,TAU),rr=Math.sqrt(Math.random())*r;const x=cx+Math.cos(a)*rr,z=cz+Math.sin(a)*rr,c=CORALC[i%CORALC.length];
   const bh=0.3+rand(0,0.35);
-  scene.add(mesh(SPH,lam(c),x,bh,z,rand(0.22,0.55),rand(0.22,0.55),rand(0.22,0.55)));
-  if(i%3===0)scene.add(mesh(CONE,lam(c),x+rand(-0.1,0.1),0.15,z+rand(-0.1,0.1),rand(0.1,0.18),rand(0.3,0.55),rand(0.1,0.18)));
-  if(i%4===0){const sh=lam(0xf5a8a8);scene.add(mesh(SPH,sh,x+0.12,bh-0.05,z+0.08,rand(0.08,0.14),rand(0.05,0.08),rand(0.1,0.16)));}}
+  ugrp().add(mesh(SPH,lam(c),x,bh,z,rand(0.22,0.55),rand(0.22,0.55),rand(0.22,0.55)));
+  if(i%3===0)ugrp().add(mesh(CONE,lam(c),x+rand(-0.1,0.1),0.15,z+rand(-0.1,0.1),rand(0.1,0.18),rand(0.3,0.55),rand(0.1,0.18)));
+  if(i%4===0){const sh=lam(SEASHELLC[i%SEASHELLC.length]);ugrp().add(mesh(SPH,sh,x+0.12,bh-0.05,z+0.08,rand(0.08,0.14),rand(0.05,0.08),rand(0.1,0.16)));}}
 }
 function buildKelpStrand(h){const g=new THREE.Group();const stem=mesh(CYL,lam(0x3d7a37),0,h/2,0,0.06+rand(0,0.02),h,0.06+rand(0,0.02));g.add(stem);
   const frN=3+Math.floor(rand(0,2.99));
@@ -337,12 +360,15 @@ function addKelpCurtain(id,cx,cz,w,h,secret){
   addKelpCluster(cx+(secret?-2.2:0),cz+(secret?0:2.8),w+1.5,3,h*0.55);
 }
 function addSeabedScatter(cx,cz,r,n){for(let i=0;i<n;i++){const a=rand(0,TAU),rr=Math.sqrt(Math.random())*r;const x=cx+Math.cos(a)*rr,z=cz+Math.sin(a)*rr;
-  const kind=Math.random();if(kind<0.35){const sh=lam(0xf5a8a8);ugrp().add(mesh(SPH,sh,x,-0.44,z,rand(0.07,0.14),rand(0.04,0.07),rand(0.1,0.18)));}
-  else if(kind<0.7){ugrp().add(mesh(SPH,lam(0xb8a888),x,-0.45,z,rand(0.05,0.12),rand(0.04,0.07),rand(0.05,0.12)));}
-  else{ugrp().add(mesh(CONE,lam(CORALC[i%CORALC.length]),x,-0.42,z,rand(0.06,0.1),rand(0.08,0.14),rand(0.06,0.1)));}}
+  const kind=Math.random();
+  if(kind<0.32){const sh=lam(SEASHELLC[i%SEASHELLC.length]);ugrp().add(mesh(SPH,sh,x,-0.44,z,rand(0.08,0.16),rand(0.04,0.08),rand(0.1,0.2)));}
+  else if(kind<0.55){ugrp().add(mesh(SPH,lam(0xb8a888),x,-0.45,z,rand(0.05,0.13),rand(0.04,0.07),rand(0.05,0.13)));}
+  else if(kind<0.78){const c=CORALC[i%CORALC.length];ugrp().add(mesh(CONE,lam(c),x,-0.42,z,rand(0.07,0.12),rand(0.12,0.22),rand(0.07,0.12)));
+    if(i%2===0)ugrp().add(mesh(SPH,lam(c),x,0.05,z,rand(0.1,0.18),rand(0.08,0.14),rand(0.1,0.18)));}
+  else{ugrp().add(mesh(SPH,lam(CORALC[(i+2)%CORALC.length]),x,-0.35,z,rand(0.14,0.28),rand(0.1,0.2),rand(0.14,0.28)));}}
 }
 function dressWreckSurface(x,y,z,w,h,d,weeds){
-  const g=new THREE.Group();g.position.set(x,y,z);scene.add(g);
+  const g=new THREE.Group();g.position.set(x,y,z);addDecor(g);
   const trim=lam(0x7a5a3a),weed=lam(0x3d7a37);
   g.add(mesh(BOXG,trim,0,h*0.48,0,w*0.94,h*0.08,d*0.94));
   if(weeds){
@@ -351,7 +377,7 @@ function dressWreckSurface(x,y,z,w,h,d,weeds){
   }
 }
 function dressWreckLedge(x,y,z,w,d){
-  const g=new THREE.Group();g.position.set(x,y,z);scene.add(g);
+  const g=new THREE.Group();g.position.set(x,y,z);addDecor(g);
   g.add(mesh(BOXG,lam(0xd9c08a),0,0.2,0,w*0.88,0.07,d*0.88));
   g.add(mesh(BOXG,lam(0x8a6a4a),0,0.08,0,w*0.92,0.06,d*0.92));
 }
@@ -504,7 +530,7 @@ function addSnoozleShell(x,y,z){
   const shell=lam(0xf5a8a8);
   g.add(mesh(SPH,shell,-0.55,-0.05,0,0.75,0.18,0.55));g.add(mesh(SPH,shell,0.55,-0.05,0,0.75,0.18,0.55));
   g.add(mesh(SPH,lam(0xfff0f0),0,0.08,0,0.55,0.12,0.45));
-  addSeabedScatter(x,z,1.2,4);scene.add(g);}
+  addSeabedScatter(x,z,1.2,4);addDecor(g);}
 function addSunRays(n,cx,cz){for(let i=0;i<n;i++){const m=new THREE.Mesh(new THREE.PlaneGeometry(0.35,8+rand(0,6)),new THREE.MeshBasicMaterial({color:0xffffff,transparent:true,opacity:0.07+Math.random()*0.05,depthWrite:false}));
   m.position.set(cx+rand(-8,8),rand(6,14),cz+rand(-6,6));m.rotation.x=-0.35+rand(-0.1,0.1);m.rotation.z=rand(-0.2,0.2);ugrp().add(m);}}
 function gustHitKelp(mx,mz,k){
@@ -645,8 +671,23 @@ function playerInConchTrigger(){
 function setConchDoorOpen(open){
   if(!CONCH||!CONCH.doorSolid)return;
   const i=solids.indexOf(CONCH.doorSolid);
-  if(open){if(i>=0)solids.splice(i,1);CONCH.doorSolid.mesh.visible=false;if(CONCH.doorVis)CONCH.doorVis.visible=false;if(CONCH.openMouth)CONCH.openMouth.visible=true;if(CONCH.closedSeam)CONCH.closedSeam.visible=false;}
-  else{if(i<0)solids.push(CONCH.doorSolid);CONCH.doorSolid.mesh.visible=false;if(CONCH.doorVis)CONCH.doorVis.visible=true;if(CONCH.openMouth)CONCH.openMouth.visible=false;if(CONCH.closedSeam)CONCH.closedSeam.visible=true;}
+  if(open){
+    if(i>=0)solids.splice(i,1);CONCH.doorSolid.mesh.visible=false;
+    if(CONCH.doorVis)CONCH.doorVis.visible=false;
+    if(CONCH.closedSeam)CONCH.closedSeam.visible=false;
+    if(CONCH.openMouth)CONCH.openMouth.visible=true;
+    if(CONCH.openRim)CONCH.openRim.visible=true;
+    if(CONCH.openCavity)CONCH.openCavity.visible=true;
+    if(CONCH.mouthFill)CONCH.mouthFill.visible=false;
+  }else{
+    if(i<0)solids.push(CONCH.doorSolid);CONCH.doorSolid.mesh.visible=false;
+    if(CONCH.doorVis)CONCH.doorVis.visible=true;
+    if(CONCH.closedSeam)CONCH.closedSeam.visible=true;
+    if(CONCH.openMouth)CONCH.openMouth.visible=false;
+    if(CONCH.openRim)CONCH.openRim.visible=false;
+    if(CONCH.openCavity)CONCH.openCavity.visible=false;
+    if(CONCH.mouthFill)CONCH.mouthFill.visible=true;
+  }
 }
 function openConch(){
   if(!CONCH||CONCH.open)return;
@@ -663,8 +704,10 @@ function updateConch(dt,winT){
   if(CONCH.open)CONCH.openT+=dt;
   const glow=CONCH.open?(0.22+Math.min(CONCH.openT,1)*0.35):(0.06+Math.sin(time*0.8)*0.02);
   if(CONCH.spiralLights)for(const L of CONCH.spiralLights){L.m.material.opacity=glow*(0.55+0.45*Math.sin(time*1.6+L.ph));}
-  if(CONCH.shellGlow)CONCH.shellGlow.material.opacity=CONCH.open?(0.12+Math.min(CONCH.openT,1)*0.18):(0.03+Math.sin(time*0.6)*0.015);
-  if(CONCH.interiorGlow)CONCH.interiorGlow.material.opacity=CONCH.open?(0.12+Math.min(CONCH.openT,1)*0.28):0.03;
+  if(CONCH.shellGlow)CONCH.shellGlow.material.opacity=CONCH.open?(0.2+Math.min(CONCH.openT,1)*0.28):(0.03+Math.sin(time*0.6)*0.015);
+  if(CONCH.interiorGlow)CONCH.interiorGlow.material.opacity=CONCH.open?(0.22+Math.min(CONCH.openT,1)*0.38):0.03;
+  if(CONCH.openMouth&&CONCH.open)CONCH.openMouth.material.opacity=0.55+Math.sin(time*2.2)*0.12;
+  if(CONCH.openRim&&CONCH.open)CONCH.openRim.material.opacity=0.35+Math.sin(time*1.6)*0.1;
   if(winT>=0){
     if(CONCH.rainbow){const k=smooth(Math.min(winT/1.3,1));CONCH.rainbow.visible=true;CONCH.rainbow.scale.setScalar(0.2+k*1.1);
       CONCH.rainbow.children.forEach(r=>{r.material.opacity=0.85*k;});}
@@ -727,7 +770,7 @@ function buildConch(cx,cz){
   g.add(mesh(SPH,rib,-0.25,12.8,-5.4,1.2,0.28,1.15));
   // --- ORGANIC MOUTH — compact hole in the body (not a building façade) ---
   g.add(mesh(SPH,lip,0.2,2.2,4.5,3.0,2.5,1.4));
-  g.add(mesh(SPH,inner,0.15,2.1,3.9,2.3,1.95,1.25));
+  const mouthFill=mesh(SPH,inner,0.15,2.1,3.9,2.3,1.95,1.25);g.add(mouthFill);CONCH.mouthFill=mouthFill;
   g.add(mesh(SPH,shell,-2.0,2.0,4.55,1.55,2.2,1.2));
   g.add(mesh(SPH,shell,2.3,2.1,4.5,1.65,2.25,1.25));
   g.add(mesh(SPH,lip,0.15,3.85,4.75,2.6,0.95,1.05));
@@ -736,12 +779,18 @@ function buildConch(cx,cz){
     const a=-0.9+i*0.45,cy=2.1+Math.sin(a)*1.3,cxo=Math.cos(a)*1.85;
     g.add(mesh(SPH,rib,cxo,cy,DOOR_Z-0.12,0.45,0.38,0.4));
   }
+  // Deep cavity behind the door — only obvious when open (dark tunnel = passable).
+  const openCavity=mesh(SPH,lam(0x1a1010),0,DOOR_Y+DOOR_H*0.5,DOOR_Z-0.55,DOOR_W*0.48,DOOR_H*0.46,0.9);
+  openCavity.visible=false;g.add(openCavity);CONCH.openCavity=openCavity;
   const doorVis=mesh(SPH,dark,0,DOOR_Y+DOOR_H*0.5,DOOR_Z,DOOR_W*0.55,DOOR_H*0.52,DOOR_D*0.55);
   g.add(doorVis);CONCH.doorVis=doorVis;
   const closedSeam=mesh(SPH,lam(0x3a2010),0,DOOR_Y+DOOR_H*0.5,DOOR_Z+0.22,0.08,DOOR_H*0.4,0.06);
   g.add(closedSeam);CONCH.closedSeam=closedSeam;
-  const openMouth=mesh(SPH,new THREE.MeshBasicMaterial({color:0xfff2d0,transparent:true,opacity:0.5,depthWrite:false}),0,DOOR_Y+DOOR_H*0.5,DOOR_Z-0.05,DOOR_W*0.5,DOOR_H*0.48,0.35);
+  // Bright open-mouth wash + rim so the aperture reads from trench approach.
+  const openMouth=mesh(SPH,new THREE.MeshBasicMaterial({color:0xfff6c8,transparent:true,opacity:0.72,depthWrite:false}),0,DOOR_Y+DOOR_H*0.5,DOOR_Z+0.15,DOOR_W*0.62,DOOR_H*0.58,0.55);
   openMouth.visible=false;g.add(openMouth);CONCH.openMouth=openMouth;
+  const openRim=mesh(SPH,new THREE.MeshBasicMaterial({color:0xffe39a,transparent:true,opacity:0.45,depthWrite:false}),0,DOOR_Y+DOOR_H*0.5,DOOR_Z+0.35,DOOR_W*0.78,DOOR_H*0.72,0.28);
+  openRim.visible=false;g.add(openRim);CONCH.openRim=openRim;
   // --- collision proxies (simple boxes; ridges stay decorative) ---
   // Removable front door — matches visible closed plate
   const doorSolid=addSolid(cx,DOOR_Y,cz+DOOR_Z,DOOR_W,DOOR_H,DOOR_D,0x5a3020,{surf:'stone'});
@@ -778,6 +827,7 @@ function buildConch(cx,cz){
   CONCH.g=g;
   registerFinish({
     x:cx,z:cz,top:10,
+    winMsg:'Everyone is awake. The Conch is singing!',
     onAllAwake(){openConch();},
     onWin(){AU.layers=Math.max(AU.layers,4);if(CONCH.rainbow)CONCH.rainbow.visible=true;},
     update(dt,winT){updateConch(dt,winT);}
