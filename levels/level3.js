@@ -11,17 +11,28 @@ physics:{
   slamHang:0.14,slamFall:-34,slamRebound:8,
   jetTime:0.38,bonkR:2.05,bonkCD:0.5
 },
-// Prototype starting values (1.3–1.5x vertical, ~2.3–2.6x horizontal carry). Phone playtest owns the next pass.
+// Stage 1 prototype values — do not retune in Stage 2; phone playtest owns the next pass.
 skyBlast:{
   puffVMul:1.4,
   boostMax:12.5,
   boostDecay:1.6
 },
+// Safe-anchor settling (seconds of stable grounded stand before the anchor moves).
+anchorSettle:0.22,
+// Lava recovery owns motion for at most this long (must stay ≤ hurt inv duration 1.4).
+lavaRecovery:0.42,
 // Prototype gap the unpowered run cannot clear; powered running leap should.
-// Near pad ends at z≈0; far pad begins at z=-10 (10-unit gap). Far pad depth is generous.
 protoGap:{nearZ:0,farZ:-10,farEndZ:-22},
+// Mandatory Sky Blast crossings — CI iterates this list for vent/anchor/depth invariants.
+mandatoryLeaps:[{
+  id:'protoLavaCross',
+  takeoff:{x:0,z:1.5,ventReach:5},
+  landing:{x:0,z:-14,edgeZ:-10,farZ:-22,minDepth:8},
+  nearSafe:{x:0,y:0.4,z:3},
+  farSafe:{x:0,y:0.4,z:-14}
+}],
 fence:0x5a2e1a,
-fenceSolids:[[0,0,16,24,1.2,0.6],[0,0,-28,24,1.2,0.6],[-13,0,-6,0.6,1.2,44],[13,0,-6,0.6,1.2,44]],
+fenceSolids:[[0,0,16,26,1.2,0.6],[0,0,-28,26,1.2,0.6],[-13,0,-6,0.6,1.2,44],[13,0,-6,0.6,1.2,44]],
 pathTiles:[],
 hedges:[],
 checks:[[0,12]],
@@ -30,22 +41,30 @@ snoozleHomes:[[0,-24]],
 snoozles:[],
 trees:[],
 steps:[
-  // Broad start terrace (Peak-coloured prototype geometry — not production volcano art)
+  // Broad start terrace
   ['solid',0,0,9,20,0.4,18,0xc45a28,{surf:'stone'}],
-  // Far landing pad — deep enough that a successful leap does not need precise braking
+  // Far landing pad — deliberately generous depth beyond the arrival edge
   ['solid',0,0,-16,20,0.4,12,0xe07a3a,{surf:'stone'}],
-  // Marked landing strip on the far pad
-  ['solid',0,0.4,-11,6,0.08,2.5,0xffd24a,{surf:'stone'}],
-  // Side practice pads (safe, non-hazard)
-  ['solid',-8,0,4,4,0.4,4,0xa84a22,{surf:'stone'}],
-  ['solid',8,0,4,4,0.4,4,0xa84a22,{surf:'stone'}],
-  // Sky Blast pickup (crate) in plain sight on the start pad
+  // Marked landing strip
+  ['solid',0,0.4,-12,6,0.08,2.2,0xffd24a,{surf:'stone'}],
+  // Side practice pads
+  ['solid',-8,0,6,4,0.4,4,0xa84a22,{surf:'stone'}],
+  ['solid',8,0,6,4,0.4,4,0xa84a22,{surf:'stone'}],
+  // Ember-red edges at the mandatory leap lips (readable, still safe stone)
+  ['solid',0,0.4,-0.15,18,0.06,0.35,0x8a2010,{surf:'stone'}],
+  ['solid',0,0.4,-10.15,18,0.06,0.35,0x8a2010,{surf:'stone'}],
+  // Small avoidable lava pool beside the path (teach touch safely)
+  ['lava',7.5,-0.15,8,3.2,0.35,3.2],
+  // Mandatory lava crossing in the gap (near pad ends ~0, far begins ~-10)
+  ['lava',0,-0.2,-5,16,0.45,9.2],
+  // Far-side lava puddle for far-anchor recovery tests (off the main landing line)
+  ['lava',-7.5,-0.15,-16,3.0,0.35,3.0],
+  // Sky Blast crate
   ['crate',0,0.4,8,'sky'],
-  // Prototype steam vent beside the take-off lip (off the run-up line so leap tests stay clean)
-  ['steamVent',5,0.4,1.5,1.4],
-  // One gloop off to the side for knockback / power-loss tests (not on the leap line)
-  ['gloop',-8,4,'small'],
-  // Stage 1 has no real finish — placeholder so loadLevel's FINISH contract is satisfied
+  // Take-off vent for the mandatory leap
+  ['steamVent',0,0.4,1.5,1.4],
+  // Gloop for enemy power-loss tests
+  ['gloop',-8,6,'small'],
   ['unfinishedFinish',0,-24,8]
 ]
 };
