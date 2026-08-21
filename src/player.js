@@ -40,7 +40,44 @@ window.__PLAYER=()=>player;
     const inner=mesh(CONE,new THREE.MeshBasicMaterial({color:0xe4f8ff,transparent:true,opacity:0.95}),x,-0.21,0,0.075,0.42,0.075);inner.rotation.z=Math.PI;jg.add(inner);});
   jg.visible=false;player.add(jg);player.userData.jet=jg;})();
 (function(){const f=new THREE.Group();f.add(mesh(CONE,new THREE.MeshBasicMaterial({color:0xff7a1f}),0,0.14,0,0.13,0.4,0.13));f.add(mesh(CONE,new THREE.MeshBasicMaterial({color:0xffe36b}),0,0.1,0,0.07,0.24,0.07));f.position.y=0.92;f.visible=false;player.userData.head.add(f);player.userData.flame=f;})();
-shadow=new THREE.Mesh(new THREE.CircleGeometry(0.5,20),new THREE.MeshBasicMaterial({color:0x000000,transparent:true,opacity:0.28,depthWrite:false}));shadow.rotation.x=-Math.PI/2;scene.add(shadow);
+// Projected shadow — Stage 4.7A player readability.
+// Invariant: readability aids increase only as Pling gets harder to track.
+// This stage strengthens spatial grounding only (no camera / halo / locator).
+// Scale shrinks with height (depth cue). Opacity stays strong through normal play.
+const SHADOW_OPACITY=0.44;
+const SHADOW_MIN_PLAY_OPACITY=0.38;
+const SHADOW_EXTREME_HEIGHT_FADE_START=14;
+const SHADOW_EXTREME_HEIGHT_FADE_END=28;
+const SHADOW_SCALE_MIN=0.35;
+const SHADOW_SCALE_RATE=0.05;
+const SHADOW_RIM_OPACITY=0.26;
+const SHADOW_CORE_COLOR=0x0a0a12;
+const SHADOW_RIM_COLOR=0xe8eef6;
+const SHADOW_RIM_LAVA_COLOR=0xffc9a0;
+(function buildPlayerShadow(){
+  shadow=new THREE.Group();
+  const rim=new THREE.Mesh(new THREE.CircleGeometry(0.72,24),new THREE.MeshBasicMaterial({color:SHADOW_RIM_COLOR,transparent:true,opacity:SHADOW_RIM_OPACITY,depthWrite:false}));
+  const core=new THREE.Mesh(new THREE.CircleGeometry(0.48,24),new THREE.MeshBasicMaterial({color:SHADOW_CORE_COLOR,transparent:true,opacity:SHADOW_OPACITY,depthWrite:false}));
+  rim.rotation.x=core.rotation.x=-Math.PI/2;
+  rim.renderOrder=1;core.renderOrder=2;
+  rim.position.y=-0.001;
+  shadow.add(rim);shadow.add(core);
+  shadow.userData={rim,core};
+  scene.add(shadow);
+  window.__SHADOW={
+    SHADOW_OPACITY,SHADOW_MIN_PLAY_OPACITY,SHADOW_EXTREME_HEIGHT_FADE_START,SHADOW_EXTREME_HEIGHT_FADE_END,
+    SHADOW_SCALE_MIN,SHADOW_SCALE_RATE,SHADOW_RIM_OPACITY,SHADOW_CORE_COLOR,SHADOW_RIM_COLOR,SHADOW_RIM_LAVA_COLOR,
+    group:shadow,core,rim,
+    state:{scale:1,opacity:SHADOW_OPACITY,rimOpacity:SHADOW_RIM_OPACITY,h:0,y:0,kind:'ground',warm:false}
+  };
+})();
+function shadowOpacityForHeight(h){
+  // Flat through the normal play envelope; only soften well above ordinary jumps / Sky Blast.
+  if(h<=SHADOW_EXTREME_HEIGHT_FADE_START)return SHADOW_OPACITY;
+  const t=clamp((h-SHADOW_EXTREME_HEIGHT_FADE_START)/(SHADOW_EXTREME_HEIGHT_FADE_END-SHADOW_EXTREME_HEIGHT_FADE_START),0,1);
+  return lerp(SHADOW_OPACITY,SHADOW_OPACITY*0.32,t);
+}
+function shadowScaleForHeight(h){return clamp(1-h*SHADOW_SCALE_RATE,SHADOW_SCALE_MIN,1);}
 
 const P=window.__P={spawn:{x:0,y:0,z:10},pos:new THREE.Vector3(0,0,10),vel:new THREE.Vector3(),yaw:Math.PI,grounded:false,wasGrounded:false,lastGround:-9,jumpBuf:-9,jumping:false,puff:true,slam:0,hangT:0,gustCD:0,bonkCD:0,bonkT:0,sq:1,sqV:0,sqT:1,footT:0,surf:'grass',run:0,mouthT:0,blinkT:2,blinkAnim:0,inFan:false,splT:0,puffAir:0,hover:false,hovT:0,hoverS:null,hp:4,maxHp:4,inv:0,dead:false,deadT:0,inGoo:false,fire:false,bubble:false,hasSkyBlast:false,leapBoost:new THREE.Vector3(),glideT:0,glideArmed:false,wingsOut:false,lavaRecT:0,lavaRecMax:0,anchorSettleT:0,safeAnchor:new THREE.Vector3(0,0,10),lavaRecFrom:new THREE.Vector3(),jetT:0,jetP:0,jetHits:[]};
 let R=0.36,H=1.15,SPEED=6.8,ACC=44,DEC=60,AIRACC=20,GRAV=-30,JUMPV=10.5,PUFFV=9.4,MAXFALL=-32,COYOTE=0.12,BUFFER=0.15,STEP=0.42;
@@ -464,6 +501,27 @@ function updatePlayerVisual(dt){const u=player.userData;if(P.dead)P.sqT=0.45;
   if(P.blinkAnim>0){P.blinkAnim-=dt;const s=P.blinkAnim>0.07?0.15:1;u.eyes.forEach(e=>{e.scale.y=s;});}else u.eyes.forEach(e=>{e.scale.y=1;});
   if(P.dead){u.eyes.forEach(e=>{e.scale.y=0.15;});u.head.rotation.x=0.55;}
   player.visible=P.dead||P.inv<=0||Math.floor(time*14)%2===0;
-  const sy=surfaceHeightAt(P.pos.x,P.pos.z,P.pos.y+0.01,R*0.6);shadow.position.set(P.pos.x,sy+0.02,P.pos.z);const ss=clamp(1-(P.pos.y-sy)*0.05,0.35,1);shadow.scale.setScalar(ss);shadow.material.opacity=0.28*ss;
+  // Project onto the actual receiving surface under the player footprint (platforms + lava).
+  const footR=R*0.85;
+  const recv=shadowReceiveAt(P.pos.x,P.pos.z,P.pos.y+0.01,footR);
+  const sy=recv.y,hAbove=Math.max(0,P.pos.y-sy);
+  const ss=shadowScaleForHeight(hAbove);
+  const op=shadowOpacityForHeight(hAbove);
+  const warm=recv.kind==='lava';
+  shadow.position.set(P.pos.x,sy+0.02,P.pos.z);
+  shadow.scale.setScalar(ss);
+  const ud=shadow.userData,core=ud.core,rim=ud.rim;
+  if(core&&core.material)core.material.opacity=op;
+  if(rim&&rim.material){
+    rim.material.opacity=SHADOW_RIM_OPACITY*(0.85+0.15*(op/SHADOW_OPACITY));
+    if(rim.material.color&&rim.material.color.setHex)rim.material.color.setHex(warm?SHADOW_RIM_LAVA_COLOR:SHADOW_RIM_COLOR);
+  }
+  const S=window.__SHADOW;
+  if(S&&S.state){
+    S.state.scale=ss;S.state.opacity=op;S.state.rimOpacity=rim&&rim.material?rim.material.opacity:SHADOW_RIM_OPACITY;
+    S.state.h=hAbove;S.state.y=sy;S.state.kind=recv.kind;S.state.warm=warm;
+    S.state.x=P.pos.x;S.state.z=P.pos.z;
+  }
 }
+
 

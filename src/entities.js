@@ -15,6 +15,36 @@ const POND={x0:-6,x1:6,z0:-33,z1:-25};
 function inPond(x,z){return x>POND.x0&&x<POND.x1&&z>POND.z0&&z<POND.z1;}
 function groundHeightAt(x,z){if(isUnderwater())return 0;return inPond(x,z)?-0.4:0;}
 function surfaceHeightAt(x,z,belowY,r){r=r||0.2;let h=groundHeightAt(x,z);for(const s of solids){if(x+r>s.min.x&&x-r<s.max.x&&z+r>s.min.z&&z-r<s.max.z&&s.max.y<=belowY+0.05&&s.max.y>h)h=s.max.y;}return h;}
+// Shadow receiving surface: nearest mostly-horizontal top beneath Pling, including lava.
+// Physics still uses surfaceHeightAt (solids + ground only). Readability may land on lava.
+let _shadowStick=null;
+function clearShadowStick(){_shadowStick=null;}
+function shadowReceiveAt(x,z,belowY,r){
+  r=r||0.2;
+  let bestY=groundHeightAt(x,z),bestKind='ground',bestBox=null;
+  for(const s of solids){
+    if(x+r<=s.min.x||x-r>=s.max.x||z+r<=s.min.z||z-r>=s.max.z)continue;
+    // Skip tops above the query — ceilings / wall tops the player is beside mid-height.
+    if(s.max.y>belowY+0.05)continue;
+    if(s.max.y>bestY){bestY=s.max.y;bestKind='solid';bestBox=s;}
+  }
+  for(const lv of lavas){
+    if(x+r<=lv.min.x||x-r>=lv.max.x||z+r<=lv.min.z||z-r>=lv.max.z)continue;
+    if(lv.max.y>belowY+0.05)continue;
+    if(lv.max.y>bestY){bestY=lv.max.y;bestKind='lava';bestBox=lv;}
+  }
+  // Edge hysteresis: keep a higher surface while the footprint still covers it, instead of
+  // snapping to a much lower floor/lava at the pad rim.
+  if(_shadowStick&&_shadowStick.y>bestY+0.25){
+    const p=_shadowStick;
+    const over=x+r>p.minx&&x-r<p.maxx&&z+r>p.minz&&z-r<p.maxz;
+    if(over&&p.y<=belowY+0.05)return {y:p.y,kind:p.kind};
+  }
+  if(bestBox)_shadowStick={y:bestY,kind:bestKind,minx:bestBox.min.x,maxx:bestBox.max.x,minz:bestBox.min.z,maxz:bestBox.max.z};
+  else _shadowStick={y:bestY,kind:'ground',minx:x-80,maxx:x+80,minz:z-80,maxz:z+80};
+  return {y:bestY,kind:bestKind};
+}
+window.__shadowReceiveAt=(x,z,belowY,r)=>shadowReceiveAt(x,z,belowY,r);
 function insideSolid(x,y,z,m){for(const s of solids){if(x>s.min.x-m&&x<s.max.x+m&&y>s.min.y-m&&y<s.max.y+m&&z>s.min.z-m&&z<s.max.z+m)return true;}return false;}
 function addSolid(x,y,z,w,h,d,color,opts){const m=new THREE.Mesh(BOXG,lam(color));m.scale.set(w,h,d);m.position.set(x,y+h/2,z);if(opts&&opts.invisible)m.visible=false;scene.add(m);
   const s={min:new THREE.Vector3(x-w/2,y,z-d/2),max:new THREE.Vector3(x+w/2,y+h,z+d/2),mesh:m,surf:(opts&&opts.surf)||'wood'};solids.push(s);return s;}
@@ -103,6 +133,7 @@ function registerFinish(f){
 const levelDecor=[];
 function addDecor(m){scene.add(m);levelDecor.push(m);return m;}
 function clearLevelWorld(){
+  clearShadowStick();
   const rem=m=>{
     if(!m)return;
     if(m.parent&&typeof m.parent.remove==='function')m.parent.remove(m);
