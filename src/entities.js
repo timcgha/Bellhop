@@ -1,9 +1,9 @@
 const solids=[],wobblers=[],pinwheels=[],toss=[],notes=[],dust=[],snoozles=[],fans=[],clouds=[],gloops=[],goos=[],puddles=[],hearts=[],crates=[],powers=[],fires=[];
-const sharks=[],fish=[],spikefish=[],clams=[],bubbleShots=[];
+const sharks=[],fish=[],spikefish=[],clams=[],bubbleShots=[],steamVents=[];
 let seenGloop=false,seenCrate=false;
 let BOAT=null,WM=null,player=null,shadow=null,RAINBOW=null,FINISH=null;
 const checks=[];let won=false,winT=0,confT=0;
-const LEVELS=[LEVEL1,LEVEL2];
+const LEVELS=[LEVEL1,LEVEL2,LEVEL3];
 let CURRENT_LEVEL=null;
 function isUnderwater(){return !!(CURRENT_LEVEL&&CURRENT_LEVEL.underwater);}
 const POND={x0:-6,x1:6,z0:-33,z1:-25};
@@ -95,6 +95,7 @@ function clearLevelWorld(){
   for(const o of dust)rem(o.m);dust.length=0;
   for(const o of snoozles)rem(o.g);snoozles.length=0;
   for(const o of fans)rem(o.g);fans.length=0;
+  for(const o of steamVents)rem(o.g);steamVents.length=0;
   for(const o of clouds)rem(o.g);clouds.length=0;
   for(const o of gloops)rem(o.g);gloops.length=0;
   for(const o of hearts)rem(o.g);hearts.length=0;
@@ -171,6 +172,7 @@ function breakCrate(c){if(c.broken)return;c.broken=true;c.g.visible=false;const 
   for(let k=0;k<16;k++)spawnP(c.x+rand(-0.4,0.4),c.y+0.45+rand(-0.4,0.4),c.z+rand(-0.4,0.4),rand(-3.5,3.5),rand(1,4.5),rand(-3.5,3.5),rand(0.08,0.17),Math.random()<0.3?0xd1a83c:0xc98a4b,rand(0.5,0.9),0.2,-9,0.9);
   if(c.item==='fire')addPower(c.x,c.y+0.85,c.z);
   else if(c.item==='bubble')addBubblePower(c.x,c.y+0.85,c.z);
+  else if(c.item==='sky')addSkyPower(c.x,c.y+0.85,c.z);
   else addHeart(c.x,c.y+0.85,c.z);}
 function buildFlameItem(){const g=new THREE.Group();
   g.add(mesh(CONE,new THREE.MeshBasicMaterial({color:0xff7a1f}),0,0.06,0,0.22,0.58,0.22));
@@ -181,6 +183,16 @@ function buildBubbleItem(){const g=new THREE.Group();
   g.add(mesh(SPH,new THREE.MeshBasicMaterial({color:0xc8f0ff,transparent:true,opacity:0.85}),0,0.08,0,0.24));
   g.add(mesh(SPH,new THREE.MeshBasicMaterial({color:0xffffff,transparent:true,opacity:0.55}),0,0.12,0,0.14));return g;}
 function addBubblePower(x,y,z){const g=buildBubbleItem();g.position.set(x,y,z);scene.add(g);powers.push({g,x,y,z,got:false,ph:rand(0,TAU),t:0,kind:'bubble'});}
+function buildSkyItem(){const g=new THREE.Group();
+  g.add(mesh(SPH,new THREE.MeshBasicMaterial({color:0xff9a3c}),0,0.05,0,0.2));
+  g.add(mesh(CONE,new THREE.MeshBasicMaterial({color:0xffe9d0,transparent:true,opacity:0.85}),0,0.28,0,0.14,0.36,0.14));
+  g.add(mesh(SPH,new THREE.MeshBasicMaterial({color:0xfff8ee,transparent:true,opacity:0.7}),0,0.42,0,0.1));return g;}
+function addSkyPower(x,y,z){const g=buildSkyItem();g.position.set(x,y,z);scene.add(g);powers.push({g,x,y,z,got:false,ph:rand(0,TAU),t:0,kind:'sky'});}
+function addSteamVent(x,y,z,r){r=r||1.2;const g=new THREE.Group();g.position.set(x,y,z);
+  g.add(mesh(CYL,lam(0x4a3a32),0,0.08,0,r*0.95,0.16,r*0.95));
+  g.add(mesh(CYL,lam(0x2e2420),0,0.14,0,r*0.55,0.08,r*0.55));
+  const crack=pho(0xff7a2a,40,0xffa060);g.add(mesh(BOXG,crack,0.12,0.18,0,0.08,0.06,r*0.7));g.add(mesh(BOXG,crack,-0.1,0.18,0.05,0.06,0.05,r*0.5));
+  scene.add(g);steamVents.push({g,x,y,z,r,pt:0});}
 const FIREGEO=new THREE.SphereGeometry(1,9,7);
 for(let i=0;i<26;i++){const m=new THREE.Mesh(FIREGEO,new THREE.MeshBasicMaterial({color:0xff8a2b}));m.scale.setScalar(0.24);m.visible=false;scene.add(m);fires.push({m,pos:new THREE.Vector3(),vel:new THREE.Vector3(),life:0,alive:false,trailT:0});}
 function buildHeart(){const g=new THREE.Group();const m=pho(0xff5a7a,120,0xffffff);g.add(mesh(SPH,m,-0.11,0.1,0,0.16));g.add(mesh(SPH,m,0.11,0.1,0,0.16));const c=mesh(CONE,m,0,-0.06,0,0.26,0.36,0.16);c.rotation.z=Math.PI;g.add(c);g.scale.setScalar(0.9);return g;}
@@ -226,7 +238,7 @@ function returnToLevelSelect(){
   clearLevelWorld();
   won=false;winT=0;confT=0;started=false;rescued=0;gotNotes=0;time=0;
   AU.win=false;
-  P.hp=P.maxHp;P.dead=false;P.inv=0;P.fire=false;P.bubble=false;P.vel.set(0,0,0);
+  P.hp=P.maxHp;P.dead=false;P.inv=0;P.fire=false;P.bubble=false;P.hasSkyBlast=false;clearLeapBoost();P.vel.set(0,0,0);
   P.pos.set(P.spawn.x,P.spawn.y,P.spawn.z);
   beginLandLevel();
   const w=$('win');if(w){w.style.display='none';w.style.opacity=1;}
@@ -249,9 +261,11 @@ function loadLevel(L){
   clearLevelWorld();
   FINISH=null;
   if(L.physics)applyPhysics(L.physics);
+  applySkyBlastTuning(L.skyBlast);
   CURRENT_LEVEL=L;
   setSong(L.music||'meadow');
   if(L.underwater)beginUnderwaterLevel(L);else beginLandLevel();
+  P.fire=false;P.bubble=false;P.hasSkyBlast=false;clearLeapBoost();P.puff=true;P.puffAir=0;endHover();P.slam=0;
   if(L.spawn){P.spawn.x=L.spawn.x;P.spawn.y=L.spawn.y;P.spawn.z=L.spawn.z;P.pos.set(L.spawn.x,L.spawn.y,L.spawn.z);P.vel.set(0,0,0);}
   const fence=L.fence;
   for(const s of L.fenceSolids)addSolid(s[0],s[1],s[2],s[3],s[4],s[5],fence);
@@ -270,6 +284,7 @@ function loadLevel(L){
     else if(k==='gloop')addGloop(step[1],step[2],step[3]);
     else if(k==='boat')buildBoat(step[1],step[2]);
     else if(k==='fan')addFan(step[1],step[2],step[3],step[4]);
+    else if(k==='steamVent')addSteamVent(step[1],step[2],step[3],step[4]);
     else if(k==='windmill')buildWindmill(step[1],step[2]);
     else if(k==='rainbow')RAINBOW=buildRainbow(step[1],step[2]);
     else if(k==='pinwheelRow'){for(let i=0;i<step[4];i++)addPinwheel(step[1]+i*step[5],step[2]+i*step[6],step[3]);}

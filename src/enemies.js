@@ -112,13 +112,18 @@ function updateFires(dt){for(const f of fires){if(!f.alive)continue;f.life-=dt;
 function updateCrates(dt){if(seenCrate)return;for(const c of crates){if(c.broken)continue;if(Math.hypot(c.x-P.pos.x,c.z-P.pos.z)<6&&Math.abs(c.y-P.pos.y)<3){seenCrate=true;showToast('A crate! Spin (Y) or slam it open.');break;}}}
 function updatePowers(dt){for(const w of powers){if(w.got)continue;w.t+=dt;w.g.position.y=w.y+Math.sin(time*3+w.ph)*0.13;w.g.rotation.y+=dt*2.2;
   const fl=1+Math.sin(time*17+w.ph)*0.12;w.g.scale.set(fl,Math.min(1,w.t*3)*(2-fl),fl);
-  w.pt=(w.pt||0)-dt;if(w.pt<=0){w.pt=0.08;spawnP(w.g.position.x+rand(-0.1,0.1),w.g.position.y+0.2,w.g.position.z+rand(-0.1,0.1),rand(-0.2,0.2),rand(0.6,1.4),rand(-0.2,0.2),0.06,Math.random()<0.5?0xff8a2b:0xffe36b,0.35,0.3,0,0.6);}
+  w.pt=(w.pt||0)-dt;if(w.pt<=0){w.pt=0.08;const col=w.kind==='sky'?(Math.random()<0.5?0xff9a3c:0xffe9d0):(w.kind==='bubble'?0xc8f0ff:(Math.random()<0.5?0xff8a2b:0xffe36b));
+    spawnP(w.g.position.x+rand(-0.1,0.1),w.g.position.y+0.2,w.g.position.z+rand(-0.1,0.1),rand(-0.2,0.2),rand(0.6,1.4),rand(-0.2,0.2),0.06,col,0.35,0.3,0,0.6);}
   if(!P.dead){tmpV.set(P.pos.x,P.pos.y+0.6,P.pos.z);if(w.g.position.distanceTo(tmpV)<1.1){w.got=true;w.g.visible=false;
     if(w.kind==='bubble'){P.bubble=true;SFX.bubblePower();CAM.fovKick=Math.max(CAM.fovKick,5);showToast('Bubble power! Gust to trap fish — keep it until something hits you.');
       for(let i=0;i<16;i++)spawnP(w.g.position.x,w.g.position.y,w.g.position.z,rand(-3,3),rand(1,4),rand(-3,3),0.07,0xc8f0ff,0.8,0.3,-4,1);}
+    else if(w.kind==='sky'){P.hasSkyBlast=true;SFX.powerUp();CAM.fovKick=Math.max(CAM.fovKick,5);showToast('Sky Blast! Jump, then puff again for a long leap.');
+      for(let i=0;i<16;i++)spawnP(w.g.position.x,w.g.position.y,w.g.position.z,rand(-3,3),rand(1,4),rand(-3,3),0.09,Math.random()<0.5?0xff9a3c:0xffe9d0,0.8,0.3,-4,1);}
     else{P.fire=true;SFX.powerUp();CAM.fovKick=Math.max(CAM.fovKick,5);showToast('Fire slam! Ground pound for fireballs — keep it until a Gloop hits you.');
       for(let i=0;i<16;i++)spawnP(w.g.position.x,w.g.position.y,w.g.position.z,rand(-3,3),rand(1,4),rand(-3,3),0.09,Math.random()<0.5?0xff8a2b:0xffe36b,0.8,0.3,-4,1);}
     updateHUD();}}}}
+function updateSteamVents(dt){for(const v of steamVents){v.pt-=dt;if(v.pt>0)continue;v.pt=0.1;
+  spawnP(v.x+rand(-0.2,0.2),v.y+0.2,v.z+rand(-0.2,0.2),rand(-0.3,0.3),rand(1.5,3.2),rand(-0.3,0.3),rand(0.06,0.1),0xfff0e0,rand(0.5,0.8),0.6,0,0.55);}}
 function updateHearts(dt){for(const h of hearts){if(h.got)continue;h.t+=dt;h.g.position.y=h.y+Math.sin(time*3+h.ph)*0.1;h.g.rotation.y+=dt*2;h.g.scale.setScalar(0.9*Math.min(1,h.t*3));
   if(!P.dead){tmpV.set(P.pos.x,P.pos.y+0.6,P.pos.z);if(h.g.position.distanceTo(tmpV)<1.05){h.got=true;h.g.visible=false;P.hp=Math.min(P.maxHp,P.hp+1);SFX.heal();for(let i=0;i<12;i++)spawnP(h.g.position.x,h.g.position.y,h.g.position.z,rand(-2,2),rand(1,4),rand(-2,2),0.07,0xff8fa8,0.7,0.3,-5,1);updateHUD();}}}}
 
