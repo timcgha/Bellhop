@@ -313,7 +313,7 @@ function loadLevel(L){
   SNOOZLE_GOAL=L.snoozleGoal||0;
   setSong(L.music||'meadow');
   if(L.underwater)beginUnderwaterLevel(L);else if(L.peakAtmosphere)beginPeakLevel();else beginLandLevel();
-  P.fire=false;P.bubble=false;P.hasSkyBlast=false;clearLeapBoost();P.puff=true;P.puffAir=0;endHover();P.slam=0;P.lavaRecT=0;P.anchorSettleT=0;
+  P.fire=false;P.bubble=false;P.hasSkyBlast=false;clearLeapBoost();clearGlide();P.puff=true;P.puffAir=0;endHover();P.slam=0;P.lavaRecT=0;P.anchorSettleT=0;
   if(L.spawn){P.spawn.x=L.spawn.x;P.spawn.y=L.spawn.y;P.spawn.z=L.spawn.z;P.pos.set(L.spawn.x,L.spawn.y,L.spawn.z);P.vel.set(0,0,0);initSafeAnchor(L.spawn.x,L.spawn.y,L.spawn.z);}
   const fence=L.fence;
   for(const s of L.fenceSolids)addSolid(s[0],s[1],s[2],s[3],s[4],s[5],fence);

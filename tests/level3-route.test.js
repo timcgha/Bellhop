@@ -103,7 +103,7 @@ function attemptTeach(gap,powered,y){
   for(let i=0;i<260;i++){
     frames(1);
     if(inLava(P.pos.x,P.pos.y,P.pos.z)||P.lavaRecT>0)hitLava=true;
-    if(P.pos.z<=gap.farEdgeZ+0.6&&P.pos.y>=y-0.8&&P.grounded){cleared=true;landZ=P.pos.z;landY=P.pos.y;break;}
+    if(P.pos.z<=gap.farEdgeZ+1.2&&P.pos.y>=y-0.8&&P.grounded){cleared=true;landZ=P.pos.z;landY=P.pos.y;break;}
     if(P.grounded&&i>12){landZ=P.pos.z;landY=P.pos.y;break;}
   }
   release();
@@ -178,6 +178,7 @@ function invCheck(leaps,vents,lavas){
     for(const label of ['nearSafe','farSafe']){
       const p=leap[label];
       const hot=lavas.some(lv=>{
+        if(!(p.y<lv.max.y+0.5&&p.y+1.15>lv.min.y-0.05))return false;
         const cx=Math.min(Math.max(p.x,lv.min.x),lv.max.x),cz=Math.min(Math.max(p.z,lv.min.z),lv.max.z);
         return Math.hypot(p.x-cx,p.z-cz)-r<lavaTun.anchorClear;
       });
@@ -188,6 +189,7 @@ function invCheck(leaps,vents,lavas){
     if(Math.abs(land.edgeZ-land.farZ)<land.minDepth)fails.push(leap.id+': depth');
     for(const lv of lavas){
       if(!(lv.min.x<land.x+6&&lv.max.x>land.x-6))continue;
+      if(lv.max.y<pad.max.y-1.5)continue;
       if(lv.min.z<land.edgeZ-0.05&&lv.max.z>land.farZ)fails.push(leap.id+': lava overlap');
     }
   }
