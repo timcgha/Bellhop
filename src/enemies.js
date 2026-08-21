@@ -105,6 +105,7 @@ function updateFires(dt){for(const f of fires){if(!f.alive)continue;f.life-=dt;
   f.trailT-=dt;if(f.trailT<=0){f.trailT=0.035;spawnP(f.pos.x,f.pos.y,f.pos.z,rand(-0.6,0.6),rand(0.4,1.6),rand(-0.6,0.6),0.11,Math.random()<0.5?0xff8a2b:0xffe36b,0.35,0.5,0,0.9);}
   let hit=false;
   for(const e of gloops){if(!e.alive||e.state==='dying')continue;if(Math.hypot(f.pos.x-e.x,f.pos.z-e.z)<0.45+e.size*0.55&&Math.abs(f.pos.y-e.y)<1.6){const d=Math.hypot(e.x-f.pos.x,e.z-f.pos.z)||0.01;hitGloop(e,2,(e.x-f.pos.x)/d*7,(e.z-f.pos.z)/d*7);hit=true;break;}}
+  if(!hit)for(const e of cinders){if(!e.alive||e.state==='dying')continue;if(Math.hypot(f.pos.x-e.x,f.pos.z-e.z)<0.45+e.size*0.55&&Math.abs(f.pos.y-e.y)<1.6){const d=Math.hypot(e.x-f.pos.x,e.z-f.pos.z)||0.01;hitCinder(e,2,(e.x-f.pos.x)/d*7,(e.z-f.pos.z)/d*7);hit=true;break;}}
   if(!hit)for(const c of crates){if(c.broken)continue;if(Math.hypot(f.pos.x-c.x,f.pos.z-c.z)<0.95&&Math.abs(f.pos.y-c.y)<1.3){breakCrate(c);hit=true;break;}}
   if(!hit)for(const d of dust){if(d.amt<=0)continue;if(Math.hypot(f.pos.x-d.x,f.pos.z-d.z)<1.35&&Math.abs(f.pos.y-0.36)<2){dustHit(d,1.5);hit=true;break;}}
   if(!hit&&insideSolid(f.pos.x,f.pos.y,f.pos.z,0.12))hit=true;

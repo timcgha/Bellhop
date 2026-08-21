@@ -36,7 +36,7 @@ mandatoryLeaps:[{
   farSafe:{x:0,y:0.4,z:-14}
 }],
 fence:0x5a2e1a,
-fenceSolids:[[0,0,16,26,1.2,0.6],[0,0,-28,26,1.2,0.6],[-13,0,-6,0.6,1.2,44],[13,0,-6,0.6,1.2,44]],
+fenceSolids:[[0,0,16,30,1.2,0.6],[0,0,-28,30,1.2,0.6],[-15,0,-6,0.6,1.2,44],[15,0,-6,0.6,1.2,44]],
 pathTiles:[],
 hedges:[],
 checks:[[0,12]],
@@ -44,6 +44,7 @@ tower:{tx:0,tz:0},
 snoozleHomes:[[0,-24]],
 snoozles:[],
 trees:[],
+// Stage 3 temporary note set for held-note CI — not the final production count.
 steps:[
   // Broad start terrace
   ['solid',0,0,9,20,0.4,18,0xc45a28,{surf:'stone'}],
@@ -54,6 +55,9 @@ steps:[
   // Side practice pads
   ['solid',-8,0,6,4,0.4,4,0xa84a22,{surf:'stone'}],
   ['solid',8,0,6,4,0.4,4,0xa84a22,{surf:'stone'}],
+  // Stage 3 systems terrace (away from the lava gap)
+  ['solid',-10,0,12,8,0.4,6,0xb85a2a,{surf:'stone'}],
+  ['solid',10,0,12,8,0.4,6,0xb85a2a,{surf:'stone'}],
   // Ember-red edges at the mandatory leap lips (readable, still safe stone)
   ['solid',0,0.4,-0.15,18,0.06,0.35,0x8a2010,{surf:'stone'}],
   ['solid',0,0.4,-10.15,18,0.06,0.35,0x8a2010,{surf:'stone'}],
@@ -70,6 +74,19 @@ steps:[
   ['steamVent',0,0.4,1.5,1.4],
   // Gloop for enemy power-loss tests
   ['gloop',-8,6,'small'],
+  // ---- Stage 3 interaction systems (prototype only) ----
+  ['cinder',-10,12,'mid'],
+  ['wisp',[
+    {x:10,y:0.9,z:14},{x:12,y:1.1,z:12},{x:10,y:0.9,z:10},{x:8,y:1.0,z:12}
+  ],{speed:2.0}],
+  ['wisp',[
+    {x:11,y:0.85,z:11},{x:9,y:0.95,z:13}
+  ],{speed:1.8,note:true}],
+  ['salamander',-12,11,{}],
+  ['salamander',-11,13,{path:[{x:-12,z:12},{x:-10,z:14},{x:-11,z:11}]}],
+  ['salamander',-9,11,{note:true}],
+  ['geyser',4,0.4,11,1.15],
+  ['note',2,1.2,13,false],
   ['unfinishedFinish',0,-24,8]
 ]
 };
