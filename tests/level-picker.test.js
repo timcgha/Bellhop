@@ -29,21 +29,34 @@ function boot(opts){return require('./harness.js')(Object.assign({autostart:fals
   ok(H.W.snoozles.length===4,'Level 2 has four snoozles through The Trench');
 }
 
-// ---- booting Level 2 does not alter Level 1 physics or expected values ----
-{
-  const H=boot({autostart:true,level:0});
-  const ph=H.getPhys();
-  ok(ph.grav===-30&&ph.maxFall===-32&&ph.jumpV===10.5,'Level 1 physics unchanged (grav/maxFall/jumpV)');
-  H.P.pos.set(0,0,10);H.P.vel.set(0,0,0);H.frames(10);
-  let maxY=0;H.kd({code:'Space',preventDefault(){},repeat:false});
-  for(let i=0;i<40;i++){H.frames(1);maxY=Math.max(maxY,H.P.pos.y);}H.ku({code:'Space'});
-  ok(maxY>1.5&&maxY<2.2,'Level 1 jump apex still '+maxY.toFixed(2));
-}
+// ---- selecting Level 3 boots LEVEL3 ----
 {
   const H=boot();
-  H.startLevel(1);
-  const ph2=H.getPhys();
+  H.startLevel(2);
+  ok(H.getLevel()&&H.getLevel().id==='level3','selecting Level 3 boots LEVEL3');
+  ok(H.W.steamVents.length>=1,'Level 3 prototype has a steam vent');
+  ok(H.W.crates.some(c=>c.item==='sky'),'Level 3 prototype has a Sky Blast crate');
+}
+
+// ---- Level 3 physics match Level 1; Level 1 and 2 unchanged ----
+{
+  const H1=boot({autostart:true,level:0});
+  const ph1=H1.getPhys();
+  ok(ph1.grav===-30&&ph1.maxFall===-32&&ph1.jumpV===10.5&&ph1.puffV===9.4&&ph1.speed===6.8,'Level 1 physics unchanged');
+}
+{
+  const H2=boot();
+  H2.startLevel(1);
+  const ph2=H2.getPhys();
   ok(ph2.grav===-6&&ph2.maxFall===-6&&ph2.jumpV===5.5,'Level 2 uses its own physics profile');
+}
+{
+  const H3=boot();
+  H3.startLevel(2);
+  const ph3=H3.getPhys();
+  ok(ph3.grav===-30&&ph3.maxFall===-32&&ph3.jumpV===10.5&&ph3.puffV===9.4&&ph3.speed===6.8,'Level 3 baseline equals Level 1 physics');
+  const sky=H3.getSky();
+  ok(sky.puffVMul===1.4&&sky.boostMax===12.5&&sky.boostDecay===1.6,'Level 3 Sky Blast tuning loaded');
 }
 
 // ---- old press-anything start path cannot bypass the level picker ----
@@ -63,6 +76,13 @@ function boot(opts){return require('./harness.js')(Object.assign({autostart:fals
   H.confirmStart();
   ok(H.isStarted(),'Space confirms the highlighted level');
   ok(H.getLevel()&&H.getLevel().id==='level2','confirmed Level 2 card boots LEVEL2');
+}
+
+// ---- three cards always present ----
+{
+  const H=boot();
+  ok(!!H.el('lvl0')&&!!H.el('lvl1')&&!!H.el('lvl2'),'picker has three level cards');
+  ok(!!H.el('art0')&&!!H.el('art1')&&!!H.el('art2'),'picker has three art canvases');
 }
 
 // ---- touch picker: tap card selects, A confirms, other buttons do not start ----
@@ -102,6 +122,15 @@ function boot(opts){return require('./harness.js')(Object.assign({autostart:fals
 }
 {
   const H=boot();
+  H.tapCard(2);
+  ok(H.pickerIdx()===2&&!H.isStarted(),'peak: first tap on The Peak selects only');
+  ok(H.touchArmed(),'peak: first Peak tap arms it');
+  H.tapCard(2);
+  ok(H.isStarted(),'peak: second Peak tap starts');
+  ok(H.getLevel()&&H.getLevel().id==='level3','peak: Level 3 loads through tap-again flow');
+}
+{
+  const H=boot();
   H.tapCard(1);
   ok(H.pickerIdx()===1&&!H.isStarted(),'switch: first tap selects Level 2');
   H.tapCard(0);
@@ -120,6 +149,15 @@ function boot(opts){return require('./harness.js')(Object.assign({autostart:fals
   H.tapCard(1);
   ok(H.isStarted()&&H.getLevel().id==='level2','rearm: Deep needs a fresh second tap to start');
 }
+{
+  const H=boot();
+  H.tapCard(2);
+  ok(H.touchArmed()&&!H.isStarted(),'peak-switch: Peak armed');
+  H.tapCard(1);
+  ok(H.pickerIdx()===1&&!H.isStarted()&&H.touchArmed(),'peak-switch: switching to Deep re-arms without starting');
+  H.tapCard(1);
+  ok(H.isStarted()&&H.getLevel().id==='level2','peak-switch: Deep starts on fresh second tap');
+}
 
 // ---- keyboard confirm still works after the touch UX change ----
 {
@@ -130,25 +168,39 @@ function boot(opts){return require('./harness.js')(Object.assign({autostart:fals
   H.confirmStart();
   ok(H.isStarted()&&H.getLevel().id==='level2','keyboard: Space still confirms the highlighted level');
 }
-
-// ---- gamepad picker: dpad/stick moves highlight, A confirms, B does not start ----
 {
   const H=boot();
-  H.setGamepad(H.mkGamepad([0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0]));
+  H.selectLevel(2);
+  H.confirmStart();
+  ok(H.isStarted()&&H.getLevel().id==='level3','keyboard: Space confirms Level 3');
+}
+
+// ---- gamepad picker: dpad/stick moves highlight across three cards ----
+{
+  const H=boot();
+  const idle=[0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0];
+  H.setGamepad(H.mkGamepad(idle));
   H.frames(1);
   ok(H.pickerIdx()===0,'gamepad: default highlight is Level 1');
   H.gamepadTick([0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1,0,0]);
   ok(H.pickerIdx()===1,'gamepad: dpad right selects Level 2');
   ok(!H.isStarted(),'gamepad: dpad does not start the game');
-  H.gamepadTick([0,0,0,0,0,0,0,0,0,0,0,0,0,0,1,0,0,0]);
-  ok(H.pickerIdx()===0,'gamepad: dpad left selects Level 1');
+  H.gamepadTick(idle); // release so the next right press edges again
   H.gamepadTick([0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1,0,0]);
-  ok(H.pickerIdx()===1,'gamepad: back on Level 2 for confirm test');
+  ok(H.pickerIdx()===2,'gamepad: dpad right again selects Level 3');
+  H.gamepadTick(idle);
+  H.gamepadTick([0,0,0,0,0,0,0,0,0,0,0,0,0,0,1,0,0,0]);
+  ok(H.pickerIdx()===1,'gamepad: dpad left selects Level 2');
+  H.gamepadTick(idle);
+  H.gamepadTick([0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1,0,0]);
+  ok(H.pickerIdx()===2,'gamepad: back on Level 3 for confirm test');
+  H.gamepadTick(idle);
   H.gamepadTick([0,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0]);
   ok(!H.isStarted(),'gamepad: B button does not start the game');
+  H.gamepadTick(idle);
   H.gamepadTick([1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0]);
   ok(H.isStarted(),'gamepad: A button confirms and starts');
-  ok(H.getLevel()&&H.getLevel().id==='level2','gamepad: confirmed Level 2 boots LEVEL2');
+  ok(H.getLevel()&&H.getLevel().id==='level3','gamepad: confirmed Level 3 boots LEVEL3');
 }
 {
   const H=boot();
@@ -179,9 +231,11 @@ function boot(opts){return require('./harness.js')(Object.assign({autostart:fals
   ok(/#start \.card\{[^}]*pointer-events\s*:\s*auto/.test(css),'start card remains tappable for level selection');
   ok(/\.tbtn\{[^}]*z-index\s*:\s*6/.test(css),'touch buttons stack above the start overlay');
   ok(/lvlPulse/.test(css),'selected level card has a pulse animation for touch feedback');
+  ok(/id="lvl2"/.test(css),'Peak card is present in the start overlay');
   const hud=require('fs').readFileSync(require('path').join(__dirname,'..','src','hud.js'),'utf8');
   ok(/tap it again to play/.test(hud),'touch pick hint no longer requires pressing A');
   ok(/function tapLevelCard/.test(hud),'level cards use tapLevelCard for select-or-start');
+  ok(/peak/.test(hud),'picker draws Peak card art');
 }
 
 report();

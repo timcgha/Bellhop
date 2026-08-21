@@ -30,7 +30,9 @@ function wakeSnoozle(s){if(s.state!=='sleep')return;s.state='wake';s.t=0;s.boat=
   s.g.userData.closed.visible=false;s.g.userData.open.visible=true;s.g.userData.mouth.scale.set(0.1,0.1,0.02);setTimeout(()=>{s.g.userData.mouth.scale.set(0.08,0.03,0.02);},900);
   rescued++;AU.layers=rescued;SFX.wake();
   for(let i=0;i<12;i++)spawnP(s.g.position.x,s.g.position.y+0.6,s.g.position.z,rand(-2,2),rand(1,4),rand(-2,2),0.08,0xffe36b,0.7,0.2,-5,1);
-  if(rescued<snoozles.length)showToast('A Snoozle woke up! ♪ '+rescued+' of '+snoozles.length);
+  // snoozleGoal lets a partial Level 3 slice place fewer Snoozles than the finished design (4).
+  const goal=(typeof snoozleGoalCount==='function')?snoozleGoalCount():snoozles.length;
+  if(rescued<goal)showToast('A Snoozle woke up! ♪ '+rescued+' of '+goal);
   else FINISH.onAllAwake();
   updateHUD();}
 function updateSnoozles(dt){for(const s of snoozles){const g=s.g;
@@ -105,6 +107,7 @@ function updateFires(dt){for(const f of fires){if(!f.alive)continue;f.life-=dt;
   f.trailT-=dt;if(f.trailT<=0){f.trailT=0.035;spawnP(f.pos.x,f.pos.y,f.pos.z,rand(-0.6,0.6),rand(0.4,1.6),rand(-0.6,0.6),0.11,Math.random()<0.5?0xff8a2b:0xffe36b,0.35,0.5,0,0.9);}
   let hit=false;
   for(const e of gloops){if(!e.alive||e.state==='dying')continue;if(Math.hypot(f.pos.x-e.x,f.pos.z-e.z)<0.45+e.size*0.55&&Math.abs(f.pos.y-e.y)<1.6){const d=Math.hypot(e.x-f.pos.x,e.z-f.pos.z)||0.01;hitGloop(e,2,(e.x-f.pos.x)/d*7,(e.z-f.pos.z)/d*7);hit=true;break;}}
+  if(!hit)for(const e of cinders){if(!e.alive||e.state==='dying')continue;if(Math.hypot(f.pos.x-e.x,f.pos.z-e.z)<0.45+e.size*0.55&&Math.abs(f.pos.y-e.y)<1.6){const d=Math.hypot(e.x-f.pos.x,e.z-f.pos.z)||0.01;hitCinder(e,2,(e.x-f.pos.x)/d*7,(e.z-f.pos.z)/d*7);hit=true;break;}}
   if(!hit)for(const c of crates){if(c.broken)continue;if(Math.hypot(f.pos.x-c.x,f.pos.z-c.z)<0.95&&Math.abs(f.pos.y-c.y)<1.3){breakCrate(c);hit=true;break;}}
   if(!hit)for(const d of dust){if(d.amt<=0)continue;if(Math.hypot(f.pos.x-d.x,f.pos.z-d.z)<1.35&&Math.abs(f.pos.y-0.36)<2){dustHit(d,1.5);hit=true;break;}}
   if(!hit&&insideSolid(f.pos.x,f.pos.y,f.pos.z,0.12))hit=true;
@@ -112,13 +115,18 @@ function updateFires(dt){for(const f of fires){if(!f.alive)continue;f.life-=dt;
 function updateCrates(dt){if(seenCrate)return;for(const c of crates){if(c.broken)continue;if(Math.hypot(c.x-P.pos.x,c.z-P.pos.z)<6&&Math.abs(c.y-P.pos.y)<3){seenCrate=true;showToast('A crate! Spin (Y) or slam it open.');break;}}}
 function updatePowers(dt){for(const w of powers){if(w.got)continue;w.t+=dt;w.g.position.y=w.y+Math.sin(time*3+w.ph)*0.13;w.g.rotation.y+=dt*2.2;
   const fl=1+Math.sin(time*17+w.ph)*0.12;w.g.scale.set(fl,Math.min(1,w.t*3)*(2-fl),fl);
-  w.pt=(w.pt||0)-dt;if(w.pt<=0){w.pt=0.08;spawnP(w.g.position.x+rand(-0.1,0.1),w.g.position.y+0.2,w.g.position.z+rand(-0.1,0.1),rand(-0.2,0.2),rand(0.6,1.4),rand(-0.2,0.2),0.06,Math.random()<0.5?0xff8a2b:0xffe36b,0.35,0.3,0,0.6);}
+  w.pt=(w.pt||0)-dt;if(w.pt<=0){w.pt=0.08;const col=w.kind==='sky'?(Math.random()<0.5?0xff9a3c:0xffe9d0):(w.kind==='bubble'?0xc8f0ff:(Math.random()<0.5?0xff8a2b:0xffe36b));
+    spawnP(w.g.position.x+rand(-0.1,0.1),w.g.position.y+0.2,w.g.position.z+rand(-0.1,0.1),rand(-0.2,0.2),rand(0.6,1.4),rand(-0.2,0.2),0.06,col,0.35,0.3,0,0.6);}
   if(!P.dead){tmpV.set(P.pos.x,P.pos.y+0.6,P.pos.z);if(w.g.position.distanceTo(tmpV)<1.1){w.got=true;w.g.visible=false;
     if(w.kind==='bubble'){P.bubble=true;SFX.bubblePower();CAM.fovKick=Math.max(CAM.fovKick,5);showToast('Bubble power! Gust to trap fish — keep it until something hits you.');
       for(let i=0;i<16;i++)spawnP(w.g.position.x,w.g.position.y,w.g.position.z,rand(-3,3),rand(1,4),rand(-3,3),0.07,0xc8f0ff,0.8,0.3,-4,1);}
+    else if(w.kind==='sky'){P.hasSkyBlast=true;SFX.powerUp();CAM.fovKick=Math.max(CAM.fovKick,5);showToast('Sky Blast! Jump, then puff again for a long leap.');
+      for(let i=0;i<16;i++)spawnP(w.g.position.x,w.g.position.y,w.g.position.z,rand(-3,3),rand(1,4),rand(-3,3),0.09,Math.random()<0.5?0xff9a3c:0xffe9d0,0.8,0.3,-4,1);}
     else{P.fire=true;SFX.powerUp();CAM.fovKick=Math.max(CAM.fovKick,5);showToast('Fire slam! Ground pound for fireballs — keep it until a Gloop hits you.');
       for(let i=0;i<16;i++)spawnP(w.g.position.x,w.g.position.y,w.g.position.z,rand(-3,3),rand(1,4),rand(-3,3),0.09,Math.random()<0.5?0xff8a2b:0xffe36b,0.8,0.3,-4,1);}
     updateHUD();}}}}
+function updateSteamVents(dt){for(const v of steamVents){v.pt-=dt;if(v.pt>0)continue;v.pt=0.1;
+  spawnP(v.x+rand(-0.2,0.2),v.y+0.2,v.z+rand(-0.2,0.2),rand(-0.3,0.3),rand(1.5,3.2),rand(-0.3,0.3),rand(0.06,0.1),0xfff0e0,rand(0.5,0.8),0.6,0,0.55);}}
 function updateHearts(dt){for(const h of hearts){if(h.got)continue;h.t+=dt;h.g.position.y=h.y+Math.sin(time*3+h.ph)*0.1;h.g.rotation.y+=dt*2;h.g.scale.setScalar(0.9*Math.min(1,h.t*3));
   if(!P.dead){tmpV.set(P.pos.x,P.pos.y+0.6,P.pos.z);if(h.g.position.distanceTo(tmpV)<1.05){h.got=true;h.g.visible=false;P.hp=Math.min(P.maxHp,P.hp+1);SFX.heal();for(let i=0;i<12;i++)spawnP(h.g.position.x,h.g.position.y,h.g.position.z,rand(-2,2),rand(1,4),rand(-2,2),0.07,0xff8fa8,0.7,0.3,-5,1);updateHUD();}}}}
 

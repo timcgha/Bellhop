@@ -1,9 +1,14 @@
 const solids=[],wobblers=[],pinwheels=[],toss=[],notes=[],dust=[],snoozles=[],fans=[],clouds=[],gloops=[],goos=[],puddles=[],hearts=[],crates=[],powers=[],fires=[];
-const sharks=[],fish=[],spikefish=[],clams=[],bubbleShots=[];
+const sharks=[],fish=[],spikefish=[],clams=[],bubbleShots=[],steamVents=[],lavas=[];
+// Peak arrays live in peak.js (cinders, embers, wisps, salamanders, geysers).
 let seenGloop=false,seenCrate=false;
 let BOAT=null,WM=null,player=null,shadow=null,RAINBOW=null,FINISH=null;
+// Intended Snoozle total for the level (may exceed placed count on a partial slice).
+let SNOOZLE_GOAL=0;
+function snoozleGoalCount(){return SNOOZLE_GOAL>0?SNOOZLE_GOAL:snoozles.length;}
+window.__snoozleGoal=()=>snoozleGoalCount();
 const checks=[];let won=false,winT=0,confT=0;
-const LEVELS=[LEVEL1,LEVEL2];
+const LEVELS=[LEVEL1,LEVEL2,LEVEL3];
 let CURRENT_LEVEL=null;
 function isUnderwater(){return !!(CURRENT_LEVEL&&CURRENT_LEVEL.underwater);}
 const POND={x0:-6,x1:6,z0:-33,z1:-25};
@@ -95,6 +100,9 @@ function clearLevelWorld(){
   for(const o of dust)rem(o.m);dust.length=0;
   for(const o of snoozles)rem(o.g);snoozles.length=0;
   for(const o of fans)rem(o.g);fans.length=0;
+  for(const o of steamVents)rem(o.g);steamVents.length=0;
+  for(const o of lavas){rem(o.g);if(o.edge)rem(o.edge);}lavas.length=0;
+  clearPeakWorld();
   for(const o of clouds)rem(o.g);clouds.length=0;
   for(const o of gloops)rem(o.g);gloops.length=0;
   for(const o of hearts)rem(o.g);hearts.length=0;
@@ -114,7 +122,7 @@ function clearLevelWorld(){
   if(RAINBOW){rem(RAINBOW);RAINBOW=null;}
   if(WM&&WM.parts)WM.parts.forEach(rem);WM=null;
   if(BOAT&&BOAT.g)rem(BOAT.g);BOAT=null;
-  FINISH=null;seenGloop=false;seenCrate=false;
+  FINISH=null;SNOOZLE_GOAL=0;seenGloop=false;seenCrate=false;
 }
 function buildWindmill(x,z){const col=addSolid(x,0,z,3.4,6.6,3.4,0xffffff,{surf:'stone'});col.mesh.visible=false;
   const body=new THREE.Mesh(new THREE.CylinderGeometry(1.25,1.75,6.4,18),lam(0xf1e3c2));body.position.set(x,3.2,z);scene.add(body);
@@ -132,11 +140,27 @@ function buildWindmill(x,z){const col=addSolid(x,0,z,3.4,6.6,3.4,0xffffff,{surf:
   });}
 function registerUnfinishedFinish(x,z,top){
   registerFinish({x,z,top,
-    onAllAwake(){showToast('All Snoozles awake! ♪ '+rescued+' of '+snoozles.length);},
+    onAllAwake(){showToast('A Snoozle woke up! ♪ '+rescued+' of '+snoozleGoalCount());},
     onWin(){},
     update(){}
   });
 }
+// Soft return used by the Stage 4 temporary Peak endpoint — no win banner, no level-complete mark.
+function softReturnToPicker(){
+  if(!started)return;
+  clearLevelWorld();
+  won=false;winT=0;confT=0;started=false;rescued=0;gotNotes=0;time=0;
+  AU.win=false;
+  P.hp=P.maxHp;P.dead=false;P.inv=0;P.fire=false;P.bubble=false;P.hasSkyBlast=false;clearLeapBoost();P.vel.set(0,0,0);
+  P.pos.set(P.spawn.x,P.spawn.y,P.spawn.z);
+  beginLandLevel();
+  const w=$('win');if(w){w.style.display='none';w.style.opacity=1;}
+  $('start').style.display='flex';
+  touchArmed=false;updatePickerUI();
+  const hint=$('hint');if(hint){hint.textContent=CTLTEXT;hint.style.opacity=0.95;}
+  updateHUD();
+}
+window.__softReturnToPicker=softReturnToPicker;
 function buildBoat(x,z){const g=new THREE.Group();g.add(mesh(BOXG,lam(0x8b5a2b),0,0.15,0,0.9,0.3,1.7));g.add(mesh(BOXG,lam(0xa86b32),0,0.32,0,1.0,0.06,1.8));g.add(mesh(CYL,lam(0x5b3a1a),0,1.0,-0.1,0.04,1.4,0.04));
   g.add(mesh(BOXG,lam(0xffffff),0,1.15,-0.1,0.9,0.9,0.02));g.add(mesh(BOXG,lam(0xe74c3c),0,1.15,-0.1,0.9,0.25,0.021));scene.add(g);g.position.set(x,-0.1,z);
   BOAT={g,pos:new THREE.Vector3(x,0,z),vel:new THREE.Vector3(),yaw:0};}
@@ -171,6 +195,7 @@ function breakCrate(c){if(c.broken)return;c.broken=true;c.g.visible=false;const 
   for(let k=0;k<16;k++)spawnP(c.x+rand(-0.4,0.4),c.y+0.45+rand(-0.4,0.4),c.z+rand(-0.4,0.4),rand(-3.5,3.5),rand(1,4.5),rand(-3.5,3.5),rand(0.08,0.17),Math.random()<0.3?0xd1a83c:0xc98a4b,rand(0.5,0.9),0.2,-9,0.9);
   if(c.item==='fire')addPower(c.x,c.y+0.85,c.z);
   else if(c.item==='bubble')addBubblePower(c.x,c.y+0.85,c.z);
+  else if(c.item==='sky')addSkyPower(c.x,c.y+0.85,c.z);
   else addHeart(c.x,c.y+0.85,c.z);}
 function buildFlameItem(){const g=new THREE.Group();
   g.add(mesh(CONE,new THREE.MeshBasicMaterial({color:0xff7a1f}),0,0.06,0,0.22,0.58,0.22));
@@ -181,6 +206,39 @@ function buildBubbleItem(){const g=new THREE.Group();
   g.add(mesh(SPH,new THREE.MeshBasicMaterial({color:0xc8f0ff,transparent:true,opacity:0.85}),0,0.08,0,0.24));
   g.add(mesh(SPH,new THREE.MeshBasicMaterial({color:0xffffff,transparent:true,opacity:0.55}),0,0.12,0,0.14));return g;}
 function addBubblePower(x,y,z){const g=buildBubbleItem();g.position.set(x,y,z);scene.add(g);powers.push({g,x,y,z,got:false,ph:rand(0,TAU),t:0,kind:'bubble'});}
+function buildSkyItem(){const g=new THREE.Group();
+  g.add(mesh(SPH,new THREE.MeshBasicMaterial({color:0xff9a3c}),0,0.05,0,0.2));
+  g.add(mesh(CONE,new THREE.MeshBasicMaterial({color:0xffe9d0,transparent:true,opacity:0.85}),0,0.28,0,0.14,0.36,0.14));
+  g.add(mesh(SPH,new THREE.MeshBasicMaterial({color:0xfff8ee,transparent:true,opacity:0.7}),0,0.42,0,0.1));return g;}
+function addSkyPower(x,y,z){const g=buildSkyItem();g.position.set(x,y,z);scene.add(g);powers.push({g,x,y,z,got:false,ph:rand(0,TAU),t:0,kind:'sky'});}
+function addSteamVent(x,y,z,r){r=r||1.2;const g=new THREE.Group();g.position.set(x,y,z);
+  g.add(mesh(CYL,lam(0x4a3a32),0,0.08,0,r*0.95,0.16,r*0.95));
+  g.add(mesh(CYL,lam(0x2e2420),0,0.14,0,r*0.55,0.08,r*0.55));
+  const crack=pho(0xff7a2a,40,0xffa060);g.add(mesh(BOXG,crack,0.12,0.18,0,0.08,0.06,r*0.7));g.add(mesh(BOXG,crack,-0.1,0.18,0.05,0.06,0.05,r*0.5));
+  scene.add(g);steamVents.push({g,x,y,z,r,pt:0});}
+// Lava is a hazard volume, not a walkable solid. Contact is handled by lavaContact in player.js.
+function addLava(x,y,z,w,h,d){
+  const g=new THREE.Group();g.position.set(x,y,z);
+  const body=mesh(BOXG,new THREE.MeshBasicMaterial({color:0xff6a18}),0,h/2,0,w,h,d);g.add(body);
+  const glow=mesh(BOXG,new THREE.MeshBasicMaterial({color:0xff9a3c,transparent:true,opacity:0.55}),0,h+0.02,0,w*0.98,0.04,d*0.98);g.add(glow);
+  // Ember-red rim so the safe/hot boundary stays obvious.
+  const edge=mesh(BOXG,new THREE.MeshBasicMaterial({color:0x8a2010}),0,h+0.01,0,w+0.25,0.03,d+0.25);
+  scene.add(g);scene.add(edge);
+  lavas.push({g,edge,body,glow,x,y,z,w,h,d,min:new THREE.Vector3(x-w/2,y,z-d/2),max:new THREE.Vector3(x+w/2,y+h,z+d/2),pt:0,ph:rand(0,TAU)});
+}
+// Ambient lava decoration only — collision state is always on (no timed hazard cycles).
+function updateLavas(dt){
+  for(const lv of lavas){
+    lv.pt-=dt;
+    if(lv.pt<=0){
+      lv.pt=0.1+Math.random()*0.22;
+      const bx=lv.x+rand(-lv.w*0.42,lv.w*0.42),bz=lv.z+rand(-lv.d*0.42,lv.d*0.42);
+      spawnP(bx,lv.max.y+0.04,bz,rand(-0.35,0.35),rand(0.6,2.0),rand(-0.35,0.35),rand(0.07,0.13),Math.random()<0.45?0xffe9d0:0xff6a18,rand(0.35,0.65),0.55,-1.2,0.75);
+      if(Math.random()<0.3)spawnP(bx,lv.max.y+0.08,bz,rand(-1.2,1.2),rand(1.8,4.2),rand(-1.2,1.2),rand(0.04,0.08),0xffc04a,rand(0.25,0.45),0.45,-4,0.9);
+    }
+    if(lv.glow&&lv.glow.material)lv.glow.material.opacity=0.42+0.18*Math.sin(time*1.6+lv.ph);
+  }
+}
 const FIREGEO=new THREE.SphereGeometry(1,9,7);
 for(let i=0;i<26;i++){const m=new THREE.Mesh(FIREGEO,new THREE.MeshBasicMaterial({color:0xff8a2b}));m.scale.setScalar(0.24);m.visible=false;scene.add(m);fires.push({m,pos:new THREE.Vector3(),vel:new THREE.Vector3(),life:0,alive:false,trailT:0});}
 function buildHeart(){const g=new THREE.Group();const m=pho(0xff5a7a,120,0xffffff);g.add(mesh(SPH,m,-0.11,0.1,0,0.16));g.add(mesh(SPH,m,0.11,0.1,0,0.16));const c=mesh(CONE,m,0,-0.06,0,0.26,0.36,0.16);c.rotation.z=Math.PI;g.add(c);g.scale.setScalar(0.9);return g;}
@@ -226,7 +284,7 @@ function returnToLevelSelect(){
   clearLevelWorld();
   won=false;winT=0;confT=0;started=false;rescued=0;gotNotes=0;time=0;
   AU.win=false;
-  P.hp=P.maxHp;P.dead=false;P.inv=0;P.fire=false;P.bubble=false;P.vel.set(0,0,0);
+  P.hp=P.maxHp;P.dead=false;P.inv=0;P.fire=false;P.bubble=false;P.hasSkyBlast=false;clearLeapBoost();P.vel.set(0,0,0);
   P.pos.set(P.spawn.x,P.spawn.y,P.spawn.z);
   beginLandLevel();
   const w=$('win');if(w){w.style.display='none';w.style.opacity=1;}
@@ -249,10 +307,14 @@ function loadLevel(L){
   clearLevelWorld();
   FINISH=null;
   if(L.physics)applyPhysics(L.physics);
+  applySkyBlastTuning(L.skyBlast);
+  applyLavaTuning(L);
   CURRENT_LEVEL=L;
+  SNOOZLE_GOAL=L.snoozleGoal||0;
   setSong(L.music||'meadow');
-  if(L.underwater)beginUnderwaterLevel(L);else beginLandLevel();
-  if(L.spawn){P.spawn.x=L.spawn.x;P.spawn.y=L.spawn.y;P.spawn.z=L.spawn.z;P.pos.set(L.spawn.x,L.spawn.y,L.spawn.z);P.vel.set(0,0,0);}
+  if(L.underwater)beginUnderwaterLevel(L);else if(L.peakAtmosphere)beginPeakLevel();else beginLandLevel();
+  P.fire=false;P.bubble=false;P.hasSkyBlast=false;clearLeapBoost();P.puff=true;P.puffAir=0;endHover();P.slam=0;P.lavaRecT=0;P.anchorSettleT=0;
+  if(L.spawn){P.spawn.x=L.spawn.x;P.spawn.y=L.spawn.y;P.spawn.z=L.spawn.z;P.pos.set(L.spawn.x,L.spawn.y,L.spawn.z);P.vel.set(0,0,0);initSafeAnchor(L.spawn.x,L.spawn.y,L.spawn.z);}
   const fence=L.fence;
   for(const s of L.fenceSolids)addSolid(s[0],s[1],s[2],s[3],s[4],s[5],fence);
   for(const p of L.pathTiles)pathTile(p[0],p[1],p[2],p[3]);
@@ -270,6 +332,17 @@ function loadLevel(L){
     else if(k==='gloop')addGloop(step[1],step[2],step[3]);
     else if(k==='boat')buildBoat(step[1],step[2]);
     else if(k==='fan')addFan(step[1],step[2],step[3],step[4]);
+    else if(k==='steamVent')addSteamVent(step[1],step[2],step[3],step[4]);
+    else if(k==='lava')addLava(step[1],step[2],step[3],step[4],step[5],step[6]);
+    else if(k==='cinder')addCinder(step[1],step[2],step[3]);
+    else if(k==='wisp')addWisp(step[1],step[2]);
+    else if(k==='salamander')addSalamander(step[1],step[2],step[3]||{});
+    else if(k==='geyser')addGeyser(step[1],step[2],step[3],step[4]);
+    else if(k==='volcanoLandmark')addVolcanoLandmark(step[1],step[2],step[3],step[4]);
+    else if(k==='peakTuft')addPeakTuft(step[1],step[2],step[3]);
+    else if(k==='basaltRock')addBasaltRock(step[1],step[2],step[3],step[4]);
+    else if(k==='driftSparks')addDriftSparks(step[1]);
+    else if(k==='protoEndpoint')addProtoEndpoint(step[1],step[2],step[3]);
     else if(k==='windmill')buildWindmill(step[1],step[2]);
     else if(k==='rainbow')RAINBOW=buildRainbow(step[1],step[2]);
     else if(k==='pinwheelRow'){for(let i=0;i<step[4];i++)addPinwheel(step[1]+i*step[5],step[2]+i*step[6],step[3]);}
