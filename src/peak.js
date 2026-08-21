@@ -252,9 +252,10 @@ function addVolcanoLandmark(x,y,z,scale){
 }
 function addPeakTuft(x,z,s){
   s=s||1;const g=new THREE.Group();g.position.set(x,groundHeightAt(x,z),z);
-  const col=Math.random()<0.5?0x5aaa3a:0x3f8a2e;
-  g.add(mesh(SPH,lam(col),0,0.25*s,0,0.35*s,0.4*s,0.28*s));
-  g.add(mesh(SPH,lam(0x6ab84a),0.2*s,0.35*s,0.05*s,0.22*s,0.45*s,0.18*s));
+  // Sparse tough scrub — not bright meadow grass.
+  const col=Math.random()<0.5?0x5a6a3a:0x4a5530;
+  g.add(mesh(SPH,lam(col),0,0.22*s,0,0.28*s,0.32*s,0.22*s));
+  g.add(mesh(SPH,lam(0x6a5a38),0.15*s,0.28*s,0.04*s,0.16*s,0.35*s,0.14*s));
   scene.add(g);levelDecor.push(g);
 }
 function addBasaltRock(x,y,z,s){

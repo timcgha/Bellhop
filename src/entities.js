@@ -23,7 +23,7 @@ function addSolid(x,y,z,w,h,d,color,opts){const m=new THREE.Mesh(BOXG,lam(color)
 function grassTex(){const cv=document.createElement('canvas');cv.width=cv.height=256;const g=cv.getContext('2d');g.fillStyle='#78c65a';g.fillRect(0,0,256,256);
   for(let i=0;i<700;i++){g.fillStyle=Math.random()<0.5?'rgba(255,255,255,0.09)':'rgba(0,70,0,0.11)';const s=rand(4,16);g.fillRect(Math.random()*256,Math.random()*256,s,s*0.6);}
   const tx=new THREE.CanvasTexture(cv);tx.wrapS=tx.wrapT=THREE.RepeatWrapping;tx.repeat.set(0.4,0.4);tx.encoding=THREE.sRGBEncoding;return tx;}
-let landGround=null;
+let landGround=null,peakGround=null;
 (function buildGround(){
   landGround=new THREE.Group();
   const shp=new THREE.Shape();shp.moveTo(-48,-28);shp.lineTo(36,-28);shp.lineTo(36,86);shp.lineTo(-48,86);shp.lineTo(-48,-28);
@@ -35,6 +35,23 @@ let landGround=null;
   landGround.add(mesh(BOXG,sand,POND.x0-0.15,-0.2,cz,0.3,0.4,d+0.6));landGround.add(mesh(BOXG,sand,POND.x1+0.15,-0.2,cz,0.3,0.4,d+0.6));
   const water=new THREE.Mesh(new THREE.PlaneGeometry(w,d),new THREE.MeshLambertMaterial({color:0x4fb4e6,transparent:true,opacity:0.72}));water.rotation.x=-Math.PI/2;water.position.set(cx,-0.08,cz);landGround.add(water);
   scene.add(landGround);
+})();
+(function buildPeakGround(){
+  // Volcanic ash / basalt floor for The Peak — replaces the meadow grass plane while Level 3 is loaded.
+  peakGround=new THREE.Group();peakGround.visible=false;
+  const ash=new THREE.Mesh(new THREE.PlaneGeometry(80,360),lam(0x2a221c));
+  ash.rotation.x=-Math.PI/2;ash.position.set(0,-0.02,-110);peakGround.add(ash);
+  const basalt=new THREE.Mesh(new THREE.PlaneGeometry(70,200),lam(0x1a1614));
+  basalt.rotation.x=-Math.PI/2;basalt.position.set(0,-0.01,-160);peakGround.add(basalt);
+  // Warm sand near the opening slopes only
+  const warm=new THREE.Mesh(new THREE.PlaneGeometry(40,50),lam(0x3a2a22));
+  warm.rotation.x=-Math.PI/2;warm.position.set(0,-0.005,8);peakGround.add(warm);
+  // Ember crack ribbons (decorative)
+  for(let i=0;i<10;i++){
+    const crack=mesh(BOXG,pho(0xff6a20,30,0xff9a3c),rand(-14,14),0.01,rand(-250,20),rand(0.15,0.35),0.02,rand(4,14));
+    peakGround.add(crack);
+  }
+  scene.add(peakGround);
 })();
 
 const FLOWERC=[0xff6b81,0xffb347,0xf9f871,0xc084fc,0xff8ac9,0xffffff,0x7ad7ff];
