@@ -74,10 +74,11 @@ const SHARK_AGGRO=7;
 // ---- no mandatory bubble on main route ----
 {
   const H=boot();startL2(H);
-  ok(!H.W.spikefish.some(s=>s.role!=='trench_alcove'&&s.role!=='trench_mid'&&s.z1<-205&&s.z1>-290),
-    'no main-route spikefish gate in The Trench');
+  ok(!H.W.spikefish.some(s=>!/trench_(alcove|mid|weave|late)/.test(s.role||'')&&s.z1<-205&&s.z1>-290),
+    'no unexpected main-route spikefish gate in The Trench');
   ok(H.W.spikefish.some(s=>s.role==='trench_mid')&&H.W.clams.some(c=>c.role==='trench_mid'),
     'optional trench_mid spikefish sits with a renewable clam');
+  ok(H.W.spikefish.filter(s=>s.role==='trench_weave').length>=2,'trench weave spikefish create later avoidance beats');
   const mainLegs=[[0,-220],[0,-235],[0,-250],[0,-265],[0,-272]];
   let needBubble=false;
   for(const L of mainLegs){

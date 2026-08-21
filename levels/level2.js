@@ -105,7 +105,7 @@ steps:[
   ['sandPath',-4,-66,4,-104],
   ['coralWall',-8,-66,8,-66],
   ['seabedScatter',0,-72,7,10],
-  ['spikefish',8,2,-74,8,2,-80,false,'open'],
+  ['spikefish',8,1.05,-74,8,1.05,-80,false,'open'],
   ['coralScatter',10,-78,6,5],
   ['coralScatter',-8,-82,5,4],
   ['kelpCluster',-7,-88,2,3,3.2],
@@ -119,14 +119,16 @@ steps:[
   ['solid',7.9,0,-96,12.2,6,0.9,0x9aa4ad,{surf:'stone'}],
   ['dressPlatform',7.9,0,-96,12.2,6,0.9],
   ['clam',-2.6,0,-93,'safety'],
-  ['spikefish',0,2,-95,0,2,-99,false,'mandatory'],
+  ['spikefish',0,1.05,-95,0,1.05,-99,false,'mandatory'],
   ['seabedScatter',-2,-96,3,8],
   ['sandPath',-2,-100,2,-108],
   ['kelpCluster',-5,-104,2,3,2.8],
   ['kelpCluster',5,-104,2,3,2.6],
   ['coralScatter',-6,-108,4,3],
   // optional side spikefish after the Shoal (bypass on the west path)
-  ['spikefish',6.5,1.8,-112,6.5,1.8,-120,false,'shoal_exit'],
+  ['spikefish',6.5,1.0,-112,6.5,1.0,-120,false,'shoal_exit'],
+  // east weave after the Shoal — swim west to bypass
+  ['spikefish',3.6,1.0,-118,3.6,1.0,-126,false,'shoal_weave'],
   ['coralScatter',8,-116,4,4],
   // --- Area 4: The Wreck ---
   ['sandPath',-2,-108,0,-158],
@@ -140,11 +142,13 @@ steps:[
   ['kelpCluster',7,-138,2.5,3,3.2],
   ['fishSchool',-6,2.5,-132,8],
   ['noteFish',-4.5,2.0,-148],
+  // west approach weave — east path stays clear toward the clam
+  ['spikefish',-3.4,1.0,-150,-3.4,1.0,-156,false,'wreck_approach'],
   ['wreck',0,-178],
   ['sandPath',-2,-158,0,-168],
   ['clam',5,0,-159,'wreck_entrance'],
   // optional note-bearing spikefish near the wreck approach (east side, bypassable)
-  ['spikefish',7.2,1.7,-162,7.2,1.7,-168,true,'wreck_note'],
+  ['spikefish',7.2,1.0,-162,7.2,1.0,-168,true,'wreck_note'],
   ['seabedScatter',6,-165,4,8],
   ['wreckDeck',0,-0.12,-172,11,9,0,0],
   ['wreckLedge',-5,2.8,-174,3.5,4,'recovery1'],
@@ -163,7 +167,9 @@ steps:[
   ['sandPath',0,-184,0,-198],
   ['seabedScatter',0,-192,8,10],
   ['kelpCluster',-6,-195,2,3,3],
+  ['kelpCluster',6,-196,2,3,2.8],
   ['coralScatter',0,-200,6,4],
+  ['coralScatter',-4,-208,4,4],
   // --- Area 5: The Trench (Stage 6A) ---
   // transition: open wreck water → narrowing dark corridor (old end-cap removed)
   ['trenchFloor',0,-210,22,28],
@@ -175,6 +181,8 @@ steps:[
   ['glowPool',0,-208,0x66ffe0,3.2],
   ['biolumCluster',-3.5,-210,3],
   ['biolumCluster',3.5,-212,3],
+  ['seabedScatter',0,-212,5,10],
+  ['coralScatter',-2.8,-215,3,3],
   ['trenchMotes',10,0,-212,6],
   // narrow main corridor + outer flank seals (no perimeter shortcut)
   // west wall gap ~z -253..-243 is the optional alcove mouth
@@ -196,25 +204,36 @@ steps:[
   ['biolumCluster',2.6,-236,3],
   ['biolumCluster',-2.4,-252,4],
   ['biolumCluster',2.8,-266,3],
+  ['seabedScatter',0,-230,4,8],
+  ['seabedScatter',0,-255,4,8],
+  ['coralScatter',2.2,-228,3,3],
+  ['coralScatter',-2.0,-248,3,3],
   ['trenchMotes',14,0,-240,5],
   ['trenchMotes',10,0,-265,4],
   // shark 1 — avoidable on the west side; not a kill gate
   ['shark',1.4,1.35,-225,false,'trench1'],
+  // west weave early in the trench — stay center/east to slip by
+  ['spikefish',-2.2,1.0,-232,-2.2,1.0,-238,false,'trench_weave'],
   // trench checkpoint after first shark (ground level, standable)
   ['solid',0,0,-240,3.2,0.45,3.2,0x4a5a68,{surf:'stone'}],
   ['dressPlatform',0,0,-240,3.2,0.45,3.2],
   ['biolumCluster',0,-241.5,2],
   // optional trench mid patrol — stay west to bypass; clam nearby if bubbled
-  ['spikefish',2.2,1.5,-244,2.2,1.5,-250,false,'trench_mid'],
+  ['spikefish',2.2,1.0,-244,2.2,1.0,-250,false,'trench_mid'],
   ['clam',-1.8,0,-247,'trench_mid'],
   ['noteFish',0.8,1.5,-252],
+  // east weave later in the trench — stay west/center to slip by
+  ['spikefish',2.3,0.95,-256,2.3,0.95,-262,false,'trench_weave'],
   // shark 2 — spaced so normal progression does not activate both at once
   ['shark',-1.3,1.35,-258,false,'trench2'],
+  // late corridor nudge before Snoozle 4 — bypass on the west
+  ['spikefish',2.4,1.0,-266,2.4,1.0,-270,false,'trench_late'],
   // Snoozle 4 on the required main route
   ['snoozleShell',0,0,-272],
   ['glowPool',0,-272,0xc48cff,3.0],
   ['biolumCluster',-2.2,-271,3],
   ['biolumCluster',2.2,-273,3],
+  ['seabedScatter',0,-272,4,6],
   // --- optional hard alcove (west side, not required) ---
   // mouth uses the west corridor gap; chamber is fully enclosed except that mouth
   ['trenchRock',-9.2,0,-242.2,5.8,12,2.2],
@@ -225,8 +244,8 @@ steps:[
   ['biolumCluster',-8.5,-246,3],
   ['biolumCluster',-10.2,-250,3],
   ['clam',-6.2,0,-246.5,'trench_alcove'],
-  ['spikefish',-8.2,1.6,-246.5,-10.5,1.6,-249.5,false,'trench_alcove'],
-  ['spikefish',-10.8,2.2,-247.5,-8.5,2.2,-250.5,false,'trench_alcove'],
+  ['spikefish',-8.2,1.0,-246.5,-10.5,1.0,-249.5,false,'trench_alcove'],
+  ['spikefish',-10.8,1.15,-247.5,-8.5,1.15,-250.5,false,'trench_alcove'],
   ['note',-9.0,1.3,-247.2,false],
   ['note',-10.4,1.5,-248.6,false],
   ['note',-8.6,1.4,-250.2,false],
@@ -235,10 +254,19 @@ steps:[
   ['sandPath',-2,-276,2,-286],
   ['trenchRock',-10,0,-280,5,10,8],
   ['trenchRock',10,0,-280,5,10,8],
-  ['glowPool',0,-280,0x88aaff,4.5],
-  ['biolumCluster',-4,-281,3],
-  ['biolumCluster',4,-281,3],
-  ['trenchMotes',8,0,-282,6],
-  ['seabedScatter',0,-282,8,8],
+  ['glowPool',0,-280,0x88aaff,5.5],
+  ['glowPool',-3.5,-284,0xffe082,3.2],
+  ['glowPool',3.5,-284,0xff8ab0,3.2],
+  ['biolumCluster',-4,-281,4],
+  ['biolumCluster',4,-281,4],
+  ['biolumCluster',-5.5,-286,3],
+  ['biolumCluster',5.5,-286,3],
+  ['biolumCluster',0,-278,3],
+  ['trenchMotes',14,0,-282,7],
+  ['seabedScatter',0,-282,10,16],
+  ['coralScatter',-5,-283,5,5],
+  ['coralScatter',5,-283,5,5],
+  ['kelpCluster',-7.5,-279,2.2,3,2.6],
+  ['kelpCluster',7.5,-279,2.2,3,2.6],
   ['conch',0,-288]
 ]};

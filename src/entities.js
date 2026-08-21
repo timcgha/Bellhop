@@ -288,7 +288,7 @@ function loadLevel(L){
     else if(k==='spikefish')addSpikefish(step[1],step[2],step[3],step[4],step[5],step[6],step[7],step[8]);
     else if(k==='kelpCurtain')addKelpCurtain(step[1],step[2],step[3],step[4],step[5],step[6]);
     else if(k==='coralWall')addCoralWall(step[1],step[2],step[3],step[4]);
-    else if(k==='coralScatter')addCoralScatter(step[1],step[2],step[3]);
+    else if(k==='coralScatter')addCoralScatter(step[1],step[2],step[3],step[4]);
     else if(k==='sandPath')sandPath(step[1],step[2],step[3],step[4]);
     else if(k==='snoozleShell')addSnoozleShell(step[1],step[2],step[3]);
     else if(k==='sunRays')addSunRays(step[1],step[2],step[3]);
