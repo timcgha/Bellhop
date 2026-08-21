@@ -90,13 +90,18 @@ function wakeAll(H){for(const s of H.W.snoozles){wake(H,s);H.frames(40);}}
   H.P.pos.set(c.trigger.x,c.trigger.y,c.trigger.z);H.P.vel.set(0,0,0);H.frames(8);
   ok(H.W.won,'entering the open Conch wins');
   ok(H.el('win').style.display==='flex','win banner shown');
-  // Win pose holds the player in the bright mouth rather than deep inside
-  ok(Math.abs(H.P.pos.z-c.doorZ)<1.2&&H.P.pos.y<2.2,'win pose keeps the player visible in the open mouth');
+  // Win pose holds the player inside the hollow chamber, not vanished in geometry
+  ok(H.P.pos.z<c.doorZ-1.5&&H.P.pos.z>c.cz-1.5&&H.P.pos.y<1.2,
+    'win pose stands the player inside the hollow chamber');
+  ok(c.chamber&&c.chamberOcclude&&c.chamberOcclude.length>0,'Conch builds a hollow chamber with fadeable outer lobes');
   ok(c.spiralLights&&c.spiralLights.length>=10,'Conch celebration has a denser spiral light set');
   const sm=H.el('win').querySelector('.sm');
   ok(sm&&/Conch|singing/i.test(sm.textContent),'banner subtitle uses the Level 2 message');
   ok(!/rainbow/i.test(sm.textContent),'banner subtitle no longer mentions the rainbow');
   ok(c.rainbow&&c.rainbow.visible,'Conch still shows its celebration arc on win');
+  // After a few frames inside, outer occluders fade so walls/player stay readable
+  for(let i=0;i<45;i++)H.frames(1);
+  ok(c.chamberFade!=null&&c.chamberFade<0.5,'outer shell lobes fade while standing inside');
   // Return to picker via jump after celebration window
   for(let i=0;i<Math.ceil(3.6*60);i++)H.frames(1);
   H.tap('Space',2);H.frames(4);
