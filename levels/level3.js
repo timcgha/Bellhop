@@ -17,8 +17,10 @@ skyBlast:{
   boostMax:12.5,
   boostDecay:1.6
 },
-// Safe-anchor settling (seconds of stable grounded stand before the anchor moves).
+// Safe-anchor settling (seconds of continuous grounded stand on eligible safe ground).
 anchorSettle:0.22,
+// Horizontal inset from lava AABBs required before an anchor may update (not a speed gate).
+anchorClear:0.85,
 // Lava recovery owns motion for at most this long (must stay ≤ hurt inv duration 1.4).
 lavaRecovery:0.42,
 // Prototype gap the unpowered run cannot clear; powered running leap should.
@@ -55,8 +57,9 @@ steps:[
   ['solid',0,0.4,-10.15,18,0.06,0.35,0x8a2010,{surf:'stone'}],
   // Small avoidable lava pool beside the path (teach touch safely)
   ['lava',7.5,-0.15,8,3.2,0.35,3.2],
-  // Mandatory lava crossing in the gap (near pad ends ~0, far begins ~-10)
-  ['lava',0,-0.2,-5,16,0.45,9.2],
+  // Mandatory lava crossing in the gap (near pad ends ~0, far begins ~-10).
+  // Far edge stops short of the landing pad so a clean powered leap is not a skim-hit.
+  ['lava',0,-0.2,-4.6,16,0.45,8.4],
   // Far-side lava puddle for far-anchor recovery tests (off the main landing line)
   ['lava',-7.5,-0.15,-16,3.0,0.35,3.0],
   // Sky Blast crate

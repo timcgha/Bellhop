@@ -33,7 +33,9 @@ let HOVER_HELD=1.0,HOVER_REL=0.5,HOVER_DRIFT=-1.6,SLAM_HANG=0.14,SLAM_FALL=-34,S
 // Sky Blast tuning — inactive until a level supplies skyBlast (Level 3). Separate from ordinary SPEED/PUFFV.
 let SKY={puffVMul:1,boostMax:0,boostDecay:2};
 // Lava recovery / safe-anchor — Level 3. Hurt invulnerability remains 1.4s; recovery must stay ≤ that.
-let LAVA_ANCHOR_SETTLE=0.22,LAVA_RECOVERY=0.42,HURT_INV=1.4;
+// Anchor settle rejects momentary clips; clearance keeps the saved point inset from lava edges.
+// Speed is intentionally NOT a gate — a successful running landing must still claim the far pad.
+let LAVA_ANCHOR_SETTLE=0.22,LAVA_ANCHOR_CLEAR=0.85,LAVA_RECOVERY=0.42,HURT_INV=1.4;
 function applyPhysics(ph){
   R=ph.r;H=ph.h;SPEED=ph.speed;ACC=ph.acc;DEC=ph.dec;AIRACC=ph.airAcc;
   GRAV=ph.grav;JUMPV=ph.jumpV;PUFFV=ph.puffV;MAXFALL=ph.maxFall;
@@ -48,11 +50,12 @@ function applySkyBlastTuning(s){
 }
 function applyLavaTuning(L){
   LAVA_ANCHOR_SETTLE=(L&&L.anchorSettle!=null)?L.anchorSettle:0.22;
+  LAVA_ANCHOR_CLEAR=(L&&L.anchorClear!=null)?L.anchorClear:0.85;
   LAVA_RECOVERY=(L&&L.lavaRecovery!=null)?L.lavaRecovery:0.42;
 }
 window.__PHYS=()=>({speed:SPEED,acc:ACC,dec:DEC,airAcc:AIRACC,grav:GRAV,jumpV:JUMPV,puffV:PUFFV,maxFall:MAXFALL,coyote:COYOTE,buffer:BUFFER,step:STEP,r:R,h:H});
 window.__SKY=()=>({puffVMul:SKY.puffVMul,boostMax:SKY.boostMax,boostDecay:SKY.boostDecay});
-window.__LAVA=()=>({anchorSettle:LAVA_ANCHOR_SETTLE,recovery:LAVA_RECOVERY,hurtInv:HURT_INV});
+window.__LAVA=()=>({anchorSettle:LAVA_ANCHOR_SETTLE,anchorClear:LAVA_ANCHOR_CLEAR,recovery:LAVA_RECOVERY,hurtInv:HURT_INV});
 function clearLeapBoost(){P.leapBoost.set(0,0,0);}
 function leapBoostMag(){return Math.hypot(P.leapBoost.x,P.leapBoost.z);}
 // Capture run-up into a stored horizontal boost. Does not stack; call only when consuming P.puff.
@@ -74,12 +77,24 @@ function decayLeapBoost(dt){
 }
 function initSafeAnchor(x,y,z){P.safeAnchor.set(x,y,z);P.anchorSettleT=0;}
 function pointInLava(x,y,z){
+  // Vertical band is tight on purpose: a successful Sky Blast may skim above the
+  // surface; contact should mean falling into / standing in the hazard, not flying over it.
   for(const lv of lavas){
-    if(x>lv.min.x&&x<lv.max.x&&z>lv.min.z&&z<lv.max.z&&y<lv.max.y+0.55&&y+H>lv.min.y-0.05)return lv;
+    if(x>lv.min.x&&x<lv.max.x&&z>lv.min.z&&z<lv.max.z&&y<lv.max.y+0.35&&y+H>lv.min.y-0.05)return lv;
   }
   return null;
 }
 function playerInLava(){return pointInLava(P.pos.x,P.pos.y,P.pos.z);}
+function lavaClearance(x,z){
+  // Horizontal distance to the nearest lava AABB (0 if inside the XZ footprint).
+  let best=Infinity;
+  for(const lv of lavas){
+    const cx=clamp(x,lv.min.x,lv.max.x),cz=clamp(z,lv.min.z,lv.max.z);
+    const d=Math.hypot(x-cx,z-cz);
+    if(d<best)best=d;
+  }
+  return best;
+}
 function surfaceIsAnchorEligible(surf){
   if(!surf)return false;
   if(surf==='lava'||surf==='goo'||surf==='water')return false;
@@ -89,8 +104,8 @@ function updateSafeAnchor(dt){
   if(P.lavaRecT>0||P.dead||P.inv>0.05){P.anchorSettleT=0;return;}
   if(!P.grounded||playerInLava()){P.anchorSettleT=0;return;}
   if(!surfaceIsAnchorEligible(P.surf)){P.anchorSettleT=0;return;}
-  // Reject fast slides / edge clips: need low horizontal speed while standing.
-  if(Math.hypot(P.vel.x,P.vel.z)>1.2){P.anchorSettleT=0;return;}
+  // Inset from lava edges — allows full-speed traversal on deep safe ground, rejects lip clips.
+  if(lavaClearance(P.pos.x,P.pos.z)<LAVA_ANCHOR_CLEAR){P.anchorSettleT=0;return;}
   P.anchorSettleT+=dt;
   if(P.anchorSettleT>=LAVA_ANCHOR_SETTLE){
     P.safeAnchor.set(P.pos.x,P.pos.y,P.pos.z);

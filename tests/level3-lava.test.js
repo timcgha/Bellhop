@@ -7,6 +7,7 @@ const L=H.getLevel();
 const lavaTun=H.getLava();
 ok(L&&L.id==='level3','boots Level 3');
 ok(lavaTun.anchorSettle===0.22,'safe-anchor settle is 0.22s');
+ok(lavaTun.anchorClear===0.85,'safe-anchor lava clearance is 0.85');
 ok(lavaTun.recovery===0.42,'lava recovery max is 0.42s');
 ok(lavaTun.recovery<=lavaTun.hurtInv,'recovery duration ≤ hurt invulnerability');
 ok(H.getSky().puffVMul===1.4&&H.getSky().boostMax===12.5&&H.getSky().boostDecay===1.6,'Stage 1 Sky Blast tuning unchanged');
@@ -72,18 +73,21 @@ ok(P.hp===hp1,'leaving lava after one contact does not drain further');
 standUntilAnchor(0,0.4,4,'takeoff');
 P.hasSkyBlast=true;P.puff=true;P.hp=4;P.inv=0;P.yaw=Math.PI;H.CAM.yaw=0;
 kd({code:'KeyW',preventDefault(){},repeat:false});
-for(let i=0;i<36;i++)frames(1);
+for(let i=0;i<28;i++)frames(1);
 kd({code:'Space',preventDefault(){},repeat:false});frames(3);ku({code:'Space'});frames(8);
 kd({code:'Space',preventDefault(){},repeat:false});frames(2);ku({code:'Space'});
 ok(Math.hypot(P.leapBoost.x,P.leapBoost.z)>1,'powered leap has live leapBoost before lava');
 const hpLeap=P.hp;
+const boostBeforeLava=Math.hypot(P.leapBoost.x,P.leapBoost.z);
+// Miss the far pad on purpose: drop into the gap lava while the boost is still live.
+P.pos.set(0,0.15,-4.6);P.vel.y=-2;P.grounded=false;
 let hitLava=false;
-for(let i=0;i<180;i++){
+for(let i=0;i<30;i++){
   frames(1);
   if(P.hp<hpLeap||P.lavaRecT>0){hitLava=true;break;}
 }
 ku({code:'KeyW'});ku({code:'Space'});
-ok(hitLava,'powered leap contacted lava while boost was live');
+ok(hitLava,'powered leap contacted lava while boost was live (boost was '+boostBeforeLava.toFixed(2)+')');
 ok(P.hp===hpLeap-1,'e2e: exactly one heart lost');
 ok(P.hasSkyBlast===true,'e2e: hasSkyBlast still true');
 ok(Math.hypot(P.leapBoost.x,P.leapBoost.z)<0.05,'e2e: leapBoost == 0');
@@ -132,33 +136,56 @@ frames(Math.ceil((lavaTun.anchorSettle+0.12)/DT)+8);
 ok(Math.hypot(P.safeAnchor.x-preLava.x,P.safeAnchor.z-preLava.z)<0.35,'standing in lava volume does not update the anchor');
 ok(!inLavaAt(P.safeAnchor.x,P.safeAnchor.y,P.safeAnchor.z),'anchor remains outside lava');
 
-// ---- far-side anchor after successful cross ----
-standUntilAnchor(0,0.4,3,'near-cross');
-P.hasSkyBlast=true;P.puff=true;P.inv=99;P.yaw=Math.PI;H.CAM.yaw=0;
+// ---- far-side anchor after running Sky Blast landing (no deliberate brake) ----
+// Design: mandatory landings have depth so the child need not stop for the far
+// side to become the recovery anchor. Speed must not gate the update.
+standUntilAnchor(0,0.4,6,'near-cross');
+const nearBeforeCross={x:P.safeAnchor.x,z:P.safeAnchor.z};
+ok(nearBeforeCross.z>0,'pre-cross anchor is on the near side');
+P.hasSkyBlast=true;P.puff=true;P.inv=0;P.yaw=Math.PI;H.CAM.yaw=0;P.hp=4;P.leapBoost.set(0,0,0);
+// Run up on the near pad, jump before the lip, then Sky Blast — stay airborne over the gap.
 kd({code:'KeyW',preventDefault(){},repeat:false});
-for(let i=0;i<40;i++)frames(1);
-kd({code:'Space',preventDefault(){},repeat:false});frames(3);ku({code:'Space'});frames(8);
+for(let i=0;i<18;i++)frames(1); // still on solid (z≈4–5)
+kd({code:'Space',preventDefault(){},repeat:false});frames(3);ku({code:'Space'});
+for(let i=0;i<10;i++)frames(1);
 kd({code:'Space',preventDefault(){},repeat:false});frames(2);ku({code:'Space'});
-let landedFar=false;
-for(let i=0;i<260;i++){
+ok(Math.hypot(P.leapBoost.x,P.leapBoost.z)>1,'Sky Blast boost live for the crossing');
+let landedFar=false,landI=-1,runSpAtLand=0,lavaOnCross=false;
+for(let i=0;i<300;i++){
   frames(1);
-  if(P.grounded&&P.pos.z<=-11&&P.pos.y>=0.3){landedFar=true;break;}
+  if(P.lavaRecT>0||P.hp<4)lavaOnCross=true;
+  if(!landedFar&&P.grounded&&P.pos.z<=-11&&P.pos.y>=0.3&&P.lavaRecT<=0){
+    landedFar=true;landI=i;runSpAtLand=Math.hypot(P.vel.x,P.vel.z);
+  }
+  // Keep holding forward after landing — do not brake — for settle + traversal.
+  if(landedFar&&i>=landI+Math.ceil((lavaTun.anchorSettle+0.25)/DT)+24)break;
+  if(lavaOnCross&&!landedFar&&i>40)break;
 }
-ku({code:'KeyW'});ku({code:'Space'});
-ok(landedFar,'powered leap lands on the far pad');
-P.inv=0;P.pos.set(0,0.4,-14);P.vel.set(0,0,0);P.grounded=true;P.surf='stone';P.lavaRecT=0;
-for(let i=0;i<Math.ceil((lavaTun.anchorSettle+0.12)/DT)+6;i++){P.grounded=true;P.vel.set(0,0,0);P.inv=0;P.surf='stone';frames(1);}
-ok(P.safeAnchor.z<-10,'far platform becomes the new safe anchor (z='+P.safeAnchor.z.toFixed(2)+')');
+ok(!lavaOnCross,'crossing did not touch lava');
+ok(landedFar,'powered leap lands on the far pad (z='+P.pos.z.toFixed(2)+')');
+ok(runSpAtLand>4,'landed while still carrying substantial run speed ('+runSpAtLand.toFixed(2)+')');
+ok(Math.hypot(P.vel.x,P.vel.z)>3,'still moving forward after landing without braking ('+Math.hypot(P.vel.x,P.vel.z).toFixed(2)+')');
+ok(P.safeAnchor.z<-10,'running far-side occupancy updates the safe anchor (z='+P.safeAnchor.z.toFixed(2)+')');
+ok(P.safeAnchor.z<nearBeforeCross.z-5,'far anchor differs from the pre-cross near anchor');
 const farA={x:P.safeAnchor.x,y:P.safeAnchor.y,z:P.safeAnchor.z};
 
-// Fall into far-side lava puddle — recover there, not to the start side.
+// Keep holding forward, then fail into the far-side puddle — recovery must stay far-side.
 P.hp=4;P.inv=0;P.hasSkyBlast=true;P.leapBoost.set(0,0,0);
 P.pos.set(-7.5,0.2,-16);P.vel.set(0,-1,0);P.grounded=false;
 frames(5);
 ok(P.lavaRecT>0||P.inv>0,'far-side lava triggers recovery');
 waitRecovery();
-ok(Math.hypot(P.pos.x-farA.x,P.pos.z-farA.z)<0.5,'far-side failure returns to far-side anchor');
-ok(P.pos.z<-8,'recovery is not sent all the way back to the start side');
+ku({code:'KeyW'});ku({code:'Space'});
+ok(P.pos.z<-8,'running-landing failure recovers on the far side, not the start (z='+P.pos.z.toFixed(2)+')');
+ok(Math.hypot(P.pos.x-farA.x,P.pos.z-farA.z)<3.5,'recovery lands near the far-side anchor established while running');
+
+// Brief lip contact still must not steal the anchor (clearance + settle).
+standUntilAnchor(0,0.4,10,'pre-lip');
+const preLip={x:P.safeAnchor.x,z:P.safeAnchor.z};
+P.pos.set(0,0.4,-10.05);P.vel.set(0,0,-6);P.grounded=true;P.surf='stone';P.inv=0;
+frames(4);
+P.pos.set(0,0.4,10);P.vel.set(0,0,0);P.grounded=true;frames(4);
+ok(Math.hypot(P.safeAnchor.x-preLip.x,P.safeAnchor.z-preLip.z)<0.5,'brief far-lip contact without settle/clearance does not move the anchor');
 
 // ---- vent restores power + spent puff, never invents leapBoost ----
 P.hasSkyBlast=false;P.puff=false;P.leapBoost.set(3,0,3);P.inv=99;
