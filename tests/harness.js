@@ -130,10 +130,18 @@ module.exports = function boot(opts = {}) {
 
   const winListeners = {}, rafs = [], timeouts = [];
   let gamepads = [];
+  let viewW = opts.innerWidth != null ? opts.innerWidth : 800;
+  let viewH = opts.innerHeight != null ? opts.innerHeight : 600;
+  const location = { search: opts.search || '' };
   const window = {
     THREE,
     matchMedia: () => ({ matches: false }),
-    devicePixelRatio: 1, innerWidth: 800, innerHeight: 600,
+    devicePixelRatio: 1,
+    get innerWidth() { return viewW; },
+    get innerHeight() { return viewH; },
+    set innerWidth(v) { viewW = v; },
+    set innerHeight(v) { viewH = v; },
+    location,
     addEventListener(t, f) { (winListeners[t] = winListeners[t] || []).push(f); },
     document: {
       getElementById: el,
@@ -150,14 +158,22 @@ module.exports = function boot(opts = {}) {
   };
 
   const ctx = vm.createContext(Object.assign({}, window, { window, console, Math }));
+  Object.defineProperty(ctx, 'innerWidth', { get() { return viewW; }, set(v) { viewW = v; }, configurable: true });
+  Object.defineProperty(ctx, 'innerHeight', { get() { return viewH; }, set(v) { viewH = v; }, configurable: true });
+  Object.defineProperty(ctx, 'location', { value: location, configurable: true, writable: true });
   vm.runInContext(src, ctx);
 
   const P = window.__P, W = window.__W, CAM = window.__CAM;
-  const kd = winListeners.keydown[0], ku = winListeners.keyup[0];
+  function fireKey(type, code) {
+    const list = winListeners[type] || [];
+    for (const f of list) f({ code, preventDefault() {}, repeat: false });
+  }
+  const kd = (e) => fireKey('keydown', e.code || e);
+  const ku = (e) => fireKey('keyup', e.code || e);
   let now = 0;
 
   function frames(n) { for (let i = 0; i < n; i++) { now += 16.67; rafs.shift()(now); } }
-  function tap(code, n = 2) { kd({ code, preventDefault() {}, repeat: false }); frames(n); ku({ code }); }
+  function tap(code, n = 2) { kd({ code }); frames(n); ku({ code }); }
 
   let failures = 0;
   function ok(cond, msg) {
@@ -173,7 +189,7 @@ module.exports = function boot(opts = {}) {
     window.__setPickerIdx(resolveLevelIdx(level));
   }
   function confirmStart() {
-    kd({ code: 'Space', preventDefault() {}, repeat: false });
+    kd({ code: 'Space' });
     frames(5);
     ku({ code: 'Space' });
   }
@@ -209,7 +225,7 @@ module.exports = function boot(opts = {}) {
   }
 
   return {
-    P, W, CAM, els, el, frames, tap, ok, report, kd, ku, timeouts,
+    P, W, CAM, els, el, frames, tap, ok, report, kd, ku, timeouts, window,
     selectLevel, confirmStart, startLevel, tapCard, tapBtn, setGamepad, gamepadTick, mkGamepad,
     getLevel: () => window.__LEVEL && window.__LEVEL(),
     getPhys: () => window.__PHYS && window.__PHYS(),
@@ -218,6 +234,8 @@ module.exports = function boot(opts = {}) {
     getPlayer: () => window.__PLAYER && window.__PLAYER(),
     getShadow: () => window.__SHADOW,
     shadowReceiveAt: (x,z,belowY,r) => window.__shadowReceiveAt(x,z,belowY,r),
+    getCamDiag: () => window.__CAMDIAG,
+    setViewport(w, h) { viewW = w; viewH = h; },
     isStarted: () => window.__started && window.__started(),
     pickerIdx: () => window.__pickerIdx && window.__pickerIdx(),
     touchArmed: () => !!(window.__touchArmed && window.__touchArmed()),
