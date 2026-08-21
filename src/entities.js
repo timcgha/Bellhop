@@ -1,5 +1,6 @@
 const solids=[],wobblers=[],pinwheels=[],toss=[],notes=[],dust=[],snoozles=[],fans=[],clouds=[],gloops=[],goos=[],puddles=[],hearts=[],crates=[],powers=[],fires=[];
 const sharks=[],fish=[],spikefish=[],clams=[],bubbleShots=[],steamVents=[],lavas=[];
+// Peak arrays live in peak.js (cinders, embers, wisps, salamanders, geysers).
 let seenGloop=false,seenCrate=false;
 let BOAT=null,WM=null,player=null,shadow=null,RAINBOW=null,FINISH=null;
 const checks=[];let won=false,winT=0,confT=0;
@@ -97,6 +98,7 @@ function clearLevelWorld(){
   for(const o of fans)rem(o.g);fans.length=0;
   for(const o of steamVents)rem(o.g);steamVents.length=0;
   for(const o of lavas){rem(o.g);if(o.edge)rem(o.edge);}lavas.length=0;
+  clearPeakWorld();
   for(const o of clouds)rem(o.g);clouds.length=0;
   for(const o of gloops)rem(o.g);gloops.length=0;
   for(const o of hearts)rem(o.g);hearts.length=0;
@@ -311,6 +313,10 @@ function loadLevel(L){
     else if(k==='fan')addFan(step[1],step[2],step[3],step[4]);
     else if(k==='steamVent')addSteamVent(step[1],step[2],step[3],step[4]);
     else if(k==='lava')addLava(step[1],step[2],step[3],step[4],step[5],step[6]);
+    else if(k==='cinder')addCinder(step[1],step[2],step[3]);
+    else if(k==='wisp')addWisp(step[1],step[2]);
+    else if(k==='salamander')addSalamander(step[1],step[2],step[3]||{});
+    else if(k==='geyser')addGeyser(step[1],step[2],step[3],step[4]);
     else if(k==='windmill')buildWindmill(step[1],step[2]);
     else if(k==='rainbow')RAINBOW=buildRainbow(step[1],step[2]);
     else if(k==='pinwheelRow'){for(let i=0;i<step[4];i++)addPinwheel(step[1]+i*step[5],step[2]+i*step[6],step[3]);}
