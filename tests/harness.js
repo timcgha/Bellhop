@@ -49,10 +49,19 @@ class V3 {
 class Obj {
   constructor() {
     this.position = new V3(); this.rotation = new V3(); this.scale = new V3(1, 1, 1);
-    this.userData = {}; this.visible = true; this.children = [];
+    this.userData = {}; this.visible = true; this.children = []; this.parent = null;
     this.material = { color: { setHex() {} }, opacity: 1 };
   }
-  add(c) { this.children.push(c); return this; }
+  add(c) {
+    if (c) { c.parent = this; this.children.push(c); }
+    return this;
+  }
+  remove(c) {
+    const i = this.children.indexOf(c);
+    if (i >= 0) this.children.splice(i, 1);
+    if (c) c.parent = null;
+    return this;
+  }
   lookAt() {} updateProjectionMatrix() {}
 }
 class Cam extends Obj { constructor() { super(); this.fov = 60; } }
@@ -107,6 +116,10 @@ module.exports = function boot(opts = {}) {
         setPointerCapture() {},
         querySelector(sel) {
           if (sel === '.lvl-art') return canvasStub();
+          if (sel === '.sm') {
+            if (!this._sm) this._sm = { textContent: '', style: {} };
+            return this._sm;
+          }
           return null;
         }
       };

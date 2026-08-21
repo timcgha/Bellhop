@@ -113,17 +113,21 @@ function canStand(H,x,z,frames){
   ok(H.W.clams.filter(c=>c.role==='safety').length===1,'only one safety clam for progression');
   ok(H.W.clams.filter(c=>c.role==='wreck_entrance').length===1,'one optional wreck entrance clam after the Shoal');
   ok(H.W.clams.filter(c=>c.role==='trench_alcove').length===1,'one renewable clam for the optional Trench alcove');
-  ok(H.W.clams.every(c=>c.role==='safety'||c.role==='wreck_entrance'||c.role==='trench_alcove'||!c.role),
-    'no extra production clams besides safety, wreck entrance, and trench alcove');
+  ok(H.W.clams.every(c=>c.role==='safety'||c.role==='wreck_entrance'||c.role==='trench_alcove'||c.role==='trench_mid'||!c.role),
+    'no unexpected production clam roles');
+  ok(H.W.clams.filter(c=>c.role==='trench_mid').length===1,'renewable clam near the optional trench mid spikefish');
 }
 {
   const H=boot();startL2(H);
-  ok(H.W.notes.length===6,'production Level 2 has six counted notes through The Trench');
+  ok(H.W.notes.length===9,'production Level 2 has nine counted notes');
   const hidden=H.W.notes.filter(n=>n.hidden).length;
   const visible=H.W.notes.filter(n=>!n.hidden).length;
-  ok(hidden===1&&visible===5,'note breakdown: one hidden held note fish + two secret alcove + three trench alcove');
-  const noteFish=H.W.fish.find(f=>f.kind==='note');
-  ok(noteFish&&noteFish.note&&noteFish.note.hidden,'held note fish note counts from build time');
+  ok(hidden===4&&visible===5,'note breakdown: four held (note fish / note-spikefish) + five visible alcove notes');
+  const noteFish=H.W.fish.filter(f=>f.kind==='note');
+  ok(noteFish.length>=2,'more than one production note fish');
+  ok(noteFish.every(f=>f.note&&f.note.hidden),'held note fish notes count from build time');
+  const noteSpike=H.W.spikefish.filter(s=>s.note);
+  ok(noteSpike.length>=1,'at least one production note-bearing spikefish');
 }
 
 // ---- Shoal spikefish teaching ----
