@@ -80,10 +80,11 @@ function wakeAll(H){for(const s of H.W.snoozles){wake(H,s);H.frames(40);}}
   ok(!/rainbow/i.test(f.winMsg),'Level 2 win subtitle is not the Level 1 rainbow line');
   wakeAll(H);
   ok(c.open,'Conch opens after four Snoozles');
-  ok(c.openMouth&&c.openMouth.visible,'open-mouth glow visible when Conch opens');
-  ok(c.openCavity&&c.openCavity.visible,'open cavity visible when Conch opens');
+  ok(c.openRim&&c.openRim.visible,'open rim ring visible when Conch opens');
+  ok(c.backWash&&c.backWash.visible,'back-wall wash visible when Conch opens');
   ok(c.openHalo&&c.openHalo.visible,'open halo visible when Conch opens');
   ok(c.approachGlow&&c.approachGlow.visible,'approach glow invites the player when open');
+  ok(!c.mouthFill.visible,'closed mouth plug hides when open so the hole stays empty');
   ok(c.doorVis&&!c.doorVis.visible,'closed door visual hides when open');
   ok(H.W.solids.indexOf(c.doorSolid)<0,'door collision removed when open');
   // Enter the interior finish trigger (doorway contact alone does not win)

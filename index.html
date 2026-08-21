@@ -58,7 +58,7 @@ body.touch .tbtn{display:flex}
 <div id="hint"></div>
 <div id="start"><div class="card">
 <h1>BELLHOP</h1>
-<div class="sub">v24 · hollow conch</div>
+<div class="sub">v25 · visible inside</div>
 <div class="level-pick">
 <div class="lvl-card sel" id="lvl0"><canvas class="lvl-art" id="art0" width="160" height="100"></canvas><span class="lvl-label">Meadow</span></div>
 <div class="lvl-card" id="lvl1"><canvas class="lvl-art" id="art1" width="160" height="100"></canvas><span class="lvl-label">The Deep</span></div>
@@ -2011,20 +2011,18 @@ function setConchDoorOpen(open){
     if(i>=0)solids.splice(i,1);CONCH.doorSolid.mesh.visible=false;
     if(CONCH.doorVis)CONCH.doorVis.visible=false;
     if(CONCH.closedSeam)CONCH.closedSeam.visible=false;
-    if(CONCH.openMouth)CONCH.openMouth.visible=true;
     if(CONCH.openRim)CONCH.openRim.visible=true;
-    if(CONCH.openCavity)CONCH.openCavity.visible=true;
     if(CONCH.openHalo)CONCH.openHalo.visible=true;
+    if(CONCH.backWash)CONCH.backWash.visible=true;
     if(CONCH.mouthFill)CONCH.mouthFill.visible=false;
     if(CONCH.approachGlow)CONCH.approachGlow.visible=true;
   }else{
     if(i<0)solids.push(CONCH.doorSolid);CONCH.doorSolid.mesh.visible=false;
     if(CONCH.doorVis)CONCH.doorVis.visible=true;
     if(CONCH.closedSeam)CONCH.closedSeam.visible=true;
-    if(CONCH.openMouth)CONCH.openMouth.visible=false;
     if(CONCH.openRim)CONCH.openRim.visible=false;
-    if(CONCH.openCavity)CONCH.openCavity.visible=false;
     if(CONCH.openHalo)CONCH.openHalo.visible=false;
+    if(CONCH.backWash)CONCH.backWash.visible=false;
     if(CONCH.mouthFill)CONCH.mouthFill.visible=true;
     if(CONCH.approachGlow)CONCH.approachGlow.visible=false;
   }
@@ -2041,14 +2039,19 @@ function openConch(){
   showToast('The Conch opened!');
 }
 function stageConchWinPose(){
-  // Stand inside the hollow chamber looking out the mouth so the player stays visible.
+  // Stand inside the hollow, camera outside looking IN so the robot reads against the back wall.
   if(!CONCH)return;
   const standZ=CONCH.chamberZ!=null?CONCH.chamberZ:(CONCH.cz+1.0);
-  P.pos.set(CONCH.cx,0.45,standZ);
+  P.pos.set(CONCH.cx,0.4,standZ);
   P.vel.set(0,0,0);P.yaw=0;P.grounded=true;P.puff=true;P.puffAir=0;endHover();
-  CAM.look.x=CONCH.cx;CAM.look.y=1.6;CAM.look.z=standZ+0.4;
-  CAM.pos.x=CONCH.cx;CAM.pos.y=3.2;CAM.pos.z=CONCH.doorZ+6.5;
-  CAM.yaw=0;CAM.pitch=0.22;CAM.fovKick=Math.max(CAM.fovKick,8);CAM.shake=Math.max(CAM.shake,0.35);
+  // Snap occluders clear immediately so the first win frames are readable.
+  CONCH.chamberFade=0.08;
+  if(CONCH.chamberOcclude)for(const m of CONCH.chamberOcclude){
+    if(!m.material)continue;m.material.opacity=0.08;m.material.transparent=true;m.material.depthWrite=false;
+  }
+  CAM.look.set(CONCH.cx,1.35,standZ);
+  CAM.pos.set(CONCH.cx+0.35,2.6,CONCH.doorZ+5.8);
+  CAM.yaw=0.04;CAM.pitch=0.18;CAM.fovKick=Math.max(CAM.fovKick,8);CAM.shake=Math.max(CAM.shake,0.35);
 }
 function conchWinBurst(){
   if(!CONCH)return;
@@ -2064,16 +2067,24 @@ function conchWinBurst(){
 }
 function updateConchChamberFade(dt){
   if(!CONCH||!CONCH.chamberOcclude||!CONCH.chamberOcclude.length)return;
-  const inside=inConchInterior();
-  const target=inside?0.16:1;
+  const inside=inConchInterior()||won;
+  const target=inside?0.06:1;
   if(CONCH.chamberFade==null)CONCH.chamberFade=1;
-  CONCH.chamberFade=damp(CONCH.chamberFade,target,8,dt);
+  CONCH.chamberFade=damp(CONCH.chamberFade,target,10,dt);
   const op=CONCH.chamberFade;
   for(const m of CONCH.chamberOcclude){
     if(!m.material)continue;
     m.material.opacity=op;
     m.material.transparent=op<0.99;
     m.material.depthWrite=op>0.85;
+  }
+  // Mouth lips that sit on the aperture also thin out when you are inside.
+  if(CONCH.apertureLips){
+    const lipOp=inside?0.2:1;
+    for(const m of CONCH.apertureLips){
+      if(!m.material)continue;
+      if(typeof m.material.opacity==='number'){m.material.opacity=lipOp;m.material.transparent=lipOp<0.99;m.material.depthWrite=lipOp>0.85;}
+    }
   }
 }
 function updateConch(dt,winT){
@@ -2083,24 +2094,21 @@ function updateConch(dt,winT){
   const glow=CONCH.open?(0.28+Math.min(CONCH.openT,1)*0.42):(0.06+Math.sin(time*0.8)*0.02);
   if(CONCH.spiralLights)for(const L of CONCH.spiralLights){L.m.material.opacity=glow*(0.55+0.45*Math.sin(time*1.6+L.ph));}
   if(CONCH.shellGlow)CONCH.shellGlow.material.opacity=CONCH.open?(0.26+Math.min(CONCH.openT,1)*0.34):(0.04+Math.sin(time*0.6)*0.015);
-  if(CONCH.interiorGlow)CONCH.interiorGlow.material.opacity=CONCH.open?(0.38+Math.min(CONCH.openT,1)*0.45):0.05;
-  if(CONCH.openMouth&&CONCH.open)CONCH.openMouth.material.opacity=0.72+Math.sin(time*2.2)*0.12;
-  if(CONCH.openRim&&CONCH.open)CONCH.openRim.material.opacity=0.48+Math.sin(time*1.6)*0.12;
+  if(CONCH.interiorGlow)CONCH.interiorGlow.material.opacity=CONCH.open?(0.22+Math.min(CONCH.openT,1)*0.28):0.04;
+  if(CONCH.openRim&&CONCH.open)CONCH.openRim.material.opacity=0.55+Math.sin(time*1.6)*0.12;
   if(CONCH.openHalo&&CONCH.open)CONCH.openHalo.material.opacity=0.28+Math.sin(time*1.8)*0.1;
   if(CONCH.approachGlow&&CONCH.open)CONCH.approachGlow.material.opacity=0.22+Math.sin(time*1.4)*0.08;
-  if(CONCH.openCavity&&CONCH.open){
-    const k=CONCH.openCavity.material;
-    if(k&&k.opacity!=null)k.opacity=0.35+Math.sin(time*1.5)*0.08;
-  }
+  if(CONCH.backWash&&CONCH.open)CONCH.backWash.material.opacity=0.35+Math.sin(time*1.5)*0.08;
   if(winT>=0){
     if(CONCH.rainbow){const k=smooth(Math.min(winT/1.3,1));CONCH.rainbow.visible=true;CONCH.rainbow.scale.setScalar(0.25+k*1.25);
       CONCH.rainbow.children.forEach(r=>{r.material.opacity=0.7*k;});}
     if(CONCH.spiralLights)for(const L of CONCH.spiralLights){L.m.material.opacity=0.7+Math.sin(time*4.5+L.ph)*0.28;}
     if(CONCH.shellGlow)CONCH.shellGlow.material.opacity=0.48+Math.sin(time*3)*0.1;
-    if(CONCH.interiorGlow)CONCH.interiorGlow.material.opacity=0.6+Math.sin(time*2.4)*0.12;
-    if(CONCH.openMouth)CONCH.openMouth.material.opacity=0.85+Math.sin(time*3)*0.1;
-    if(CONCH.openRim)CONCH.openRim.material.opacity=0.6+Math.sin(time*2.5)*0.12;
+    if(CONCH.interiorGlow)CONCH.interiorGlow.material.opacity=0.32+Math.sin(time*2.4)*0.08;
+    if(CONCH.openRim)CONCH.openRim.material.opacity=0.65+Math.sin(time*2.5)*0.12;
+    if(CONCH.openHalo)CONCH.openHalo.material.opacity=0.35+Math.sin(time*2.2)*0.1;
     if(CONCH.approachGlow)CONCH.approachGlow.material.opacity=0.35+Math.sin(time*2)*0.1;
+    if(CONCH.backWash)CONCH.backWash.material.opacity=0.45+Math.sin(time*2.2)*0.1;
     CONCH.winBurstT=(CONCH.winBurstT||0)-dt;
     if(CONCH.winBurstT<=0&&winT<14){
       CONCH.winBurstT=0.07;
@@ -2168,16 +2176,19 @@ function buildConch(cx,cz){
   g.add(mesh(SPH,cream,0.55,16.6,-6.1,0.15,0.3,0.14));
   g.add(mesh(SPH,rib,-1.0,11.1,-4.8,1.75,0.34,1.65));
   g.add(mesh(SPH,rib,-0.25,12.8,-5.4,1.2,0.28,1.15));
-  // Mouth lip rings the hollow; does not fill it
-  g.add(mesh(SPH,lip,-2.15,2.1,DOOR_Z-0.15,1.35,2.3,1.1));
-  g.add(mesh(SPH,lip,2.35,2.15,DOOR_Z-0.2,1.4,2.35,1.15));
-  g.add(mesh(SPH,lip,0.1,4.05,DOOR_Z-0.05,2.8,0.9,1.0));
-  g.add(mesh(SPH,lip,0.1,0.45,DOOR_Z+0.15,2.6,0.55,0.95));
+  // Mouth lip — only the frame around the hole (sides / lintel / sill), never a center fill.
+  CONCH.apertureLips=[];
+  function addLip(m){g.add(m);CONCH.apertureLips.push(m);if(m.material&&typeof m.material.clone==='function'){m.material=m.material.clone();m.material.transparent=true;m.material.opacity=1;}return m;}
+  addLip(mesh(SPH,lip,-2.25,2.15,DOOR_Z-0.1,1.15,2.2,0.95));
+  addLip(mesh(SPH,lip,2.45,2.2,DOOR_Z-0.15,1.2,2.25,1.0));
+  addLip(mesh(SPH,lip,0.1,4.15,DOOR_Z-0.05,2.6,0.7,0.85));
+  addLip(mesh(SPH,lip,0.1,0.35,DOOR_Z+0.1,2.4,0.4,0.8));
   for(let i=0;i<5;i++){
-    const a=-0.9+i*0.45,cy=2.1+Math.sin(a)*1.3,cxo=Math.cos(a)*1.95;
-    g.add(mesh(SPH,rib,cxo,cy,DOOR_Z-0.05,0.42,0.36,0.38));
+    const a=-0.9+i*0.45,cy=2.1+Math.sin(a)*1.35,cxo=Math.cos(a)*2.05;
+    addLip(mesh(SPH,rib,cxo,cy,DOOR_Z+0.02,0.38,0.32,0.34));
   }
-  const mouthFill=mesh(SPH,inner,0.1,2.1,DOOR_Z-0.35,DOOR_W*0.48,DOOR_H*0.46,0.95);g.add(mouthFill);CONCH.mouthFill=mouthFill;
+  // Closed plug only — hidden when open so the hole is literally empty.
+  const mouthFill=mesh(SPH,inner,0.1,2.1,DOOR_Z-0.2,DOOR_W*0.46,DOOR_H*0.44,0.7);g.add(mouthFill);CONCH.mouthFill=mouthFill;
   // Hollow chamber — always-visible walls (the indentation you stand in)
   const chamber=new THREE.Group();g.add(chamber);CONCH.chamber=chamber;
   const chMidZ=(CH_BACK+CH_FRONT)*0.5,chDepth=CH_FRONT-CH_BACK;
@@ -2191,18 +2202,20 @@ function buildConch(cx,cz){
   chamber.add(mesh(BOXG,pearl,(CH_HALF_W-0.22),CH_H*0.45,chMidZ,0.16,CH_H*0.7,chDepth-0.3));
   chamber.add(mesh(BOXG,chamberWall,0,CH_H,chMidZ,CH_HALF_W*2,0.4,chDepth));
   chamber.add(mesh(BOXG,pearl,0,CH_H-0.22,chMidZ,CH_HALF_W*1.7,0.14,chDepth-0.25));
-  const openCavity=mesh(SPH,new THREE.MeshBasicMaterial({color:0xfff0d0,transparent:true,opacity:0.28,depthWrite:false}),0,2.0,chMidZ,CH_HALF_W*0.85,CH_H*0.42,chDepth*0.35);
-  openCavity.visible=false;chamber.add(openCavity);CONCH.openCavity=openCavity;
+  // Soft wash on the BACK wall only (never a volume in the mouth opening).
+  const backWash=new THREE.Mesh(new THREE.PlaneGeometry(CH_HALF_W*2.4,CH_H*1.5),new THREE.MeshBasicMaterial({color:0xfff0d0,transparent:true,opacity:0.35,depthWrite:false}));
+  backWash.position.set(0,CH_H*0.45,CH_BACK+0.4);backWash.visible=false;chamber.add(backWash);CONCH.backWash=backWash;
+  CONCH.openCavity=backWash;
   const doorVis=mesh(SPH,dark,0,DOOR_Y+DOOR_H*0.5,DOOR_Z,DOOR_W*0.55,DOOR_H*0.52,DOOR_D*0.55);
   g.add(doorVis);CONCH.doorVis=doorVis;
   const closedSeam=mesh(SPH,lam(0x3a2010),0,DOOR_Y+DOOR_H*0.5,DOOR_Z+0.22,0.08,DOOR_H*0.4,0.06);
   g.add(closedSeam);CONCH.closedSeam=closedSeam;
-  const openMouth=mesh(SPH,new THREE.MeshBasicMaterial({color:0xfff8d0,transparent:true,opacity:0.82,depthWrite:false}),0,DOOR_Y+DOOR_H*0.5,DOOR_Z+0.2,DOOR_W*0.7,DOOR_H*0.64,0.7);
-  openMouth.visible=false;g.add(openMouth);CONCH.openMouth=openMouth;
-  const openRim=mesh(SPH,new THREE.MeshBasicMaterial({color:0xffe39a,transparent:true,opacity:0.55,depthWrite:false}),0,DOOR_Y+DOOR_H*0.5,DOOR_Z+0.45,DOOR_W*0.92,DOOR_H*0.82,0.35);
-  openRim.visible=false;g.add(openRim);CONCH.openRim=openRim;
-  const openHalo=mesh(SPH,new THREE.MeshBasicMaterial({color:0xc8f0ff,transparent:true,opacity:0.3,depthWrite:false}),0,DOOR_Y+DOOR_H*0.5,DOOR_Z+0.85,DOOR_W*1.15,DOOR_H*1.0,0.4);
-  openHalo.visible=false;g.add(openHalo);CONCH.openHalo=openHalo;
+  // Open state = bright RING around the hole, not a filled disc (filled discs paint over the player).
+  const openRim=new THREE.Mesh(new THREE.TorusGeometry(Math.max(DOOR_W,DOOR_H)*0.42,0.14,8,28),new THREE.MeshBasicMaterial({color:0xffe39a,transparent:true,opacity:0.55,depthWrite:false}));
+  openRim.position.set(0,DOOR_Y+DOOR_H*0.5,DOOR_Z+0.2);openRim.visible=false;g.add(openRim);CONCH.openRim=openRim;
+  CONCH.openMouth=openRim;
+  const openHalo=new THREE.Mesh(new THREE.TorusGeometry(Math.max(DOOR_W,DOOR_H)*0.58,0.1,8,28),new THREE.MeshBasicMaterial({color:0xc8f0ff,transparent:true,opacity:0.3,depthWrite:false}));
+  openHalo.position.set(0,DOOR_Y+DOOR_H*0.5,DOOR_Z+0.45);openHalo.visible=false;g.add(openHalo);CONCH.openHalo=openHalo;
   const approachGlow=new THREE.Mesh(new THREE.PlaneGeometry(7.5,5.5),new THREE.MeshBasicMaterial({color:0xffe9b8,transparent:true,opacity:0.22,depthWrite:false}));
   approachGlow.rotation.x=-Math.PI/2;approachGlow.position.set(0,0.04,DOOR_Z+2.4);approachGlow.visible=false;g.add(approachGlow);CONCH.approachGlow=approachGlow;
   // Collision: hollow box walls around free center
@@ -2231,7 +2244,8 @@ function buildConch(cx,cz){
   const shellGlow=new THREE.Mesh(new THREE.SphereGeometry(1,10,8),new THREE.MeshBasicMaterial({color:0xffd28a,transparent:true,opacity:0.05,depthWrite:false}));
   shellGlow.position.set(-1.8,6.5,-1.5);shellGlow.scale.set(9.2,9.0,10.2);g.add(shellGlow);CONCH.shellGlow=shellGlow;
   const interiorGlow=new THREE.Mesh(new THREE.SphereGeometry(1,8,6),new THREE.MeshBasicMaterial({color:0xfff0c8,transparent:true,opacity:0.08,depthWrite:false}));
-  interiorGlow.position.set(0,2.0,chMidZ);interiorGlow.scale.set(2.2,1.9,chDepth*0.4);chamber.add(interiorGlow);CONCH.interiorGlow=interiorGlow;
+  // Keep the wash on the back wall so it never sits in front of the player.
+  interiorGlow.position.set(0,2.0,CH_BACK+0.9);interiorGlow.scale.set(2.0,1.7,0.6);chamber.add(interiorGlow);CONCH.interiorGlow=interiorGlow;
   CONCH.trigger={x:cx,y:1.6,z:cz+1.0,hx:1.35,hy:1.8,hz:1.5};
   CONCH.interior={x0:cx-(CH_HALF_W-0.15),x1:cx+(CH_HALF_W-0.15),z0:cz+CH_BACK+0.2,z1:cz+CH_FRONT,yMax:CH_H-0.2};
   const rainbow=buildRainbow(cx,cz);

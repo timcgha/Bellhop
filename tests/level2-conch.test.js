@@ -66,7 +66,7 @@ const CONCH_Z=-288;
   ok(!c.open,'Conch starts closed');
   ok(H.W.solids.indexOf(c.doorSolid)>=0,'closed door collision is present at start');
   ok(c.doorVis&&c.doorVis.visible,'closed door visual is visible at start');
-  ok(c.openMouth&&!c.openMouth.visible,'open-mouth glow stays hidden while closed');
+  ok(c.openRim&&!c.openRim.visible,'open rim stays hidden while closed');
   ok(c.shellSolids&&c.shellSolids.length>=5,'shell collision proxies are registered');
 }
 
@@ -118,7 +118,9 @@ const CONCH_Z=-288;
   ok(c.open,'fourth Snoozle wake opens the Conch');
   ok(H.W.solids.indexOf(c.doorSolid)<0,'open doorway removes door collision');
   ok(!c.doorVis.visible,'closed door visual hides when open');
-  ok(c.openMouth.visible,'open-mouth glow appears when passable');
+  ok(c.openRim.visible,'open rim appears when passable');
+  ok(c.backWash&&c.backWash.visible,'back-wall wash appears when passable');
+  ok(!c.mouthFill.visible,'mouth plug hides so the aperture stays hollow');
   ok(!H.W.won,'waking Snoozle 4 leaves won false');
   ok(H.el('win').style.display!=='flex','opening the Conch does not start congratulations');
 }
