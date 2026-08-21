@@ -289,36 +289,39 @@ function ugrp(){return underwaterGroup||scene;}
 function beginLandLevel(){if(landGround)landGround.visible=true;if(underwaterGroup)underwaterGroup.visible=false;scene.background=new THREE.Color(0x9fdcff);scene.fog=new THREE.Fog(0x9fdcff,45,120);}
 function beginUnderwaterLevel(L){
   if(landGround)landGround.visible=false;
-  scene.background=new THREE.Color(0x4ab8d8);scene.fog=new THREE.Fog(0x52b8d4,20,92);
+  // Clearer, warmer water so the Deep reads colorful on a phone.
+  scene.background=new THREE.Color(0x3eb0d4);scene.fog=new THREE.Fog(0x48b8d8,18,98);
   decorKelps.length=0;suspendMotes.length=0;biolumGlows.length=0;CONCH=null;
   if(!underwaterGroup){underwaterGroup=new THREE.Group();scene.add(underwaterGroup);}
   underwaterGroup.visible=true;while(underwaterGroup.children.length)underwaterGroup.remove(underwaterGroup.children[0]);
-  for(let i=0;i<12;i++){const c=SANDC[i%SANDC.length];const px=rand(-55,55),pz=rand(-200,18);
+  for(let i=0;i<16;i++){const c=SANDC[i%SANDC.length];const px=rand(-55,55),pz=rand(-290,18);
     const pw=rand(10,26),pd=rand(8,20);
     const patch=new THREE.Mesh(new THREE.PlaneGeometry(pw,pd),lam(c));patch.rotation.x=-Math.PI/2;patch.position.set(px,-0.54+rand(-0.02,0.01),pz);patch.rotation.z=rand(0,TAU);underwaterGroup.add(patch);}
-  const floor=new THREE.Mesh(new THREE.PlaneGeometry(140,160),lam(0xd4b898));floor.rotation.x=-Math.PI/2;floor.position.set(0,-0.55,-48);underwaterGroup.add(floor);
-  const bright=lam(0xf2e0c0);const floor2=new THREE.Mesh(new THREE.PlaneGeometry(52,42),bright);floor2.rotation.x=-Math.PI/2;floor2.position.set(0,-0.48,4);underwaterGroup.add(floor2);
-  for(let i=0;i<28;i++){const a=rand(0,TAU),r=rand(2,18);const x=Math.cos(a)*r,z=4+Math.sin(a)*r*0.6;
+  const floor=new THREE.Mesh(new THREE.PlaneGeometry(140,160),lam(0xd9bc8e));floor.rotation.x=-Math.PI/2;floor.position.set(0,-0.55,-48);underwaterGroup.add(floor);
+  const bright=lam(0xf6e6c4);const floor2=new THREE.Mesh(new THREE.PlaneGeometry(52,42),bright);floor2.rotation.x=-Math.PI/2;floor2.position.set(0,-0.48,4);underwaterGroup.add(floor2);
+  for(let i=0;i<34;i++){const a=rand(0,TAU),r=rand(2,18);const x=Math.cos(a)*r,z=4+Math.sin(a)*r*0.6;
     underwaterGroup.add(mesh(SPH,lam(SANDC[i%SANDC.length]),x,-0.46+rand(0,0.06),z,rand(0.5,1.5),rand(0.08,0.2),rand(0.5,1.3)));}
-  for(let i=0;i<36;i++){const z=rand(-200,12),x=rand(-11,11);
+  for(let i=0;i<48;i++){const z=rand(-290,12),x=rand(-11,11);
     underwaterGroup.add(mesh(SPH,lam(SANDC[(i+3)%SANDC.length]),x+rand(-3,3),-0.47,z+rand(-2,2),rand(0.7,2.0),rand(0.06,0.14),rand(0.7,2.0)));}
-  // Soft teal / rose tint patches so the floor is not one flat beige
-  for(let i=0;i<8;i++){const c=i%2?0xd8ebe6:0xf0d4c8;const px=rand(-40,40),pz=rand(-180,10);
-    const patch=new THREE.Mesh(new THREE.PlaneGeometry(rand(8,16),rand(6,12)),lam(c));patch.rotation.x=-Math.PI/2;patch.position.set(px,-0.51,pz);patch.rotation.z=rand(0,TAU);underwaterGroup.add(patch);}
-  const deepSand=lam(0xc4a888);const floor3=new THREE.Mesh(new THREE.PlaneGeometry(60,90),deepSand);floor3.rotation.x=-Math.PI/2;floor3.position.set(0,-0.52,-165);underwaterGroup.add(floor3);
+  // Soft teal / rose / lilac tint patches so the floor is not one flat beige
+  for(let i=0;i<14;i++){const cols=[0xd8ebe6,0xf0d4c8,0xe0d4f0,0xd4f0e8];const c=cols[i%cols.length];const px=rand(-40,40),pz=rand(-285,10);
+    const patch=new THREE.Mesh(new THREE.PlaneGeometry(rand(8,18),rand(6,14)),lam(c));patch.rotation.x=-Math.PI/2;patch.position.set(px,-0.51,pz);patch.rotation.z=rand(0,TAU);underwaterGroup.add(patch);}
+  const deepSand=lam(0xc9ad84);const floor3=new THREE.Mesh(new THREE.PlaneGeometry(60,90),deepSand);floor3.rotation.x=-Math.PI/2;floor3.position.set(0,-0.52,-165);underwaterGroup.add(floor3);
+  // Warm destination floor under the Trench → Conch approach
+  const plaza=lam(0xe8c89a);const floor4=new THREE.Mesh(new THREE.PlaneGeometry(36,40),plaza);floor4.rotation.x=-Math.PI/2;floor4.position.set(0,-0.50,-275);underwaterGroup.add(floor4);
   addDistantSilhouettes();
 }
 function sandPath(x1,z1,x2,z2){
   const cx=(x1+x2)/2,cz=(z1+z2)/2,lw=Math.abs(x2-x1)+0.4,ld=Math.abs(z2-z1)+0.4;
-  // Bright readable path with a soft warm edge so it stands out from the seabed.
-  ugrp().add(mesh(BOXG,lam(0xf7ebc8),cx,-0.43,cz,lw,0.05,ld));
-  ugrp().add(mesh(BOXG,lam(0xfff6dc),cx,-0.40,cz,lw*0.78,0.03,ld*0.84));
-  ugrp().add(mesh(BOXG,lam(0xe8c890),cx,-0.44,cz,lw*1.08,0.02,ld*1.08));
-  const steps=Math.max(5,Math.round(Math.max(lw,ld)/1.4));
+  // Bright readable path with warm edge + shell accents so it pops underwater.
+  ugrp().add(mesh(BOXG,lam(0xf3dfb0),cx,-0.44,cz,lw*1.12,0.02,ld*1.12));
+  ugrp().add(mesh(BOXG,lam(0xf8ecc8),cx,-0.42,cz,lw,0.05,ld));
+  ugrp().add(mesh(BOXG,lam(0xfff8e4),cx,-0.39,cz,lw*0.72,0.03,ld*0.78));
+  const steps=Math.max(5,Math.round(Math.max(lw,ld)/1.25));
   for(let i=0;i<steps;i++){const t=(i+0.5)/steps;const along=lw>ld;
-    const px=along?cx-lw/2+t*lw:cx+rand(-0.35,0.35),pz=along?cz+rand(-0.35,0.35):cz-ld/2+t*ld;
-    const c=i%3===0?SEASHELLC[i%SEASHELLC.length]:0xb8a888;
-    ugrp().add(mesh(SPH,lam(c),px,-0.4,pz,rand(0.06,0.15),rand(0.04,0.08),rand(0.06,0.15)));}
+    const px=along?cx-lw/2+t*lw:cx+rand(-0.4,0.4),pz=along?cz+rand(-0.4,0.4):cz-ld/2+t*ld;
+    const c=i%2===0?SEASHELLC[i%SEASHELLC.length]:(i%3===0?CORALC[i%CORALC.length]:0xb8a888);
+    ugrp().add(mesh(SPH,lam(c),px,-0.38,pz,rand(0.07,0.16),rand(0.04,0.09),rand(0.07,0.16)));}
 }
 function addCoralWall(x1,z1,x2,z2){
   const cx=(x1+x2)/2,cz=(z1+z2)/2,w=Math.abs(x2-x1)+0.8,d=Math.abs(z2-z1)+0.8;
@@ -334,11 +337,13 @@ function addCoralWall(x1,z1,x2,z2){
     const side=along?(px>cx?1:-1):(pz>cz?1:-1);
     addKelpCluster(px+side*0.9,pz,1.2,2,2.2+rand(0,1.5));}
 }
-function addCoralScatter(n,cx,cz,r){for(let i=0;i<n;i++){const a=rand(0,TAU),rr=Math.sqrt(Math.random())*r;const x=cx+Math.cos(a)*rr,z=cz+Math.sin(a)*rr,c=CORALC[i%CORALC.length];
-  const bh=0.3+rand(0,0.35);
-  ugrp().add(mesh(SPH,lam(c),x,bh,z,rand(0.22,0.55),rand(0.22,0.55),rand(0.22,0.55)));
+function addCoralScatter(n,cx,cz,r){const rad=(r!=null&&Number.isFinite(r))?r:4.5;
+  for(let i=0;i<n;i++){const a=rand(0,TAU),rr=Math.sqrt(Math.random())*rad;const x=cx+Math.cos(a)*rr,z=cz+Math.sin(a)*rr,c=CORALC[i%CORALC.length];
+  const bh=0.28+rand(0,0.4);
+  ugrp().add(mesh(SPH,lam(c),x,bh,z,rand(0.22,0.58),rand(0.22,0.58),rand(0.22,0.58)));
   if(i%3===0)ugrp().add(mesh(CONE,lam(c),x+rand(-0.1,0.1),0.15,z+rand(-0.1,0.1),rand(0.1,0.18),rand(0.3,0.55),rand(0.1,0.18)));
-  if(i%4===0){const sh=lam(SEASHELLC[i%SEASHELLC.length]);ugrp().add(mesh(SPH,sh,x+0.12,bh-0.05,z+0.08,rand(0.08,0.14),rand(0.05,0.08),rand(0.1,0.16)));}}
+  if(i%4===0){const sh=lam(SEASHELLC[i%SEASHELLC.length]);ugrp().add(mesh(SPH,sh,x+0.12,bh-0.05,z+0.08,rand(0.08,0.14),rand(0.05,0.08),rand(0.1,0.16)));}
+  if(i%5===0)ugrp().add(mesh(CONE,lam(CORALC[(i+3)%CORALC.length]),x-0.15,0.1,z+0.12,rand(0.08,0.14),rand(0.25,0.45),rand(0.08,0.14)));}
 }
 function buildKelpStrand(h){const g=new THREE.Group();const stem=mesh(CYL,lam(0x3d7a37),0,h/2,0,0.06+rand(0,0.02),h,0.06+rand(0,0.02));g.add(stem);
   const frN=3+Math.floor(rand(0,2.99));
@@ -471,17 +476,24 @@ function addSuspendMotes(n){
     suspendMotes.push({m,x,y,z,ph:rand(0,TAU),sp:rand(0.2,0.7)});}
 }
 function addTrenchFloor(cx,cz,w,d){
-  const dark=lam(0x3a4a58),mid=lam(0x4a5a68);
+  // Cool slate with teal/violet wash so the corridor still feels alive.
+  const dark=lam(0x3d5164),mid=lam(0x4f677c),wash=lam(0x5a7a88);
   ugrp().add(mesh(BOXG,dark,cx,-0.52,cz,w,0.08,d));
   ugrp().add(mesh(BOXG,mid,cx,-0.46,cz,w*0.72,0.05,d*0.88));
+  ugrp().add(mesh(BOXG,wash,cx,-0.44,cz,w*0.42,0.03,d*0.55));
 }
 function addTrenchRock(x,y,z,w,h,d){
   const sol=addSolid(x,y,z,w,h,d,0x2a3540,{surf:'stone'});sol.mesh.visible=false;
-  const rock=lam(0x2f3d4c),dark=lam(0x1e2834),edge=lam(0x3a4e62);
+  const rock=lam(0x334556),dark=lam(0x1e2834),edge=lam(0x4a6480),coral=lam(CORALC[Math.floor(rand(0,CORALC.length))]);
   ugrp().add(mesh(BOXG,rock,x,y+h*0.48,z,w*0.96,h*0.92,d*0.96));
   ugrp().add(mesh(BOXG,dark,x+(w>d?0:w*0.08),y+h*0.55,z+(d>w?0:d*0.08),w*0.7,h*0.7,d*0.7));
   ugrp().add(mesh(SPH,edge,x+w*0.28,y+h*0.7,z-d*0.2,Math.min(w,d)*0.22,h*0.18,Math.min(w,d)*0.22));
   ugrp().add(mesh(SPH,dark,x-w*0.25,y+h*0.45,z+d*0.22,Math.min(w,d)*0.28,h*0.22,Math.min(w,d)*0.28));
+  // Small coral freckles on rock faces so the walls are not pure slate.
+  if(Math.min(w,d)>2){
+    ugrp().add(mesh(SPH,coral,x+w*0.35,y+1.1,z,0.22,0.28,0.22));
+    ugrp().add(mesh(CONE,coral,x-w*0.3,y+0.6,z+d*0.1,0.1,0.45,0.1));
+  }
 }
 function addBiolumCluster(cx,cz,n){
   const count=n||4;
@@ -678,7 +690,9 @@ function setConchDoorOpen(open){
     if(CONCH.openMouth)CONCH.openMouth.visible=true;
     if(CONCH.openRim)CONCH.openRim.visible=true;
     if(CONCH.openCavity)CONCH.openCavity.visible=true;
+    if(CONCH.openHalo)CONCH.openHalo.visible=true;
     if(CONCH.mouthFill)CONCH.mouthFill.visible=false;
+    if(CONCH.approachGlow)CONCH.approachGlow.visible=true;
   }else{
     if(i<0)solids.push(CONCH.doorSolid);CONCH.doorSolid.mesh.visible=false;
     if(CONCH.doorVis)CONCH.doorVis.visible=true;
@@ -686,7 +700,9 @@ function setConchDoorOpen(open){
     if(CONCH.openMouth)CONCH.openMouth.visible=false;
     if(CONCH.openRim)CONCH.openRim.visible=false;
     if(CONCH.openCavity)CONCH.openCavity.visible=false;
+    if(CONCH.openHalo)CONCH.openHalo.visible=false;
     if(CONCH.mouthFill)CONCH.mouthFill.visible=true;
+    if(CONCH.approachGlow)CONCH.approachGlow.visible=false;
   }
 }
 function openConch(){
@@ -696,24 +712,65 @@ function openConch(){
   SFX.conchOpen();
   CAM.fovKick=Math.max(CAM.fovKick,5);CAM.shake=Math.max(CAM.shake,0.25);
   spawnRing(CONCH.doorX,CONCH.doorY,CONCH.doorZ,0xffe9b0,0.45,6,0.55);
-  for(let i=0;i<18;i++)spawnP(CONCH.doorX+rand(-1,1),CONCH.doorY+rand(0,2),CONCH.doorZ+rand(-0.5,0.5),rand(-2,2),rand(1,4),rand(-2,2),0.08,Math.random()<0.5?0xffe36b:0xc8f0ff,0.7,0.3,-4,1);
+  spawnRing(CONCH.doorX,CONCH.doorY,CONCH.doorZ+0.6,0xc8f0ff,0.3,5,0.45);
+  for(let i=0;i<24;i++)spawnP(CONCH.doorX+rand(-1.2,1.2),CONCH.doorY+rand(0,2.2),CONCH.doorZ+rand(-0.4,0.8),rand(-2,2),rand(1,4.5),rand(-2,2),0.08,Math.random()<0.5?0xffe36b:0xc8f0ff,0.75,0.3,-4,1);
   showToast('The Conch opened!');
+}
+function stageConchWinPose(){
+  // Hold the player in the bright open mouth looking out at the plaza / Snoozles
+  // so the ending reads as a celebration, not vanishing into geometry.
+  if(!CONCH)return;
+  P.pos.set(CONCH.cx,1.15,CONCH.doorZ-0.55);
+  P.vel.set(0,0,0);P.yaw=0;P.grounded=true;P.puff=true;P.puffAir=0;endHover();
+  CAM.look.x=CONCH.cx;CAM.look.y=2.2;CAM.look.z=CONCH.doorZ+4;
+  CAM.pos.x=CONCH.cx;CAM.pos.y=3.4;CAM.pos.z=CONCH.doorZ+7.5;
+  CAM.yaw=0;CAM.pitch=0.28;CAM.fovKick=Math.max(CAM.fovKick,8);CAM.shake=Math.max(CAM.shake,0.35);
+}
+function conchWinBurst(){
+  if(!CONCH)return;
+  spawnRing(CONCH.doorX,CONCH.doorY+0.4,CONCH.doorZ+0.2,0xfff0c8,0.5,8,0.7);
+  spawnRing(CONCH.cx,3.5,CONCH.cz+2,0x88e0ff,0.4,7,0.65);
+  for(let i=0;i<36;i++){
+    const a=rand(0,TAU),r=rand(0.4,4.5);
+    const col=Math.random()<0.34?0xffe36b:(Math.random()<0.5?0x66ffe0:0xff8ab0);
+    spawnP(CONCH.cx+Math.cos(a)*r,rand(0.8,5.5),CONCH.cz+2+Math.sin(a)*r*0.6,
+      Math.cos(a)*rand(0.5,2.5),rand(1.5,5),Math.sin(a)*rand(0.5,2.5),
+      rand(0.08,0.16),col,rand(1.2,2.2),0.25,-1.6,1);
+  }
 }
 function updateConch(dt,winT){
   if(!CONCH)return;
   if(CONCH.open)CONCH.openT+=dt;
-  const glow=CONCH.open?(0.22+Math.min(CONCH.openT,1)*0.35):(0.06+Math.sin(time*0.8)*0.02);
+  const glow=CONCH.open?(0.28+Math.min(CONCH.openT,1)*0.42):(0.06+Math.sin(time*0.8)*0.02);
   if(CONCH.spiralLights)for(const L of CONCH.spiralLights){L.m.material.opacity=glow*(0.55+0.45*Math.sin(time*1.6+L.ph));}
-  if(CONCH.shellGlow)CONCH.shellGlow.material.opacity=CONCH.open?(0.2+Math.min(CONCH.openT,1)*0.28):(0.03+Math.sin(time*0.6)*0.015);
-  if(CONCH.interiorGlow)CONCH.interiorGlow.material.opacity=CONCH.open?(0.22+Math.min(CONCH.openT,1)*0.38):0.03;
-  if(CONCH.openMouth&&CONCH.open)CONCH.openMouth.material.opacity=0.55+Math.sin(time*2.2)*0.12;
-  if(CONCH.openRim&&CONCH.open)CONCH.openRim.material.opacity=0.35+Math.sin(time*1.6)*0.1;
+  if(CONCH.shellGlow)CONCH.shellGlow.material.opacity=CONCH.open?(0.26+Math.min(CONCH.openT,1)*0.34):(0.04+Math.sin(time*0.6)*0.015);
+  if(CONCH.interiorGlow)CONCH.interiorGlow.material.opacity=CONCH.open?(0.32+Math.min(CONCH.openT,1)*0.42):0.04;
+  if(CONCH.openMouth&&CONCH.open)CONCH.openMouth.material.opacity=0.72+Math.sin(time*2.2)*0.12;
+  if(CONCH.openRim&&CONCH.open)CONCH.openRim.material.opacity=0.48+Math.sin(time*1.6)*0.12;
+  if(CONCH.openHalo&&CONCH.open)CONCH.openHalo.material.opacity=0.28+Math.sin(time*1.8)*0.1;
+  if(CONCH.approachGlow&&CONCH.open)CONCH.approachGlow.material.opacity=0.22+Math.sin(time*1.4)*0.08;
+  if(CONCH.openCavity&&CONCH.open){
+    const k=CONCH.openCavity.material;
+    if(k&&k.opacity!=null)k.opacity=0.55+Math.sin(time*1.5)*0.08;
+  }
   if(winT>=0){
-    if(CONCH.rainbow){const k=smooth(Math.min(winT/1.3,1));CONCH.rainbow.visible=true;CONCH.rainbow.scale.setScalar(0.2+k*1.1);
-      CONCH.rainbow.children.forEach(r=>{r.material.opacity=0.85*k;});}
-    if(CONCH.spiralLights)for(const L of CONCH.spiralLights){L.m.material.opacity=0.55+Math.sin(time*4+L.ph)*0.25;}
-    if(CONCH.shellGlow)CONCH.shellGlow.material.opacity=0.35+Math.sin(time*3)*0.08;
-    if(CONCH.interiorGlow)CONCH.interiorGlow.material.opacity=0.4+Math.sin(time*2.4)*0.1;
+    if(CONCH.rainbow){const k=smooth(Math.min(winT/1.3,1));CONCH.rainbow.visible=true;CONCH.rainbow.scale.setScalar(0.25+k*1.25);
+      CONCH.rainbow.children.forEach(r=>{r.material.opacity=0.7*k;});}
+    if(CONCH.spiralLights)for(const L of CONCH.spiralLights){L.m.material.opacity=0.7+Math.sin(time*4.5+L.ph)*0.28;}
+    if(CONCH.shellGlow)CONCH.shellGlow.material.opacity=0.48+Math.sin(time*3)*0.1;
+    if(CONCH.interiorGlow)CONCH.interiorGlow.material.opacity=0.55+Math.sin(time*2.4)*0.12;
+    if(CONCH.openMouth)CONCH.openMouth.material.opacity=0.85+Math.sin(time*3)*0.1;
+    if(CONCH.openRim)CONCH.openRim.material.opacity=0.6+Math.sin(time*2.5)*0.12;
+    if(CONCH.approachGlow)CONCH.approachGlow.material.opacity=0.35+Math.sin(time*2)*0.1;
+    // Soft underwater bubble confetti around the mouth / plaza (Deep-specific payoff).
+    CONCH.winBurstT=(CONCH.winBurstT||0)-dt;
+    if(CONCH.winBurstT<=0&&winT<14){
+      CONCH.winBurstT=0.07;
+      const a=rand(0,TAU),r=rand(0.5,6);
+      const col=[0xffe36b,0x66ffe0,0xff8ab0,0xc8f0ff,0xffd28a][Math.floor(Math.random()*5)];
+      spawnP(CONCH.cx+Math.cos(a)*r,rand(0.6,6),CONCH.cz+2.2+Math.sin(a)*r*0.7,
+        rand(-1.2,1.2),rand(0.8,3.2),rand(-1.2,1.2),rand(0.07,0.14),col,rand(1.4,2.4),0.2,-1.4,0.95);
+    }
   }else if(CONCH.open&&!won&&playerInConchTrigger())triggerWin();
 }
 function addConchShellSolid(x,y,z,w,h,d){
@@ -779,18 +836,23 @@ function buildConch(cx,cz){
     const a=-0.9+i*0.45,cy=2.1+Math.sin(a)*1.3,cxo=Math.cos(a)*1.85;
     g.add(mesh(SPH,rib,cxo,cy,DOOR_Z-0.12,0.45,0.38,0.4));
   }
-  // Deep cavity behind the door — only obvious when open (dark tunnel = passable).
-  const openCavity=mesh(SPH,lam(0x1a1010),0,DOOR_Y+DOOR_H*0.5,DOOR_Z-0.55,DOOR_W*0.48,DOOR_H*0.46,0.9);
+  // Deep cavity — warm inviting tunnel (not a black void) so open reads passable.
+  const openCavity=mesh(SPH,new THREE.MeshBasicMaterial({color:0xffe2b0,transparent:true,opacity:0.62,depthWrite:false}),0,DOOR_Y+DOOR_H*0.5,DOOR_Z-0.7,DOOR_W*0.5,DOOR_H*0.48,1.15);
   openCavity.visible=false;g.add(openCavity);CONCH.openCavity=openCavity;
   const doorVis=mesh(SPH,dark,0,DOOR_Y+DOOR_H*0.5,DOOR_Z,DOOR_W*0.55,DOOR_H*0.52,DOOR_D*0.55);
   g.add(doorVis);CONCH.doorVis=doorVis;
   const closedSeam=mesh(SPH,lam(0x3a2010),0,DOOR_Y+DOOR_H*0.5,DOOR_Z+0.22,0.08,DOOR_H*0.4,0.06);
   g.add(closedSeam);CONCH.closedSeam=closedSeam;
-  // Bright open-mouth wash + rim so the aperture reads from trench approach.
-  const openMouth=mesh(SPH,new THREE.MeshBasicMaterial({color:0xfff6c8,transparent:true,opacity:0.72,depthWrite:false}),0,DOOR_Y+DOOR_H*0.5,DOOR_Z+0.15,DOOR_W*0.62,DOOR_H*0.58,0.55);
+  // Bright open-mouth wash + outer halo so the aperture reads from trench approach.
+  const openMouth=mesh(SPH,new THREE.MeshBasicMaterial({color:0xfff8d0,transparent:true,opacity:0.82,depthWrite:false}),0,DOOR_Y+DOOR_H*0.5,DOOR_Z+0.2,DOOR_W*0.7,DOOR_H*0.64,0.7);
   openMouth.visible=false;g.add(openMouth);CONCH.openMouth=openMouth;
-  const openRim=mesh(SPH,new THREE.MeshBasicMaterial({color:0xffe39a,transparent:true,opacity:0.45,depthWrite:false}),0,DOOR_Y+DOOR_H*0.5,DOOR_Z+0.35,DOOR_W*0.78,DOOR_H*0.72,0.28);
+  const openRim=mesh(SPH,new THREE.MeshBasicMaterial({color:0xffe39a,transparent:true,opacity:0.55,depthWrite:false}),0,DOOR_Y+DOOR_H*0.5,DOOR_Z+0.45,DOOR_W*0.92,DOOR_H*0.82,0.35);
   openRim.visible=false;g.add(openRim);CONCH.openRim=openRim;
+  const openHalo=mesh(SPH,new THREE.MeshBasicMaterial({color:0xc8f0ff,transparent:true,opacity:0.3,depthWrite:false}),0,DOOR_Y+DOOR_H*0.5,DOOR_Z+0.85,DOOR_W*1.15,DOOR_H*1.0,0.4);
+  openHalo.visible=false;g.add(openHalo);CONCH.openHalo=openHalo;
+  // Soft floor wash in front of the mouth (plaza invitation).
+  const approachGlow=new THREE.Mesh(new THREE.PlaneGeometry(7.5,5.5),new THREE.MeshBasicMaterial({color:0xffe9b8,transparent:true,opacity:0.22,depthWrite:false}));
+  approachGlow.rotation.x=-Math.PI/2;approachGlow.position.set(0,0.04,DOOR_Z+2.4);approachGlow.visible=false;g.add(approachGlow);CONCH.approachGlow=approachGlow;
   // --- collision proxies (simple boxes; ridges stay decorative) ---
   // Removable front door — matches visible closed plate
   const doorSolid=addSolid(cx,DOOR_Y,cz+DOOR_Z,DOOR_W,DOOR_H,DOOR_D,0x5a3020,{surf:'stone'});
@@ -809,27 +871,33 @@ function buildConch(cx,cz){
   // Floor strip inside so the player can rest after swimming in
   addSolid(cx,0,cz+0.6,3.4,0.35,7.2,0xe8b890,{surf:'stone'});
   // spiral lights (dim when closed, bright when open)
-  for(let i=0;i<8;i++){
-    const t=i/7,y=1.4+t*4.8,z=3.0-t*7.5;
-    const m=new THREE.Mesh(SPH,new THREE.MeshBasicMaterial({color:0xffe39a,transparent:true,opacity:0.08,depthWrite:false}));
-    m.position.set((i%2?0.5:-0.5),y,z);m.scale.setScalar(0.35+t*0.15);g.add(m);
-    CONCH.spiralLights.push({m,ph:i*0.7});
+  for(let i=0;i<12;i++){
+    const t=i/11,y=1.2+t*5.2,z=3.2-t*8.0;
+    const col=i%3===0?0xc8f0ff:(i%3===1?0xffe39a:0xffb0d0);
+    const m=new THREE.Mesh(SPH,new THREE.MeshBasicMaterial({color:col,transparent:true,opacity:0.08,depthWrite:false}));
+    m.position.set((i%2?0.65:-0.65),y,z);m.scale.setScalar(0.32+t*0.2);g.add(m);
+    CONCH.spiralLights.push({m,ph:i*0.55});
   }
-  const shellGlow=new THREE.Mesh(new THREE.SphereGeometry(1,10,8),new THREE.MeshBasicMaterial({color:0xffd28a,transparent:true,opacity:0.04,depthWrite:false}));
-  shellGlow.position.set(-1.8,6.5,-1.5);shellGlow.scale.set(8.5,8.5,9.5);g.add(shellGlow);CONCH.shellGlow=shellGlow;
-  const interiorGlow=new THREE.Mesh(new THREE.SphereGeometry(1,8,6),new THREE.MeshBasicMaterial({color:0xfff0c8,transparent:true,opacity:0.04,depthWrite:false}));
-  interiorGlow.position.set(0,2.2,0.2);interiorGlow.scale.set(2.6,2.2,3.2);g.add(interiorGlow);CONCH.interiorGlow=interiorGlow;
+  const shellGlow=new THREE.Mesh(new THREE.SphereGeometry(1,10,8),new THREE.MeshBasicMaterial({color:0xffd28a,transparent:true,opacity:0.05,depthWrite:false}));
+  shellGlow.position.set(-1.8,6.5,-1.5);shellGlow.scale.set(9.2,9.0,10.2);g.add(shellGlow);CONCH.shellGlow=shellGlow;
+  const interiorGlow=new THREE.Mesh(new THREE.SphereGeometry(1,8,6),new THREE.MeshBasicMaterial({color:0xfff0c8,transparent:true,opacity:0.05,depthWrite:false}));
+  interiorGlow.position.set(0,2.2,0.2);interiorGlow.scale.set(3.0,2.5,3.6);g.add(interiorGlow);CONCH.interiorGlow=interiorGlow;
   // Finish trigger deep inside — past the doorway plane, not the mouth lip
   CONCH.trigger={x:cx,y:2.0,z:cz-1.6,hx:1.5,hy:2.0,hz:1.35};
   CONCH.interior={x0:cx-2.2,x1:cx+2.2,z0:cz-4.5,z1:cz+DOOR_Z-0.6,yMax:6.2};
   const rainbow=buildRainbow(cx,cz);
-  rainbow.position.set(cx,18,cz);rainbow.scale.setScalar(0.18);rainbow.visible=false;CONCH.rainbow=rainbow;
-  CONCH.g=g;
+  rainbow.position.set(cx,16,cz+1);rainbow.scale.setScalar(0.18);rainbow.visible=false;CONCH.rainbow=rainbow;
+  CONCH.g=g;CONCH.winBurstT=0;
   registerFinish({
-    x:cx,z:cz,top:10,
+    x:cx,z:cz,top:8,
     winMsg:'Everyone is awake. The Conch is singing!',
     onAllAwake(){openConch();},
-    onWin(){AU.layers=Math.max(AU.layers,4);if(CONCH.rainbow)CONCH.rainbow.visible=true;},
+    onWin(){
+      AU.layers=Math.max(AU.layers,4);
+      if(CONCH.rainbow)CONCH.rainbow.visible=true;
+      stageConchWinPose();
+      conchWinBurst();
+    },
     update(dt,winT){updateConch(dt,winT);}
   });
   return CONCH;

@@ -32,12 +32,27 @@ function wakeAll(H){for(const s of H.W.snoozles){wake(H,s);H.frames(40);}}
 // ---- more spikefish later in the level ----
 {
   const H=Hboot();startL2(H);
-  ok(H.W.spikefish.length>=6,'Level 2 has additional spikefish presence');
+  ok(H.W.spikefish.length>=11,'Level 2 has denser spikefish presence');
   ok(H.W.spikefish.some(s=>s.role==='shoal_exit'),'shoal-exit spikefish exists');
   ok(H.W.spikefish.some(s=>s.role==='trench_mid'),'trench mid spikefish exists');
   ok(H.W.spikefish.some(s=>s.role==='wreck_note'&&s.note),'wreck note-bearing spikefish exists');
   ok(H.W.spikefish.find(s=>s.role==='open')&&H.W.spikefish.find(s=>s.role==='mandatory'),
     'Shoal open/mandatory teaching pair remains');
+  const routeSpikes=H.W.spikefish.filter(s=>s.role!=='wreck_shaft');
+  ok(routeSpikes.every(s=>s.y1<=1.2&&s.y2<=1.2),'non-shaft spikefish sit in the normal swim band');
+  ok(H.W.spikefish.some(s=>s.role==='trench_weave')&&H.W.spikefish.some(s=>s.role==='trench_late'),
+    'later trench has weave / late avoidance spikefish');
+  // Seabed-height contact is possible without jumping
+  const low=H.W.spikefish.find(s=>s.role==='mandatory');
+  H.P.hp=4;H.P.inv=0;H.P.dead=false;H.P.bubble=false;
+  H.P.pos.set(low.x1,0.55,low.z1);H.P.vel.set(0,0,0);
+  let hit=false;
+  for(let i=0;i<90;i++){
+    H.P.pos.x=low.x;H.P.pos.z=low.z;H.P.pos.y=0.55;H.P.vel.set(0,0,0);
+    const hp=H.P.hp;H.frames(1);
+    if(H.P.hp<hp){hit=true;break;}
+  }
+  ok(hit,'low spikefish can threaten a seabed-height player');
 }
 
 // ---- shark threatens seabed-height player ----
@@ -67,15 +82,21 @@ function wakeAll(H){for(const s of H.W.snoozles){wake(H,s);H.frames(40);}}
   ok(c.open,'Conch opens after four Snoozles');
   ok(c.openMouth&&c.openMouth.visible,'open-mouth glow visible when Conch opens');
   ok(c.openCavity&&c.openCavity.visible,'open cavity visible when Conch opens');
+  ok(c.openHalo&&c.openHalo.visible,'open halo visible when Conch opens');
+  ok(c.approachGlow&&c.approachGlow.visible,'approach glow invites the player when open');
   ok(c.doorVis&&!c.doorVis.visible,'closed door visual hides when open');
   ok(H.W.solids.indexOf(c.doorSolid)<0,'door collision removed when open');
   // Enter the interior finish trigger (doorway contact alone does not win)
   H.P.pos.set(c.trigger.x,c.trigger.y,c.trigger.z);H.P.vel.set(0,0,0);H.frames(8);
   ok(H.W.won,'entering the open Conch wins');
   ok(H.el('win').style.display==='flex','win banner shown');
+  // Win pose holds the player in the bright mouth rather than deep inside
+  ok(Math.abs(H.P.pos.z-c.doorZ)<1.2&&H.P.pos.y<2.2,'win pose keeps the player visible in the open mouth');
+  ok(c.spiralLights&&c.spiralLights.length>=10,'Conch celebration has a denser spiral light set');
   const sm=H.el('win').querySelector('.sm');
   ok(sm&&/Conch|singing/i.test(sm.textContent),'banner subtitle uses the Level 2 message');
   ok(!/rainbow/i.test(sm.textContent),'banner subtitle no longer mentions the rainbow');
+  ok(c.rainbow&&c.rainbow.visible,'Conch still shows its celebration arc on win');
   // Return to picker via jump after celebration window
   for(let i=0;i<Math.ceil(3.6*60);i++)H.frames(1);
   H.tap('Space',2);H.frames(4);
