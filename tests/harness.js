@@ -10,7 +10,7 @@
 //   const {P, W, el, frames, tap, ok, kd, ku, report} = H;
 //
 // Options:
-//   { level: 0 | 1 | 'LEVEL1' | 'LEVEL2', autostart: true | false }
+//   { level: 0 | 1 | 2 | 'LEVEL1' | 'LEVEL2' | 'LEVEL3', autostart: true | false }
 //
 // Each require('./harness.js')() call boots a FRESH game. Tests that need a
 // clean world must live in their own file, because run.js gives every file its
@@ -81,6 +81,7 @@ const THREE = new Proxy({}, {
 const HOOKS = [];
 
 function resolveLevelIdx(level) {
+  if (level === 'LEVEL3' || level === 2 || level === 'level3') return 2;
   if (level === 'LEVEL2' || level === 1 || level === 'level2') return 1;
   return 0;
 }
@@ -100,7 +101,7 @@ module.exports = function boot(opts = {}) {
       getContext() {
         return {
           scale() {}, fillRect() {}, fillStyle: '', strokeStyle: '', lineWidth: 0,
-          beginPath() {}, moveTo() {}, lineTo() {}, quadraticCurveTo() {}, closePath() {}, fill() {}, stroke() {}, arc() {},
+          beginPath() {}, moveTo() {}, lineTo() {}, quadraticCurveTo() {}, closePath() {}, fill() {}, stroke() {}, arc() {}, ellipse() {},
           createLinearGradient() { return { addColorStop() {} }; }
         };
       }
@@ -108,7 +109,7 @@ module.exports = function boot(opts = {}) {
   }
   function el(id) {
     if (!els[id]) {
-      const isCanvas = id === 'art0' || id === 'art1';
+      const isCanvas = id === 'art0' || id === 'art1' || id === 'art2';
       els[id] = isCanvas ? canvasStub() : {
         id, listeners: {}, style: {}, textContent: '',
         classList: { add() {}, remove() {}, toggle() {} },
@@ -212,6 +213,7 @@ module.exports = function boot(opts = {}) {
     selectLevel, confirmStart, startLevel, tapCard, tapBtn, setGamepad, gamepadTick, mkGamepad,
     getLevel: () => window.__LEVEL && window.__LEVEL(),
     getPhys: () => window.__PHYS && window.__PHYS(),
+    getSky: () => window.__SKY && window.__SKY(),
     isStarted: () => window.__started && window.__started(),
     pickerIdx: () => window.__pickerIdx && window.__pickerIdx(),
     touchArmed: () => !!(window.__touchArmed && window.__touchArmed()),

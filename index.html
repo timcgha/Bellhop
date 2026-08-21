@@ -19,13 +19,13 @@ canvas{display:block;touch-action:none}
 #win .sm{margin-top:12px;font-size:min(5vw,23px);font-weight:800;color:#fff;text-align:center;text-shadow:0 3px 0 rgba(20,60,80,.55);animation:pop .7s .18s backwards cubic-bezier(.2,1.6,.4,1)}
 @keyframes pop{from{transform:scale(.2) rotate(-8deg);opacity:0}to{transform:scale(1) rotate(0);opacity:1}}
 #start{position:fixed;inset:0;display:flex;align-items:center;justify-content:center;background:rgba(159,220,255,.55);z-index:5;pointer-events:none}
-#start .card{background:#fff8e6;border:4px solid #1e7f85;border-radius:26px;padding:22px 26px;max-width:min(520px,94vw);text-align:center;box-shadow:0 14px 40px rgba(10,60,90,.28);pointer-events:auto}
+#start .card{background:#fff8e6;border:4px solid #1e7f85;border-radius:26px;padding:22px 26px;max-width:min(560px,96vw);text-align:center;box-shadow:0 14px 40px rgba(10,60,90,.28);pointer-events:auto}
 #start h1{margin:0;font-size:38px;letter-spacing:2px;color:#1e7f85;font-weight:900}
 #start .sub{margin:2px 0 10px;color:#1c2b33;font-weight:700;font-size:13px;letter-spacing:.5px;text-transform:uppercase}
 #start p{margin:6px 0;line-height:1.35;color:#1c2b33;font-size:15px}
 #start .keys{font-size:13px;color:#3d5560;background:#e9f6f7;border-radius:12px;padding:8px 10px}
 #start .level-pick{display:flex;gap:12px;justify-content:center;margin:14px 0 8px;flex-wrap:wrap}
-#start .lvl-card{flex:1 1 140px;max-width:180px;padding:8px;border-radius:18px;border:4px solid #b8d4d8;background:#e9f6f7;cursor:pointer;transition:border-color .15s,box-shadow .15s,transform .1s}
+#start .lvl-card{flex:1 1 120px;max-width:168px;padding:8px;border-radius:18px;border:4px solid #b8d4d8;background:#e9f6f7;cursor:pointer;transition:border-color .15s,box-shadow .15s,transform .1s}
 #start .lvl-card.sel{border-color:#f5b400;background:#fff3c4;box-shadow:0 0 0 3px rgba(245,180,0,.35),0 6px 16px rgba(10,60,90,.2);transform:scale(1.04)}
 #start .lvl-card.sel.pulse{animation:lvlPulse .38s cubic-bezier(.2,1.4,.4,1)}
 @keyframes lvlPulse{0%{transform:scale(1.04)}40%{transform:scale(1.12)}100%{transform:scale(1.04)}}
@@ -58,10 +58,11 @@ body.touch .tbtn{display:flex}
 <div id="hint"></div>
 <div id="start"><div class="card">
 <h1>BELLHOP</h1>
-<div class="sub">v25 · visible inside</div>
+<div class="sub">v26 · peak leap prototype</div>
 <div class="level-pick">
 <div class="lvl-card sel" id="lvl0"><canvas class="lvl-art" id="art0" width="160" height="100"></canvas><span class="lvl-label">Meadow</span></div>
 <div class="lvl-card" id="lvl1"><canvas class="lvl-art" id="art1" width="160" height="100"></canvas><span class="lvl-label">The Deep</span></div>
+<div class="lvl-card" id="lvl2"><canvas class="lvl-art" id="art2" width="160" height="100"></canvas><span class="lvl-label">The Peak</span></div>
 </div>
 <p class="pick-hint" id="pickHint"></p>
 <p class="keys" id="ctlText"></p>
@@ -395,6 +396,60 @@ steps:[
 ]};
 
 
+// ===== levels/level3.js =====
+const LEVEL3={
+id:'level3',
+music:'meadow',
+spawn:{x:0,y:0.4,z:12},
+// Explicit Level 1 land profile — Stage 1 identity is Sky Blast, not new gravity.
+physics:{
+  speed:6.8,acc:44,dec:60,airAcc:20,
+  grav:-30,maxFall:-32,jumpV:10.5,puffV:9.4,
+  coyote:0.12,buffer:0.15,step:0.42,r:0.36,h:1.15,
+  hoverHeld:1.0,hoverReleased:0.5,hoverDrift:-1.6,
+  slamHang:0.14,slamFall:-34,slamRebound:8,
+  jetTime:0.38,bonkR:2.05,bonkCD:0.5
+},
+// Prototype starting values (1.3–1.5x vertical, ~2.3–2.6x horizontal carry). Phone playtest owns the next pass.
+skyBlast:{
+  puffVMul:1.4,
+  boostMax:12.5,
+  boostDecay:1.6
+},
+// Prototype gap the unpowered run cannot clear; powered running leap should.
+// Near pad ends at z≈0; far pad begins at z=-10 (10-unit gap). Far pad depth is generous.
+protoGap:{nearZ:0,farZ:-10,farEndZ:-22},
+fence:0x5a2e1a,
+fenceSolids:[[0,0,16,24,1.2,0.6],[0,0,-28,24,1.2,0.6],[-13,0,-6,0.6,1.2,44],[13,0,-6,0.6,1.2,44]],
+pathTiles:[],
+hedges:[],
+checks:[[0,12]],
+tower:{tx:0,tz:0},
+snoozleHomes:[[0,-24]],
+snoozles:[],
+trees:[],
+steps:[
+  // Broad start terrace (Peak-coloured prototype geometry — not production volcano art)
+  ['solid',0,0,9,20,0.4,18,0xc45a28,{surf:'stone'}],
+  // Far landing pad — deep enough that a successful leap does not need precise braking
+  ['solid',0,0,-16,20,0.4,12,0xe07a3a,{surf:'stone'}],
+  // Marked landing strip on the far pad
+  ['solid',0,0.4,-11,6,0.08,2.5,0xffd24a,{surf:'stone'}],
+  // Side practice pads (safe, non-hazard)
+  ['solid',-8,0,4,4,0.4,4,0xa84a22,{surf:'stone'}],
+  ['solid',8,0,4,4,0.4,4,0xa84a22,{surf:'stone'}],
+  // Sky Blast pickup (crate) in plain sight on the start pad
+  ['crate',0,0.4,8,'sky'],
+  // Prototype steam vent beside the take-off lip (off the run-up line so leap tests stay clean)
+  ['steamVent',5,0.4,1.5,1.4],
+  // One gloop off to the side for knockback / power-loss tests (not on the leap line)
+  ['gloop',-8,4,'small'],
+  // Stage 1 has no real finish — placeholder so loadLevel's FINISH contract is satisfied
+  ['unfinishedFinish',0,-24,8]
+]
+};
+
+
 // ===== src/util.js =====
 const clamp=(v,a,b)=>Math.max(a,Math.min(b,v));
 const lerp=(a,b,t)=>a+(b-a)*t;
@@ -665,11 +720,11 @@ function updateZ(dt){for(const o of ZS){if(o.life<=0)continue;o.life-=dt;if(o.li
 
 // ===== src/entities.js =====
 const solids=[],wobblers=[],pinwheels=[],toss=[],notes=[],dust=[],snoozles=[],fans=[],clouds=[],gloops=[],goos=[],puddles=[],hearts=[],crates=[],powers=[],fires=[];
-const sharks=[],fish=[],spikefish=[],clams=[],bubbleShots=[];
+const sharks=[],fish=[],spikefish=[],clams=[],bubbleShots=[],steamVents=[];
 let seenGloop=false,seenCrate=false;
 let BOAT=null,WM=null,player=null,shadow=null,RAINBOW=null,FINISH=null;
 const checks=[];let won=false,winT=0,confT=0;
-const LEVELS=[LEVEL1,LEVEL2];
+const LEVELS=[LEVEL1,LEVEL2,LEVEL3];
 let CURRENT_LEVEL=null;
 function isUnderwater(){return !!(CURRENT_LEVEL&&CURRENT_LEVEL.underwater);}
 const POND={x0:-6,x1:6,z0:-33,z1:-25};
@@ -761,6 +816,7 @@ function clearLevelWorld(){
   for(const o of dust)rem(o.m);dust.length=0;
   for(const o of snoozles)rem(o.g);snoozles.length=0;
   for(const o of fans)rem(o.g);fans.length=0;
+  for(const o of steamVents)rem(o.g);steamVents.length=0;
   for(const o of clouds)rem(o.g);clouds.length=0;
   for(const o of gloops)rem(o.g);gloops.length=0;
   for(const o of hearts)rem(o.g);hearts.length=0;
@@ -837,6 +893,7 @@ function breakCrate(c){if(c.broken)return;c.broken=true;c.g.visible=false;const 
   for(let k=0;k<16;k++)spawnP(c.x+rand(-0.4,0.4),c.y+0.45+rand(-0.4,0.4),c.z+rand(-0.4,0.4),rand(-3.5,3.5),rand(1,4.5),rand(-3.5,3.5),rand(0.08,0.17),Math.random()<0.3?0xd1a83c:0xc98a4b,rand(0.5,0.9),0.2,-9,0.9);
   if(c.item==='fire')addPower(c.x,c.y+0.85,c.z);
   else if(c.item==='bubble')addBubblePower(c.x,c.y+0.85,c.z);
+  else if(c.item==='sky')addSkyPower(c.x,c.y+0.85,c.z);
   else addHeart(c.x,c.y+0.85,c.z);}
 function buildFlameItem(){const g=new THREE.Group();
   g.add(mesh(CONE,new THREE.MeshBasicMaterial({color:0xff7a1f}),0,0.06,0,0.22,0.58,0.22));
@@ -847,6 +904,16 @@ function buildBubbleItem(){const g=new THREE.Group();
   g.add(mesh(SPH,new THREE.MeshBasicMaterial({color:0xc8f0ff,transparent:true,opacity:0.85}),0,0.08,0,0.24));
   g.add(mesh(SPH,new THREE.MeshBasicMaterial({color:0xffffff,transparent:true,opacity:0.55}),0,0.12,0,0.14));return g;}
 function addBubblePower(x,y,z){const g=buildBubbleItem();g.position.set(x,y,z);scene.add(g);powers.push({g,x,y,z,got:false,ph:rand(0,TAU),t:0,kind:'bubble'});}
+function buildSkyItem(){const g=new THREE.Group();
+  g.add(mesh(SPH,new THREE.MeshBasicMaterial({color:0xff9a3c}),0,0.05,0,0.2));
+  g.add(mesh(CONE,new THREE.MeshBasicMaterial({color:0xffe9d0,transparent:true,opacity:0.85}),0,0.28,0,0.14,0.36,0.14));
+  g.add(mesh(SPH,new THREE.MeshBasicMaterial({color:0xfff8ee,transparent:true,opacity:0.7}),0,0.42,0,0.1));return g;}
+function addSkyPower(x,y,z){const g=buildSkyItem();g.position.set(x,y,z);scene.add(g);powers.push({g,x,y,z,got:false,ph:rand(0,TAU),t:0,kind:'sky'});}
+function addSteamVent(x,y,z,r){r=r||1.2;const g=new THREE.Group();g.position.set(x,y,z);
+  g.add(mesh(CYL,lam(0x4a3a32),0,0.08,0,r*0.95,0.16,r*0.95));
+  g.add(mesh(CYL,lam(0x2e2420),0,0.14,0,r*0.55,0.08,r*0.55));
+  const crack=pho(0xff7a2a,40,0xffa060);g.add(mesh(BOXG,crack,0.12,0.18,0,0.08,0.06,r*0.7));g.add(mesh(BOXG,crack,-0.1,0.18,0.05,0.06,0.05,r*0.5));
+  scene.add(g);steamVents.push({g,x,y,z,r,pt:0});}
 const FIREGEO=new THREE.SphereGeometry(1,9,7);
 for(let i=0;i<26;i++){const m=new THREE.Mesh(FIREGEO,new THREE.MeshBasicMaterial({color:0xff8a2b}));m.scale.setScalar(0.24);m.visible=false;scene.add(m);fires.push({m,pos:new THREE.Vector3(),vel:new THREE.Vector3(),life:0,alive:false,trailT:0});}
 function buildHeart(){const g=new THREE.Group();const m=pho(0xff5a7a,120,0xffffff);g.add(mesh(SPH,m,-0.11,0.1,0,0.16));g.add(mesh(SPH,m,0.11,0.1,0,0.16));const c=mesh(CONE,m,0,-0.06,0,0.26,0.36,0.16);c.rotation.z=Math.PI;g.add(c);g.scale.setScalar(0.9);return g;}
@@ -892,7 +959,7 @@ function returnToLevelSelect(){
   clearLevelWorld();
   won=false;winT=0;confT=0;started=false;rescued=0;gotNotes=0;time=0;
   AU.win=false;
-  P.hp=P.maxHp;P.dead=false;P.inv=0;P.fire=false;P.bubble=false;P.vel.set(0,0,0);
+  P.hp=P.maxHp;P.dead=false;P.inv=0;P.fire=false;P.bubble=false;P.hasSkyBlast=false;clearLeapBoost();P.vel.set(0,0,0);
   P.pos.set(P.spawn.x,P.spawn.y,P.spawn.z);
   beginLandLevel();
   const w=$('win');if(w){w.style.display='none';w.style.opacity=1;}
@@ -915,9 +982,11 @@ function loadLevel(L){
   clearLevelWorld();
   FINISH=null;
   if(L.physics)applyPhysics(L.physics);
+  applySkyBlastTuning(L.skyBlast);
   CURRENT_LEVEL=L;
   setSong(L.music||'meadow');
   if(L.underwater)beginUnderwaterLevel(L);else beginLandLevel();
+  P.fire=false;P.bubble=false;P.hasSkyBlast=false;clearLeapBoost();P.puff=true;P.puffAir=0;endHover();P.slam=0;
   if(L.spawn){P.spawn.x=L.spawn.x;P.spawn.y=L.spawn.y;P.spawn.z=L.spawn.z;P.pos.set(L.spawn.x,L.spawn.y,L.spawn.z);P.vel.set(0,0,0);}
   const fence=L.fence;
   for(const s of L.fenceSolids)addSolid(s[0],s[1],s[2],s[3],s[4],s[5],fence);
@@ -936,6 +1005,7 @@ function loadLevel(L){
     else if(k==='gloop')addGloop(step[1],step[2],step[3]);
     else if(k==='boat')buildBoat(step[1],step[2]);
     else if(k==='fan')addFan(step[1],step[2],step[3],step[4]);
+    else if(k==='steamVent')addSteamVent(step[1],step[2],step[3],step[4]);
     else if(k==='windmill')buildWindmill(step[1],step[2]);
     else if(k==='rainbow')RAINBOW=buildRainbow(step[1],step[2]);
     else if(k==='pinwheelRow'){for(let i=0;i<step[4];i++)addPinwheel(step[1]+i*step[5],step[2]+i*step[6],step[3]);}
@@ -991,7 +1061,8 @@ function buildPlayer(){
   [legL,legR].forEach(L=>{L.add(mesh(CYL,teal,0,-0.13,0,0.09,0.24,0.09));L.add(mesh(BOXG,dark,0,-0.27,0.03,0.24,0.1,0.3));g.add(L);});
   const bel=new THREE.Group();bel.position.y=0.3;g.add(bel);
   bel.add(mesh(CYL,silver,0,0.285,0,0.34,0.57,0.34));
-  for(let i=0;i<6;i++){const r=new THREE.Mesh(new THREE.TorusGeometry(0.35,0.03,8,20),silver);r.rotation.x=Math.PI/2;r.position.y=0.06+i*0.09;bel.add(r);}
+  const seams=[];
+  for(let i=0;i<6;i++){const r=new THREE.Mesh(new THREE.TorusGeometry(0.35,0.03,8,20),pho(0xc9ced4,70,0xffffff));r.rotation.x=Math.PI/2;r.position.y=0.06+i*0.09;bel.add(r);seams.push(r);}
   const head=new THREE.Group();head.position.y=0.87;g.add(head);
   const dome=new THREE.Mesh(new THREE.SphereGeometry(0.46,22,14,0,TAU,0,Math.PI*0.6),teal);dome.position.y=0.18;head.add(dome);
   head.add(mesh(CYL,teal,0,0.1,0,0.46,0.2,0.46));
@@ -1001,7 +1072,7 @@ function buildPlayer(){
   head.add(mesh(CYL,brass,0,0.7,0,0.075,0.3,0.075));head.add(mesh(CYL,dark,0,0.86,0,0.05,0.04,0.05));
   const armL=new THREE.Group(),armR=new THREE.Group();armL.position.set(-0.46,0.08,0);armR.position.set(0.46,0.08,0);
   [[armL,-1],[armR,1]].forEach(a=>{const A=a[0],sgn=a[1];A.add(mesh(SPH,brass,0,0,0,0.1));A.add(mesh(CYL,teal,sgn*0.06,-0.16,0,0.07,0.28,0.07));A.add(mesh(SPH,dark,sgn*0.08,-0.32,0,0.1));head.add(A);});
-  g.scale.setScalar(0.72);g.userData={legL,legR,bel,head,eyes,mouth,armL,armR};return g;
+  g.scale.setScalar(0.72);g.userData={legL,legR,bel,head,eyes,mouth,armL,armR,seams};return g;
 }
 player=buildPlayer();scene.add(player);
 (function(){const jg=new THREE.Group();
@@ -1012,9 +1083,11 @@ player=buildPlayer();scene.add(player);
 (function(){const f=new THREE.Group();f.add(mesh(CONE,new THREE.MeshBasicMaterial({color:0xff7a1f}),0,0.14,0,0.13,0.4,0.13));f.add(mesh(CONE,new THREE.MeshBasicMaterial({color:0xffe36b}),0,0.1,0,0.07,0.24,0.07));f.position.y=0.92;f.visible=false;player.userData.head.add(f);player.userData.flame=f;})();
 shadow=new THREE.Mesh(new THREE.CircleGeometry(0.5,20),new THREE.MeshBasicMaterial({color:0x000000,transparent:true,opacity:0.28,depthWrite:false}));shadow.rotation.x=-Math.PI/2;scene.add(shadow);
 
-const P=window.__P={spawn:{x:0,y:0,z:10},pos:new THREE.Vector3(0,0,10),vel:new THREE.Vector3(),yaw:Math.PI,grounded:false,wasGrounded:false,lastGround:-9,jumpBuf:-9,jumping:false,puff:true,slam:0,hangT:0,gustCD:0,bonkCD:0,bonkT:0,sq:1,sqV:0,sqT:1,footT:0,surf:'grass',run:0,mouthT:0,blinkT:2,blinkAnim:0,inFan:false,splT:0,puffAir:0,hover:false,hovT:0,hoverS:null,hp:4,maxHp:4,inv:0,dead:false,deadT:0,inGoo:false,fire:false,bubble:false,jetT:0,jetP:0,jetHits:[]};
+const P=window.__P={spawn:{x:0,y:0,z:10},pos:new THREE.Vector3(0,0,10),vel:new THREE.Vector3(),yaw:Math.PI,grounded:false,wasGrounded:false,lastGround:-9,jumpBuf:-9,jumping:false,puff:true,slam:0,hangT:0,gustCD:0,bonkCD:0,bonkT:0,sq:1,sqV:0,sqT:1,footT:0,surf:'grass',run:0,mouthT:0,blinkT:2,blinkAnim:0,inFan:false,splT:0,puffAir:0,hover:false,hovT:0,hoverS:null,hp:4,maxHp:4,inv:0,dead:false,deadT:0,inGoo:false,fire:false,bubble:false,hasSkyBlast:false,leapBoost:new THREE.Vector3(),jetT:0,jetP:0,jetHits:[]};
 let R=0.36,H=1.15,SPEED=6.8,ACC=44,DEC=60,AIRACC=20,GRAV=-30,JUMPV=10.5,PUFFV=9.4,MAXFALL=-32,COYOTE=0.12,BUFFER=0.15,STEP=0.42;
 let HOVER_HELD=1.0,HOVER_REL=0.5,HOVER_DRIFT=-1.6,SLAM_HANG=0.14,SLAM_FALL=-34,SLAM_REBOUND=8,JET_T=0.38,BONKR=2.05,BONK_CD=0.5;
+// Sky Blast tuning — inactive until a level supplies skyBlast (Level 3). Separate from ordinary SPEED/PUFFV.
+let SKY={puffVMul:1,boostMax:0,boostDecay:2};
 function applyPhysics(ph){
   R=ph.r;H=ph.h;SPEED=ph.speed;ACC=ph.acc;DEC=ph.dec;AIRACC=ph.airAcc;
   GRAV=ph.grav;JUMPV=ph.jumpV;PUFFV=ph.puffV;MAXFALL=ph.maxFall;
@@ -1023,7 +1096,31 @@ function applyPhysics(ph){
   SLAM_HANG=ph.slamHang;SLAM_FALL=ph.slamFall;SLAM_REBOUND=ph.slamRebound;
   JET_T=ph.jetTime;BONKR=ph.bonkR;BONK_CD=ph.bonkCD;
 }
+function applySkyBlastTuning(s){
+  if(!s){SKY={puffVMul:1,boostMax:0,boostDecay:2};return;}
+  SKY={puffVMul:s.puffVMul,boostMax:s.boostMax,boostDecay:s.boostDecay};
+}
 window.__PHYS=()=>({speed:SPEED,acc:ACC,dec:DEC,airAcc:AIRACC,grav:GRAV,jumpV:JUMPV,puffV:PUFFV,maxFall:MAXFALL,coyote:COYOTE,buffer:BUFFER,step:STEP,r:R,h:H});
+window.__SKY=()=>({puffVMul:SKY.puffVMul,boostMax:SKY.boostMax,boostDecay:SKY.boostDecay});
+function clearLeapBoost(){P.leapBoost.set(0,0,0);}
+function leapBoostMag(){return Math.hypot(P.leapBoost.x,P.leapBoost.z);}
+// Capture run-up into a stored horizontal boost. Does not stack; call only when consuming P.puff.
+function fireLeapBoost(){
+  if(!(SKY.boostMax>0)||!P.hasSkyBlast)return;
+  const hx=P.vel.x,hz=P.vel.z,run=Math.hypot(hx,hz);
+  const scale=clamp(run/SPEED,0,1);
+  let dx,dz;
+  if(run>0.05){dx=hx/run;dz=hz/run;}
+  else{dx=Math.sin(P.yaw);dz=Math.cos(P.yaw);}
+  P.leapBoost.x=dx*SKY.boostMax*scale;
+  P.leapBoost.z=dz*SKY.boostMax*scale;
+}
+function decayLeapBoost(dt){
+  if(leapBoostMag()<1e-4){clearLeapBoost();return;}
+  const k=Math.exp(-SKY.boostDecay*dt);
+  P.leapBoost.x*=k;P.leapBoost.z*=k;
+  if(leapBoostMag()<0.05)clearLeapBoost();
+}
 function hOverlap(s){const p=P.pos;return p.x+R>s.min.x&&p.x-R<s.max.x&&p.z+R>s.min.z&&p.z-R<s.max.z;}
 function pushOutXZ(s){const p=P.pos;const px1=(p.x+R)-s.min.x,px2=s.max.x-(p.x-R),pz1=(p.z+R)-s.min.z,pz2=s.max.z-(p.z-R);const m=Math.min(px1,px2,pz1,pz2);if(m===px1)p.x=s.min.x-R-0.001;else if(m===px2)p.x=s.max.x+R+0.001;else if(m===pz1)p.z=s.min.z-R-0.001;else p.z=s.max.z+R+0.001;}
 function collideAxis(ax){const p=P.pos,v=P.vel;for(const s of solids){if(!hOverlap(s))continue;if(p.y+H<=s.min.y+0.001||p.y>=s.max.y-0.001)continue;
@@ -1032,7 +1129,39 @@ function collideAxis(ax){const p=P.pos,v=P.vel;for(const s of solids){if(!hOverl
   else{if(v.z>0)p.z=s.min.z-R-0.001;else if(v.z<0)p.z=s.max.z+R+0.001;else{const c=(s.min.z+s.max.z)/2;p.z=p.z<c?s.min.z-R-0.001:s.max.z+R+0.001;}v.z=0;}}}
 function spoutWorld(out){const y=(0.3+0.57*P.sq+0.9)*0.72;out.set(P.pos.x,P.pos.y+y,P.pos.z);return out;}
 function refillFX(){SFX.refill();spoutWorld(tmpV);for(let i=0;i<4;i++)spawnP(tmpV.x,tmpV.y,tmpV.z,rand(-0.6,0.6),rand(1.5,3),rand(-0.6,0.6),rand(0.06,0.1),0xffffff,rand(0.4,0.6),1.5,0,0.8);}
+function skyLeapFX(){const c=Math.cos(P.yaw),s=Math.sin(P.yaw);for(let sg=-1;sg<=1;sg+=2){const fx=P.pos.x+sg*0.12*c,fz=P.pos.z-sg*0.12*s;for(let i=0;i<8;i++)spawnP(fx+rand(-0.08,0.08),P.pos.y+0.05,fz+rand(-0.08,0.08),rand(-1.4,1.4),rand(-4.5,-1.8),rand(-1.4,1.4),rand(0.12,0.2),Math.random()<0.5?0xffe9d0:0xffb06a,rand(0.35,0.55),1.4,0,0.9);}spawnRing(P.pos.x,P.pos.y+0.03,P.pos.z,0xffc08a,0.35,4,0.35);}
 function puffJumpFX(){const c=Math.cos(P.yaw),s=Math.sin(P.yaw);for(let sg=-1;sg<=1;sg+=2){const fx=P.pos.x+sg*0.12*c,fz=P.pos.z-sg*0.12*s;for(let i=0;i<7;i++)spawnP(fx+rand(-0.08,0.08),P.pos.y+0.05,fz+rand(-0.08,0.08),rand(-1.2,1.2),rand(-4,-1.5),rand(-1.2,1.2),rand(0.12,0.2),0xffffff,rand(0.35,0.6),1.4,0,0.9);}spawnRing(P.pos.x,P.pos.y+0.03,P.pos.z,0xffffff,0.3,3.5,0.35);}
+let skyTrailT=0;
+function spawnSkySteamTrail(dt){
+  const mag=leapBoostMag();if(mag<0.08){skyTrailT=0;return;}
+  skyTrailT-=dt;if(skyTrailT>0)return;
+  // Density and length track live boost magnitude — not a fixed timer length.
+  const n=1+Math.floor(clamp(mag/SKY.boostMax,0,1)*3);
+  skyTrailT=0.045+0.04*(1-clamp(mag/Math.max(SKY.boostMax,1e-3),0,1));
+  const bx=P.leapBoost.x,bz=P.leapBoost.z,bl=mag||1;
+  const tx=-bx/bl,tz=-bz/bl;
+  const speed=2.2+mag*0.55;
+  for(let i=0;i<n;i++)spawnP(P.pos.x+rand(-0.12,0.12),P.pos.y+0.45+rand(-0.1,0.15),P.pos.z+rand(-0.12,0.12),tx*speed+rand(-0.4,0.4),rand(0.4,1.4),tz*speed+rand(-0.4,0.4),rand(0.08,0.14),Math.random()<0.5?0xfff4e8:0xffd2a8,rand(0.28,0.45)+mag*0.02,1.1+mag*0.04,0,0.7);
+}
+function grantSkyBlastFromVent(){
+  const needPower=!P.hasSkyBlast,needPuff=!P.puff;
+  if(!needPower&&!needPuff)return false;
+  P.hasSkyBlast=true;
+  if(needPuff){P.puff=true;refillFX();}
+  else if(needPower){SFX.powerUp();spoutWorld(tmpV);for(let i=0;i<10;i++)spawnP(tmpV.x,tmpV.y,tmpV.z,rand(-2,2),rand(1,3),rand(-2,2),0.08,0xffc08a,0.6,0.3,-3,0.9);}
+  return true;
+}
+function updateSteamVentTouch(dt){
+  for(const v of steamVents){
+    const dx=P.pos.x-v.x,dz=P.pos.z-v.z;
+    if(dx*dx+dz*dz<(v.r+0.2)*(v.r+0.2)&&Math.abs(P.pos.y-v.y)<1.4){
+      if(P.grounded||!P.puff||!P.hasSkyBlast)grantSkyBlastFromVent();
+    }
+  }
+}
+function gustSteamVents(mx,mz,k){
+  for(const v of steamVents){const s=k(v.x,v.z);if(s>0.12){grantSkyBlastFromVent();for(let i=0;i<8;i++)spawnP(v.x,v.y+0.2,v.z,rand(-1,1),rand(2,5),rand(-1,1),0.08,0xfff0e0,0.5,0.5,0,0.7);}}
+}
 function fireJet(){P.jetT=JET_T;P.jetP=0;P.jetHits.length=0;SFX.jet();}
 function jetDamage(){for(const e of gloops){if(!e.alive||e.state==='dying')continue;if(P.jetHits.indexOf(e)>=0)continue;
   const dx=e.x-P.pos.x,dz=e.z-P.pos.z,d=Math.hypot(dx,dz);if(d>0.55+e.size*0.5)continue;
@@ -1050,7 +1179,7 @@ function onLand(fall,surf){if(!P.puff){P.puff=true;refillFX();}P.sq=clamp(1-fall
   if(surf==='water'){SFX.splash();for(let i=0;i<10;i++)spawnP(P.pos.x,-0.05,P.pos.z,rand(-2,2),rand(1.5,4),rand(-2,2),rand(0.06,0.14),0xdff6ff,rand(0.3,0.5),0.5,-7,0.9);}
   else if(fall>7){spawnRing(P.pos.x,P.pos.y+0.03,P.pos.z,0xe9dcc0,0.35,4,0.35);for(let i=0;i<8;i++){const a=rand(0,TAU);spawnP(P.pos.x,P.pos.y+0.05,P.pos.z,Math.cos(a)*rand(1,3),rand(0.5,1.5),Math.sin(a)*rand(1,3),rand(0.08,0.14),0xffffff,rand(0.3,0.5),1.0,-2,0.7);}}
   CAM.fovKick=-3*clamp(fall/20,0,1);if(fall>14)rumble(80,0.4,0.2);}
-function landOn(surf){const v=P.vel;const fall=-v.y;if(v.y<0)v.y=0;P.puffAir=0;endHover();P.grounded=true;P.lastGround=time;P.surf=surf;if(P.slam!==0){slamImpact();return;}if(!P.wasGrounded)onLand(fall,surf);}
+function landOn(surf){const v=P.vel;const fall=-v.y;if(v.y<0)v.y=0;P.puffAir=0;endHover();clearLeapBoost();P.grounded=true;P.lastGround=time;P.surf=surf;if(P.slam!==0){slamImpact();return;}if(!P.wasGrounded)onLand(fall,surf);}
 function doGust(){const yaw=P.yaw,fx=Math.sin(yaw),fz=Math.cos(yaw);const mx=P.pos.x+fx*0.35,my=P.pos.y+0.85,mz=P.pos.z+fz*0.35;
   SFX.gust();P.sq=Math.min(P.sq,0.72);P.mouthT=0.35;
   for(let i=0;i<14;i++){const sp=rand(5,9),a=rand(-0.35,0.35);spawnP(mx,my+rand(-0.1,0.1),mz,Math.sin(yaw+a)*sp,rand(-0.5,1),Math.cos(yaw+a)*sp,rand(0.08,0.16),0xffffff,rand(0.3,0.5),1.6,0,0.7);}
@@ -1064,6 +1193,7 @@ function doGust(){const yaw=P.yaw,fx=Math.sin(yaw),fz=Math.cos(yaw);const mx=P.p
   for(const q of goos){if(!q.alive||q.ref||Math.abs(q.pos.y-P.pos.y)>3)continue;const s=k(q.pos.x,q.pos.z);if(s>0){q.ref=true;q.vel.x=fx*12;q.vel.z=fz*12;q.vel.y=Math.max(q.vel.y,3);q.life=3;q.m.material.color.setHex(0xd8ff9a);spawnRing(q.pos.x,q.pos.y,q.pos.z,0xd8ff9a,0.2,3,0.25);}}
   {if(WM){const s=k(WM.sailX,WM.sailZ);if(s>0)WM.spin+=s*7;}}
   {if(BOAT){const s=k(BOAT.pos.x,BOAT.pos.z);if(s>0){BOAT.vel.x+=fx*s*6;BOAT.vel.z+=fz*s*6;}}}
+  gustSteamVents(mx,mz,k);
   if(isUnderwater())gustHitKelp(mx,mz,k);
   rumble(60,0.2,0.4);
   if(isUnderwater()&&P.bubble)fireBubble();
@@ -1098,16 +1228,20 @@ function slamImpact(){const px=P.pos.x,py=P.pos.y,pz=P.pos.z;SFX.slam();CAM.shak
   {if(WM){const s=kk(WM.sailX,WM.sailZ);if(s>0)WM.spin+=s*4;}}
   {if(BOAT){const s=kk(BOAT.pos.x,BOAT.pos.z);if(s>0){const d=Math.hypot(BOAT.pos.x-px,BOAT.pos.z-pz)||0.01;BOAT.vel.x+=(BOAT.pos.x-px)/d*s*4;BOAT.vel.z+=(BOAT.pos.z-pz)/d*s*4;}}}
   P.vel.y=SLAM_REBOUND;P.grounded=false;P.lastGround=-9;P.slam=0;P.sq=0.5;if(!P.puff){P.puff=true;refillFX();}}
-function hurtPlayer(kx,kz,col){if(P.inv>0||P.dead)return;P.hp--;P.inv=1.4;const l=Math.hypot(kx,kz)||1;P.vel.x=kx/l*5;P.vel.z=kz/l*5;P.vel.y=Math.max(P.vel.y,5);P.grounded=false;P.slam=0;P.puffAir=0;endHover();P.sq=0.6;SFX.hurt();CAM.shake=0.45;rumble(150,0.7,0.3);
+function hurtPlayer(kx,kz,col){if(P.inv>0||P.dead)return;P.hp--;P.inv=1.4;const l=Math.hypot(kx,kz)||1;P.vel.x=kx/l*5;P.vel.z=kz/l*5;P.vel.y=Math.max(P.vel.y,5);P.grounded=false;P.slam=0;P.puffAir=0;endHover();clearLeapBoost();P.sq=0.6;SFX.hurt();CAM.shake=0.45;rumble(150,0.7,0.3);
   for(let i=0;i<10;i++)spawnP(P.pos.x,P.pos.y+0.6,P.pos.z,rand(-3,3),rand(1,4),rand(-3,3),rand(0.06,0.12),col||GOOC,rand(0.3,0.5),0.3,-8,0.9);
   const lostFire=P.fire;
   const lostBubble=P.bubble&&isUnderwater();
+  // Enemy hits remove Sky Blast like fire/bubbles. Future lava contact must clear leapBoost only and KEEP hasSkyBlast (see Level 3 spec).
+  const lostSky=P.hasSkyBlast;
   if(P.fire){P.fire=false;SFX.fireOut();spoutWorld(tmpV);for(let i=0;i<12;i++)spawnP(tmpV.x,tmpV.y,tmpV.z,rand(-1.2,1.2),rand(0.5,2.2),rand(-1.2,1.2),rand(0.08,0.15),0x8a8a8a,rand(0.5,0.9),0.9,-1,0.55);}
   if(lostBubble){P.bubble=false;SFX.bubbleOut();spoutWorld(tmpV);for(let i=0;i<10;i++)spawnP(tmpV.x,tmpV.y,tmpV.z,rand(-1,1),rand(0.5,2),rand(-1,1),0.07,0xc8f0ff,rand(0.4,0.7),0.8,-1,0.7);}
+  if(lostSky){P.hasSkyBlast=false;SFX.fireOut();spoutWorld(tmpV);for(let i=0;i<10;i++)spawnP(tmpV.x,tmpV.y,tmpV.z,rand(-1,1),rand(0.8,2.4),rand(-1,1),rand(0.07,0.12),0xffc08a,rand(0.4,0.7),0.7,-1,0.65);}
   updateHUD();if(P.hp<=0){P.dead=true;P.deadT=1.8;SFX.deflate();showToast('Out of puff! Back to the last checkpoint…');spoutWorld(tmpV);for(let i=0;i<8;i++)spawnP(tmpV.x,tmpV.y,tmpV.z,rand(-0.5,0.5),rand(1,2),rand(-0.5,0.5),0.08,0xffffff,0.8,1.2,0,0.7);}
   else if(lostFire)showToast('The fire went out!');
-  else if(lostBubble)showToast('The bubbles went away!');}
-function respawn(){P.pos.set(P.spawn.x,P.spawn.y,P.spawn.z);P.vel.set(0,0,0);P.hp=P.maxHp;P.dead=false;P.inv=1.5;P.puff=true;P.puffAir=0;endHover();P.slam=0;P.sq=1.3;P.yaw=Math.PI;CAM.yaw=0;CAM.pos.set(P.spawn.x,P.spawn.y+5,P.spawn.z+9);CAM.look.set(P.spawn.x,P.spawn.y+1,P.spawn.z);CAM.lastManual=-9;SFX.refill();puffJumpFX();showToast('Back on your feet!');updateHUD();}
+  else if(lostBubble)showToast('The bubbles went away!');
+  else if(lostSky)showToast('The Sky Blast went out!');}
+function respawn(){P.pos.set(P.spawn.x,P.spawn.y,P.spawn.z);P.vel.set(0,0,0);P.hp=P.maxHp;P.dead=false;P.inv=1.5;P.puff=true;P.puffAir=0;endHover();clearLeapBoost();P.slam=0;P.sq=1.3;P.yaw=Math.PI;CAM.yaw=0;CAM.pos.set(P.spawn.x,P.spawn.y+5,P.spawn.z+9);CAM.look.set(P.spawn.x,P.spawn.y+1,P.spawn.z);CAM.lastManual=-9;SFX.refill();puffJumpFX();showToast('Back on your feet!');updateHUD();}
 function hitGloop(e,dmg,kx,kz){if(!e.alive||e.state==='dying')return;e.hp-=dmg;e.hurtT=0.3;e.vx+=kx;e.vz+=kz;e.wind=0;SFX.blorp();
   for(let i=0;i<8;i++)spawnP(e.x,e.y+0.5,e.z,rand(-3,3),rand(1,4),rand(-3,3),rand(0.06,0.12),e.col,rand(0.3,0.5),0.3,-8,0.9);
   if(e.hp<=0){e.state='dying';e.t=0;e.vx=0;e.vz=0;SFX.dissolve();addPuddle(e.x,e.y,e.z,0.8+e.size*0.6,e.col);if(P.hp<P.maxHp)addHeart(e.x,e.y+0.8,e.z);for(let i=0;i<14;i++)spawnP(e.x,e.y+0.4,e.z,rand(-2,2),rand(1,3),rand(-2,2),rand(0.08,0.16),e.col,rand(0.5,0.9),0.5,-5,0.9);rumble(80,0.3,0.3);}}
@@ -1119,18 +1253,25 @@ function updatePlayer(dt){const p=P.pos,v=P.vel;
   P.inv-=dt;if(P.dead){P.deadT-=dt;if(P.deadT<=0)respawn();}
   const cy=CAM.yaw,fx=-Math.sin(cy),fz=-Math.cos(cy),rx=Math.cos(cy),rz=-Math.sin(cy);
   let wx=fx*(-IN.mz)+rx*IN.mx,wz=fz*(-IN.mz)+rz*IN.mx;let wl=Math.hypot(wx,wz);if(wl>1){wx/=wl;wz/=wl;wl=1;}if(P.dead){wx=0;wz=0;wl=0;}
+  // Ordinary movement stays SPEED-capped. leapBoost is applied separately so stick reverse cannot cancel it.
   if(P.slam===0){const a=P.grounded?(wl>0.05?ACC:DEC):(wl>0.05?AIRACC:3);v.x=moveTo(v.x,wx*SPEED,a*dt);v.z=moveTo(v.z,wz*SPEED,a*dt);if(wl>0.05)P.yaw=angDamp(P.yaw,Math.atan2(wx,wz),14,dt);}
+  decayLeapBoost(dt);
   if(IN.jump)P.jumpBuf=time;
   const canJump=(P.grounded||time-P.lastGround<COYOTE)&&P.slam===0;
   if(!P.dead&&time-P.jumpBuf<BUFFER&&canJump){v.y=JUMPV;P.grounded=false;P.lastGround=-9;P.jumpBuf=-9;P.jumping=true;P.sq=1.25;SFX.jump();fireJet();for(let i=0;i<3;i++)spawnP(p.x,p.y+0.05,p.z,rand(-1,1),rand(0.5,1),rand(-1,1),0.09,0xffffff,0.3,0.8,0,0.5);}
-  else if(!P.dead&&IN.jump&&!P.grounded&&!canJump&&P.puff&&P.slam===0){v.y=Math.max(v.y,0)*0.35+PUFFV;P.puff=false;P.puffAir=1;P.jumping=true;P.jumpBuf=-9;P.sq=1.35;puffJumpFX();SFX.puff();fireJet();CAM.fovKick=6;}
+  else if(!P.dead&&IN.jump&&!P.grounded&&!canJump&&P.puff&&P.slam===0){
+    const puffV=PUFFV*(P.hasSkyBlast?SKY.puffVMul:1);
+    v.y=Math.max(v.y,0)*0.35+puffV;P.puff=false;P.puffAir=1;P.jumping=true;P.jumpBuf=-9;P.sq=1.35;
+    if(P.hasSkyBlast&&SKY.boostMax>0){fireLeapBoost();skyLeapFX();}
+    else puffJumpFX();
+    SFX.puff();fireJet();CAM.fovKick=6;}
   if(P.jumping&&!IN.jumpHeld&&v.y>0){v.y*=0.5;P.jumping=false;}
   if(v.y<=0)P.jumping=false;
   P.gustCD-=dt;P.bonkCD-=dt;
   const uw=isUnderwater();
   if(!P.dead&&IN.b&&P.slam===0&&!P.inFan){
     if(uw){if(P.gustCD<=0){doGust();P.gustCD=0.45;}}
-    else if(!P.grounded){P.slam=1;P.hangT=SLAM_HANG;v.x*=0.25;v.z*=0.25;v.y=Math.max(v.y,0)*0.2;P.puffAir=0;endHover();SFX.slamCharge();}
+    else if(!P.grounded){P.slam=1;P.hangT=SLAM_HANG;v.x*=0.25;v.z*=0.25;v.y=Math.max(v.y,0)*0.2;P.puffAir=0;endHover();clearLeapBoost();SFX.slamCharge();}
     else if(P.gustCD<=0){doGust();P.gustCD=0.45;}
   }
   if(!P.dead&&IN.y&&P.bonkCD<=0){doBonk();P.bonkCD=BONK_CD;P.bonkT=0.45;}
@@ -1145,8 +1286,10 @@ function updatePlayer(dt){const p=P.pos,v=P.vel;
   else{P.sqT=P.grounded?1:(v.y>3?1.1:1);v.y+=GRAV*dt;if(v.y<MAXFALL)v.y=MAXFALL;}
   P.inFan=false;
   for(const f of fans){const dx=p.x-f.x,dz=p.z-f.z;if(dx*dx+dz*dz<f.r*f.r&&p.y<f.top){P.inFan=true;if(P.slam){P.slam=0;}P.puffAir=0;endHover();v.y=moveTo(v.y,9.5,50*dt);if(!P.puff){P.puff=true;refillFX();}}}
+  updateSteamVentTouch(dt);
   P.wasGrounded=P.grounded;P.grounded=false;
-  p.x+=v.x*dt;collideAxis('x');p.z+=v.z*dt;collideAxis('z');
+  // Integrate ordinary velocity plus the independent leapBoost carry.
+  p.x+=(v.x+P.leapBoost.x)*dt;collideAxis('x');p.z+=(v.z+P.leapBoost.z)*dt;collideAxis('z');
   const prevY=p.y;p.y+=v.y*dt;
   let landY=-Infinity,landSurf=null,bump=false,bumpY=Infinity;
   for(const s of solids){if(!hOverlap(s))continue;if(p.y+H<=s.min.y||p.y>=s.max.y)continue;
@@ -1157,10 +1300,11 @@ function updatePlayer(dt){const p=P.pos,v=P.vel;
   if(p.y<=gy&&gy>landY){landY=gy;landSurf=inPond(p.x,p.z)?'water':'grass';}
   if(landY>-Infinity){p.y=landY;landOn(landSurf);}
   else if(bump){p.y=bumpY-H-0.001;if(v.y>0)v.y=0;}
-  if(p.y<-6){p.set(P.spawn.x,P.spawn.y,P.spawn.z);v.set(0,0,0);}
+  if(p.y<-6){p.set(P.spawn.x,P.spawn.y,P.spawn.z);v.set(0,0,0);clearLeapBoost();}
   if(P.jetT>0){P.jetT-=dt;jetDamage();
     P.jetP-=dt;if(P.jetP<=0){P.jetP=0.028;const cy=Math.cos(P.yaw),sy=Math.sin(P.yaw);
       for(let sg=-1;sg<=1;sg+=2)spawnP(p.x+sg*0.12*cy,p.y-0.04,p.z-sg*0.12*sy,rand(-0.8,0.8),rand(-4,-1.8),rand(-0.8,0.8),rand(0.07,0.13),Math.random()<0.5?0x5ec8ff:0xe4f8ff,rand(0.25,0.42),1.1,0,0.85);}}
+  spawnSkySteamTrail(dt);
   P.inGoo=false;if(P.grounded){for(const pu of puddles){if(!pu.alive)continue;if(Math.abs(p.y-pu.y)<0.4&&Math.hypot(p.x-pu.x,p.z-pu.z)<pu.size+R*0.5){P.inGoo=true;break;}}}
   if(P.inGoo){v.x*=Math.exp(-16*dt);v.z*=Math.exp(-16*dt);P.surf='goo';}
   const sp=Math.hypot(v.x,v.z);
@@ -1184,6 +1328,11 @@ function updatePlayerVisual(dt){const u=player.userData;if(P.dead)P.sqT=0.45;
     u.jet.children.forEach(c=>{c.material.opacity=(c.material.color?0.5:0.5)+jk*0.45;});}
   else u.jet.visible=false;
   u.flame.visible=!!P.fire;if(P.fire){const fl=1+Math.sin(time*19)*0.16;u.flame.scale.set(fl,1+Math.sin(time*25)*0.24,fl);u.flame.rotation.y=time*3.4;}
+  // Idle Sky Blast tell: bellows seams glow orange. No spout flame — that stays fire-power only.
+  if(u.seams){const runGlow=P.grounded?clamp(Math.hypot(P.vel.x,P.vel.z)/SPEED,0,1):0;
+    for(const seam of u.seams){const mat=seam.material;if(!mat||!mat.color)continue;
+      if(P.hasSkyBlast){const g=0.45+runGlow*0.35+Math.sin(time*6)*0.05;mat.color.setHex(0xff8a3a);if(mat.emissive&&mat.emissive.setHex)mat.emissive.setHex(0xff6a20);if(mat.emissiveIntensity!=null)mat.emissiveIntensity=g;}
+      else{mat.color.setHex(0xc9ced4);if(mat.emissive&&mat.emissive.setHex)mat.emissive.setHex(0x000000);if(mat.emissiveIntensity!=null)mat.emissiveIntensity=0;}}}
   P.mouthT-=dt;u.mouth.scale.set(0.16,P.mouthT>0?0.16:0.05,0.03);
   P.blinkT-=dt;if(P.blinkT<=0){P.blinkT=rand(2,5);P.blinkAnim=0.14;}
   if(P.blinkAnim>0){P.blinkAnim-=dt;const s=P.blinkAnim>0.07?0.15:1;u.eyes.forEach(e=>{e.scale.y=s;});}else u.eyes.forEach(e=>{e.scale.y=1;});
@@ -1309,13 +1458,18 @@ function updateFires(dt){for(const f of fires){if(!f.alive)continue;f.life-=dt;
 function updateCrates(dt){if(seenCrate)return;for(const c of crates){if(c.broken)continue;if(Math.hypot(c.x-P.pos.x,c.z-P.pos.z)<6&&Math.abs(c.y-P.pos.y)<3){seenCrate=true;showToast('A crate! Spin (Y) or slam it open.');break;}}}
 function updatePowers(dt){for(const w of powers){if(w.got)continue;w.t+=dt;w.g.position.y=w.y+Math.sin(time*3+w.ph)*0.13;w.g.rotation.y+=dt*2.2;
   const fl=1+Math.sin(time*17+w.ph)*0.12;w.g.scale.set(fl,Math.min(1,w.t*3)*(2-fl),fl);
-  w.pt=(w.pt||0)-dt;if(w.pt<=0){w.pt=0.08;spawnP(w.g.position.x+rand(-0.1,0.1),w.g.position.y+0.2,w.g.position.z+rand(-0.1,0.1),rand(-0.2,0.2),rand(0.6,1.4),rand(-0.2,0.2),0.06,Math.random()<0.5?0xff8a2b:0xffe36b,0.35,0.3,0,0.6);}
+  w.pt=(w.pt||0)-dt;if(w.pt<=0){w.pt=0.08;const col=w.kind==='sky'?(Math.random()<0.5?0xff9a3c:0xffe9d0):(w.kind==='bubble'?0xc8f0ff:(Math.random()<0.5?0xff8a2b:0xffe36b));
+    spawnP(w.g.position.x+rand(-0.1,0.1),w.g.position.y+0.2,w.g.position.z+rand(-0.1,0.1),rand(-0.2,0.2),rand(0.6,1.4),rand(-0.2,0.2),0.06,col,0.35,0.3,0,0.6);}
   if(!P.dead){tmpV.set(P.pos.x,P.pos.y+0.6,P.pos.z);if(w.g.position.distanceTo(tmpV)<1.1){w.got=true;w.g.visible=false;
     if(w.kind==='bubble'){P.bubble=true;SFX.bubblePower();CAM.fovKick=Math.max(CAM.fovKick,5);showToast('Bubble power! Gust to trap fish — keep it until something hits you.');
       for(let i=0;i<16;i++)spawnP(w.g.position.x,w.g.position.y,w.g.position.z,rand(-3,3),rand(1,4),rand(-3,3),0.07,0xc8f0ff,0.8,0.3,-4,1);}
+    else if(w.kind==='sky'){P.hasSkyBlast=true;SFX.powerUp();CAM.fovKick=Math.max(CAM.fovKick,5);showToast('Sky Blast! Jump, then puff again for a long leap.');
+      for(let i=0;i<16;i++)spawnP(w.g.position.x,w.g.position.y,w.g.position.z,rand(-3,3),rand(1,4),rand(-3,3),0.09,Math.random()<0.5?0xff9a3c:0xffe9d0,0.8,0.3,-4,1);}
     else{P.fire=true;SFX.powerUp();CAM.fovKick=Math.max(CAM.fovKick,5);showToast('Fire slam! Ground pound for fireballs — keep it until a Gloop hits you.');
       for(let i=0;i<16;i++)spawnP(w.g.position.x,w.g.position.y,w.g.position.z,rand(-3,3),rand(1,4),rand(-3,3),0.09,Math.random()<0.5?0xff8a2b:0xffe36b,0.8,0.3,-4,1);}
     updateHUD();}}}}
+function updateSteamVents(dt){for(const v of steamVents){v.pt-=dt;if(v.pt>0)continue;v.pt=0.1;
+  spawnP(v.x+rand(-0.2,0.2),v.y+0.2,v.z+rand(-0.2,0.2),rand(-0.3,0.3),rand(1.5,3.2),rand(-0.3,0.3),rand(0.06,0.1),0xfff0e0,rand(0.5,0.8),0.6,0,0.55);}}
 function updateHearts(dt){for(const h of hearts){if(h.got)continue;h.t+=dt;h.g.position.y=h.y+Math.sin(time*3+h.ph)*0.1;h.g.rotation.y+=dt*2;h.g.scale.setScalar(0.9*Math.min(1,h.t*3));
   if(!P.dead){tmpV.set(P.pos.x,P.pos.y+0.6,P.pos.z);if(h.g.position.distanceTo(tmpV)<1.05){h.got=true;h.g.visible=false;P.hp=Math.min(P.maxHp,P.hp+1);SFX.heal();for(let i=0;i<12;i++)spawnP(h.g.position.x,h.g.position.y,h.g.position.z,rand(-2,2),rand(1,4),rand(-2,2),0.07,0xff8fa8,0.7,0.3,-5,1);updateHUD();}}}}
 
@@ -2323,7 +2477,7 @@ window.__touchArmed=()=>touchArmed;
 window.__setPickerIdx=setPickerIdx;
 
 function drawLevelArt(){
-  [[$('art0'),'meadow'],[$('art1'),'deep']].forEach(([cv,kind])=>{
+  [[$('art0'),'meadow'],[$('art1'),'deep'],[$('art2'),'peak']].forEach(([cv,kind])=>{
     if(!cv||typeof cv.getContext!=='function')return;
     const w=160,h=100;
     const g=cv.getContext('2d');if(!g)return;
@@ -2337,13 +2491,21 @@ function drawLevelArt(){
       g.fillStyle='#f1e3c2';g.fillRect(w*0.72,h*0.28,10,28);g.fillStyle='#c0392b';g.beginPath();g.moveTo(w*0.67,h*0.28);g.lineTo(w*0.82,h*0.28);g.lineTo(w*0.745,h*0.14);g.closePath();g.fill();
       for(let i=0;i<4;i++){const a=i*Math.PI/2;g.fillStyle='#7a4f2b';g.fillRect(w*0.745+Math.cos(a)*16-2,h*0.22+Math.sin(a)*10,4,18);g.fillStyle='#fff5e0';g.fillRect(w*0.745+Math.cos(a)*16-5,h*0.22+Math.sin(a)*10,10,12);}
       g.fillStyle='#4d9a3a';g.beginPath();g.arc(w*0.22,h*0.52,14,0,TAU);g.fill();g.beginPath();g.arc(w*0.18,h*0.48,10,0,TAU);g.fill();
-    }else{
+    }else if(kind==='deep'){
       const sea=g.createLinearGradient(0,0,0,h);sea.addColorStop(0,'#5ec8e8');sea.addColorStop(0.45,'#2a9fd4');sea.addColorStop(1,'#1a6a8a');g.fillStyle=sea;g.fillRect(0,0,w,h);
       g.fillStyle='rgba(255,255,255,0.25)';for(let i=0;i<5;i++)g.fillRect(i*34+4,h*0.12+Math.sin(i)*6,28,3);
       g.fillStyle='#d9c08a';g.fillRect(0,h*0.78,w,h*0.22);
       g.fillStyle='#f5d0a8';g.beginPath();g.moveTo(w*0.55,h*0.78);g.quadraticCurveTo(w*0.62,h*0.35,w*0.78,h*0.78);g.lineTo(w*0.52,h*0.78);g.closePath();g.fill();
       g.strokeStyle='#e8b890';g.lineWidth=2;g.stroke();
       g.fillStyle='#fff8ee';g.beginPath();g.arc(w*0.6,h*0.52,11,0,TAU);g.fill();g.strokeStyle='#e8b890';g.stroke();
+    }else{
+      const sky=g.createLinearGradient(0,0,0,h);sky.addColorStop(0,'#5a7ea8');sky.addColorStop(0.55,'#c45a28');sky.addColorStop(1,'#2a1810');g.fillStyle=sky;g.fillRect(0,0,w,h);
+      g.fillStyle='#3a2218';g.fillRect(0,h*0.72,w,h*0.28);
+      g.fillStyle='#e07a3a';g.beginPath();g.moveTo(w*0.18,h*0.78);g.lineTo(w*0.5,h*0.22);g.lineTo(w*0.82,h*0.78);g.closePath();g.fill();
+      g.fillStyle='#8a3a1a';g.beginPath();g.moveTo(w*0.34,h*0.78);g.lineTo(w*0.5,h*0.38);g.lineTo(w*0.66,h*0.78);g.closePath();g.fill();
+      g.fillStyle='rgba(80,80,90,0.55)';g.beginPath();g.ellipse(w*0.5,h*0.2,10,5,0,0,TAU);g.fill();
+      g.fillStyle='rgba(60,60,70,0.4)';g.beginPath();g.ellipse(w*0.48,h*0.12,7,4,0,0,TAU);g.fill();
+      g.fillStyle='#ff9a3c';g.beginPath();g.arc(w*0.5,h*0.28,4,0,TAU);g.fill();
     }
   });
 }
@@ -2353,7 +2515,7 @@ for(let i=0;i<LEVELS.length;i++){
 }
 
 function startGame(){if(started)return;loadLevel(LEVELS[pickerIdx]);started=true;$('start').style.display='none';initAudio();IN.jump=false;IN.b=false;IN.y=false;updateHUD();
-  const msg=pickerIdx===0?'Follow the path. Wake all four Snoozles!':'Dive in. Wake four Snoozles on the ocean floor!';
+  const msg=pickerIdx===0?'Follow the path. Wake all four Snoozles!':(pickerIdx===1?'Dive in. Wake four Snoozles on the ocean floor!':'Try the long leap. Jump, then puff again!');
   setTimeout(()=>showToast(msg),600);setTimeout(()=>{$('hint').style.opacity=0;},12000);}
 window.__startGame=startGame;
 updatePickerUI();
@@ -2362,7 +2524,7 @@ updatePickerUI();
 // ===== src/game.js =====
 let time=0,rescued=0,gotNotes=0;
 let started=false;
-window.__W={solids,gloops,goos,hearts,crates,powers,fires,checks,snoozles,notes,dust,puddles,sharks,fish,spikefish,clams,bubbleShots,kelps,celebrationParticles:PART,get underwaterGroup(){return underwaterGroup;},get won(){return won;},get WM(){return WM;},get RAINBOW(){return RAINBOW;},get FINISH(){return FINISH;},get sfx(){return SFX;},get wreck(){return WRECK;},get conch(){return CONCH;}};
+window.__W={solids,gloops,goos,hearts,crates,powers,fires,checks,snoozles,notes,dust,puddles,sharks,fish,spikefish,clams,bubbleShots,kelps,steamVents,celebrationParticles:PART,get underwaterGroup(){return underwaterGroup;},get won(){return won;},get WM(){return WM;},get RAINBOW(){return RAINBOW;},get FINISH(){return FINISH;},get sfx(){return SFX;},get wreck(){return WRECK;},get conch(){return CONCH;}};
 window.__started=()=>started;
 
 // ---------- camera ----------
@@ -2406,7 +2568,7 @@ function frame(now){requestAnimationFrame(frame);let dt=(now-last)/1000;last=now
   if(!started){updateClouds(dt);updateSnoozles(dt);updateZ(dt);updatePlayerVisual(dt);renderer.render(scene,camera);return;}
   time+=dt;
   readKeys(dt);if(T.stickId!==null){IN.mx=T.jx;IN.mz=T.jy;}if(HELD.a)IN.jumpHeld=true;if(HELD.b)IN.bHeld=true;
-  updatePlayer(dt);updateWobblers(dt);updatePinwheels(dt);updateToss(dt);updateNotes(dt);updateSnoozles(dt);updateBoat(dt);updateWindmill(dt);updateFans(dt);updateClouds(dt);updateGloops(dt);updateGoos(dt);updatePuddles(dt);updateFires(dt);updateCrates(dt);updatePowers(dt);updateHearts(dt);updateChecks(dt);
+  updatePlayer(dt);updateWobblers(dt);updatePinwheels(dt);updateToss(dt);updateNotes(dt);updateSnoozles(dt);updateBoat(dt);updateWindmill(dt);updateFans(dt);updateSteamVents(dt);updateClouds(dt);updateGloops(dt);updateGoos(dt);updatePuddles(dt);updateFires(dt);updateCrates(dt);updatePowers(dt);updateHearts(dt);updateChecks(dt);
   updateSharks(dt);updateFish(dt);updateSpikefish(dt);updateBubbleShots(dt);updateClams(dt);updateKelp(dt);
   updateWin(dt);if(FINISH)FINISH.update(dt,won?winT:-1);
   updateParticles(dt);updateRings(dt);updateZ(dt);updateCamera(dt);updatePlayerVisual(dt);
