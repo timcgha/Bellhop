@@ -43,7 +43,7 @@ ok(skyCrates.length>=5&&skyCrates.length<=8,'Areas 1–3 have multiple Sky Blast
 ok(L.route.skyCrates&&L.route.skyCrates.length===skyCrates.length,'route.skyCrates metadata matches live crates');
 const vents=W.steamVents;
 ok(vents.length>=5,'renewable steam vents remain on the route');
-const firstCrate=skyCrates.find(c=>Math.abs(c.z+52)<1);
+const firstCrate=skyCrates.find(c=>Math.abs(c.z-L.route.skyCrate.z)<1.5);
 ok(!!firstCrate,'teaching Sky Blast crate still present');
 settle(firstCrate.x,firstCrate.y+1.3,firstCrate.z);P.vel.set(0,-10,0);P.slam=2;P.grounded=false;P.hasSkyBlast=false;P.leapBoost.set(0,0,0);
 frames(14);

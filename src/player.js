@@ -16,7 +16,7 @@ function buildPlayer(){
   head.add(mesh(CYL,brass,0,0.7,0,0.075,0.3,0.075));head.add(mesh(CYL,dark,0,0.86,0,0.05,0.04,0.05));
   const armL=new THREE.Group(),armR=new THREE.Group();armL.position.set(-0.46,0.08,0);armR.position.set(0.46,0.08,0);
   [[armL,-1],[armR,1]].forEach(a=>{const A=a[0],sgn=a[1];A.add(mesh(SPH,brass,0,0,0,0.1));A.add(mesh(CYL,teal,sgn*0.06,-0.16,0,0.07,0.28,0.07));A.add(mesh(SPH,dark,sgn*0.08,-0.32,0,0.1));head.add(A);});
-  // Compact mechanical glide wings — folded until a powered Sky Blast crest.
+  // Compact mechanical glide wings — fold until a powered Sky Blast puff (visual deploys before glide physics).
   const wings=new THREE.Group();wings.position.set(0,0.55,-0.02);bel.add(wings);
   const wingMat=pho(0xb8c0c8,90,0xe8eef4),hingeMat=brass;
   const wingL=new THREE.Group(),wingR=new THREE.Group();
@@ -42,7 +42,7 @@ window.__PLAYER=()=>player;
 (function(){const f=new THREE.Group();f.add(mesh(CONE,new THREE.MeshBasicMaterial({color:0xff7a1f}),0,0.14,0,0.13,0.4,0.13));f.add(mesh(CONE,new THREE.MeshBasicMaterial({color:0xffe36b}),0,0.1,0,0.07,0.24,0.07));f.position.y=0.92;f.visible=false;player.userData.head.add(f);player.userData.flame=f;})();
 shadow=new THREE.Mesh(new THREE.CircleGeometry(0.5,20),new THREE.MeshBasicMaterial({color:0x000000,transparent:true,opacity:0.28,depthWrite:false}));shadow.rotation.x=-Math.PI/2;scene.add(shadow);
 
-const P=window.__P={spawn:{x:0,y:0,z:10},pos:new THREE.Vector3(0,0,10),vel:new THREE.Vector3(),yaw:Math.PI,grounded:false,wasGrounded:false,lastGround:-9,jumpBuf:-9,jumping:false,puff:true,slam:0,hangT:0,gustCD:0,bonkCD:0,bonkT:0,sq:1,sqV:0,sqT:1,footT:0,surf:'grass',run:0,mouthT:0,blinkT:2,blinkAnim:0,inFan:false,splT:0,puffAir:0,hover:false,hovT:0,hoverS:null,hp:4,maxHp:4,inv:0,dead:false,deadT:0,inGoo:false,fire:false,bubble:false,hasSkyBlast:false,leapBoost:new THREE.Vector3(),glideT:0,glideArmed:false,lavaRecT:0,lavaRecMax:0,anchorSettleT:0,safeAnchor:new THREE.Vector3(0,0,10),lavaRecFrom:new THREE.Vector3(),jetT:0,jetP:0,jetHits:[]};
+const P=window.__P={spawn:{x:0,y:0,z:10},pos:new THREE.Vector3(0,0,10),vel:new THREE.Vector3(),yaw:Math.PI,grounded:false,wasGrounded:false,lastGround:-9,jumpBuf:-9,jumping:false,puff:true,slam:0,hangT:0,gustCD:0,bonkCD:0,bonkT:0,sq:1,sqV:0,sqT:1,footT:0,surf:'grass',run:0,mouthT:0,blinkT:2,blinkAnim:0,inFan:false,splT:0,puffAir:0,hover:false,hovT:0,hoverS:null,hp:4,maxHp:4,inv:0,dead:false,deadT:0,inGoo:false,fire:false,bubble:false,hasSkyBlast:false,leapBoost:new THREE.Vector3(),glideT:0,glideArmed:false,wingsOut:false,lavaRecT:0,lavaRecMax:0,anchorSettleT:0,safeAnchor:new THREE.Vector3(0,0,10),lavaRecFrom:new THREE.Vector3(),jetT:0,jetP:0,jetHits:[]};
 let R=0.36,H=1.15,SPEED=6.8,ACC=44,DEC=60,AIRACC=20,GRAV=-30,JUMPV=10.5,PUFFV=9.4,MAXFALL=-32,COYOTE=0.12,BUFFER=0.15,STEP=0.42;
 let HOVER_HELD=1.0,HOVER_REL=0.5,HOVER_DRIFT=-1.6,SLAM_HANG=0.14,SLAM_FALL=-34,SLAM_REBOUND=8,JET_T=0.38,BONKR=2.05,BONK_CD=0.5;
 // Sky Blast tuning — inactive until a level supplies skyBlast (Level 3). Separate from ordinary SPEED/PUFFV.
@@ -78,7 +78,7 @@ window.__PHYS=()=>({speed:SPEED,acc:ACC,dec:DEC,airAcc:AIRACC,grav:GRAV,jumpV:JU
 window.__SKY=()=>({puffVMul:SKY.puffVMul,boostMax:SKY.boostMax,boostDecay:SKY.boostDecay,glideDur:SKY.glideDur,glideFallCap:SKY.glideFallCap,glideStartVy:SKY.glideStartVy});
 window.__LAVA=()=>({anchorSettle:LAVA_ANCHOR_SETTLE,anchorClear:LAVA_ANCHOR_CLEAR,recovery:LAVA_RECOVERY,hurtInv:HURT_INV});
 function clearLeapBoost(){P.leapBoost.set(0,0,0);}
-function clearGlide(){P.glideT=0;P.glideArmed=false;}
+function clearGlide(){P.glideT=0;P.glideArmed=false;P.wingsOut=false;}
 function leapBoostMag(){return Math.hypot(P.leapBoost.x,P.leapBoost.z);}
 // Capture run-up into a stored horizontal boost. Does not stack; call only when consuming P.puff.
 function fireLeapBoost(){
@@ -90,8 +90,9 @@ function fireLeapBoost(){
   else{dx=Math.sin(P.yaw);dz=Math.cos(P.yaw);}
   P.leapBoost.x=dx*SKY.boostMax*scale;
   P.leapBoost.z=dz*SKY.boostMax*scale;
-  // Arm a one-shot glide for the descent — does not stack with a live glide.
+  // Arm physical glide for crest/descent. Wings deploy NOW (visual only) so the leap reads as a glide immediately.
   if(SKY.glideDur>0&&P.glideT<=0)P.glideArmed=true;
+  P.wingsOut=true;
 }
 function decayLeapBoost(dt){
   if(leapBoostMag()<1e-4){clearLeapBoost();return;}
@@ -401,7 +402,7 @@ function updatePlayer(dt){const p=P.pos,v=P.vel;
     else if(v.y>0&&prevY+H<=s.min.y+0.06){if(s.min.y<bumpY){bumpY=s.min.y;bump=true;}}
     else{if(s.max.y-p.y<STEP+0.06){if(s.max.y>landY){landY=s.max.y;landSurf=s.surf;}}else pushOutXZ(s);}}
   const gy=groundHeightAt(p.x,p.z);
-  if(p.y<=gy&&gy>landY){landY=gy;landSurf=inPond(p.x,p.z)?'water':'grass';}
+  if(p.y<=gy&&gy>landY){landY=gy;landSurf=(CURRENT_LEVEL&&CURRENT_LEVEL.peakAtmosphere)?'stone':(inPond(p.x,p.z)?'water':'grass');}
   if(landY>-Infinity){p.y=landY;landOn(landSurf);}
   else if(bump){p.y=bumpY-H-0.001;if(v.y>0)v.y=0;}
   if(p.y<-6){p.set(P.spawn.x,P.spawn.y,P.spawn.z);v.set(0,0,0);clearLeapBoost();clearGlide();}
@@ -440,11 +441,12 @@ function updatePlayerVisual(dt){const u=player.userData;if(P.dead)P.sqT=0.45;
     for(const seam of u.seams){const mat=seam.material;if(!mat||!mat.color)continue;
       if(P.hasSkyBlast){const g=0.45+runGlow*0.35+Math.sin(time*6)*0.05;mat.color.setHex(0xff8a3a);if(mat.emissive&&mat.emissive.setHex)mat.emissive.setHex(0xff6a20);if(mat.emissiveIntensity!=null)mat.emissiveIntensity=g;}
       else{mat.color.setHex(0xc9ced4);if(mat.emissive&&mat.emissive.setHex)mat.emissive.setHex(0x000000);if(mat.emissiveIntensity!=null)mat.emissiveIntensity=0;}}}
-  // Mechanical glide wings: deploy only during the powered glide window.
+  // Mechanical glide wings: deploy on powered puff (visual), stay through glide physics, retract on clear.
   if(u.wings){
     const wd=u.wings.userData;
-    if(P.glideT>0)wd.open=lerp(wd.open,1,1-Math.exp(-18*dt));
-    else if(P.grounded||P.slam>0)wd.open=0;
+    const want=P.wingsOut||P.glideT>0;
+    if(want)wd.open=lerp(wd.open,1,1-Math.exp(-22*dt));
+    else if(P.grounded||P.slam>0||P.dead)wd.open=0;
     else wd.open=lerp(wd.open,0,1-Math.exp(-20*dt));
     const o=wd.open;
     u.wings.visible=o>0.04;
