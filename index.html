@@ -425,6 +425,8 @@ lavaRecovery:0.42,
 // Prototype gap the unpowered run cannot clear; powered running leap should.
 protoGap:{nearZ:0,farZ:-10,farEndZ:-22},
 // Mandatory Sky Blast crossings — CI iterates this list for vent/anchor/depth invariants.
+// Coordinates must match the prototype solids/lava below: near pad ends ~z=0, far pad
+// spans z=-22..-10 (edgeZ/farZ), gap lava currently z≈-8.8..-0.4, vent at takeoff.
 mandatoryLeaps:[{
   id:'protoLavaCross',
   takeoff:{x:0,z:1.5,ventReach:5},
@@ -1191,11 +1193,12 @@ function pointInLava(x,y,z){
 }
 function playerInLava(){return pointInLava(P.pos.x,P.pos.y,P.pos.z);}
 function lavaClearance(x,z){
-  // Horizontal distance to the nearest lava AABB (0 if inside the XZ footprint).
+  // Horizontal distance from the player's capsule edge (radius R) to the nearest
+  // lava AABB — not just the center point, which would overstate safety by R.
   let best=Infinity;
   for(const lv of lavas){
     const cx=clamp(x,lv.min.x,lv.max.x),cz=clamp(z,lv.min.z,lv.max.z);
-    const d=Math.hypot(x-cx,z-cz);
+    const d=Math.hypot(x-cx,z-cz)-R;
     if(d<best)best=d;
   }
   return best;

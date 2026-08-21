@@ -26,6 +26,8 @@ lavaRecovery:0.42,
 // Prototype gap the unpowered run cannot clear; powered running leap should.
 protoGap:{nearZ:0,farZ:-10,farEndZ:-22},
 // Mandatory Sky Blast crossings — CI iterates this list for vent/anchor/depth invariants.
+// Coordinates must match the prototype solids/lava below: near pad ends ~z=0, far pad
+// spans z=-22..-10 (edgeZ/farZ), gap lava currently z≈-8.8..-0.4, vent at takeoff.
 mandatoryLeaps:[{
   id:'protoLavaCross',
   takeoff:{x:0,z:1.5,ventReach:5},

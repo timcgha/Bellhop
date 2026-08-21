@@ -59,6 +59,20 @@ ok(Math.hypot(P.safeAnchor.x-L.spawn.x,P.safeAnchor.z-L.spawn.z)<0.01,'spawn ini
 ok(!inLavaAt(P.safeAnchor.x,P.safeAnchor.y,P.safeAnchor.z),'spawn anchor is not in lava');
 ok(W.lavas.length>=2,'Stage 2 prototype has lava volumes');
 
+ok(H.getPhys().r===0.36,'clearance uses player radius R=0.36');
+// Body-edge clearance: a center just outside lava can look safe by point distance but fail once R is subtracted.
+{
+  const lv=W.lavas.find(l=>l.x>5&&l.z>5);
+  const clear=lavaTun.anchorClear,R=H.getPhys().r;
+  const px=lv.max.x+clear*0.5,pz=(lv.min.z+lv.max.z)/2;
+  const centerDist=px-lv.max.x,bodyDist=centerDist-R;
+  ok(centerDist<clear&&bodyDist<clear,'fixture: center-only would look safer than body clearance');
+  standUntilAnchor(0,0.4,10,'clear-base');
+  const baseA={x:P.safeAnchor.x,z:P.safeAnchor.z};
+  P.inv=0;P.lavaRecT=0;P.pos.set(px,0.4,pz);P.vel.set(0,0,0);P.grounded=true;P.surf='stone';
+  for(let i=0;i<Math.ceil((lavaTun.anchorSettle+0.2)/DT)+8;i++){quietEnemies();P.pos.set(px,0.4,pz);P.grounded=true;P.vel.set(0,0,0);P.inv=0;frames(1);}
+  ok(Math.hypot(P.safeAnchor.x-baseA.x,P.safeAnchor.z-baseA.z)<0.5,'body-aware clearance rejects near-lava centers that only look safe by point distance');
+}
 // ---- lava contact: exactly one heart, keeps Sky Blast, clears leapBoost ----
 standUntilAnchor(0,0.4,6,'near pad');
 P.hasSkyBlast=true;P.puff=true;P.hp=4;P.inv=0;P.leapBoost.set(0,0,-8);
@@ -224,6 +238,7 @@ ok(Math.hypot(P.leapBoost.x,P.leapBoost.z)<0.01,'vent refill leaves leapBoost at
 // ---- mandatory-leap data invariants (iterate Level 3 data) ----
 function checkMandatoryLeaps(leaps,vents,lavas){
   const fails=[];
+  const R=H.getPhys().r;
   for(const leap of leaps||[]){
     const t=leap.takeoff,land=leap.landing;
     if(!t||!land||!leap.nearSafe||!leap.farSafe){fails.push(leap.id+': missing fields');continue;}
@@ -231,12 +246,24 @@ function checkMandatoryLeaps(leaps,vents,lavas){
     if(!ventOk)fails.push(leap.id+': no renewable vent within ventReach of takeoff');
     for(const label of ['nearSafe','farSafe']){
       const p=leap[label];
-      const hot=lavas.some(lv=>p.x>lv.min.x&&p.x<lv.max.x&&p.z>lv.min.z&&p.z<lv.max.z&&p.y<lv.max.y+0.55);
-      if(hot)fails.push(leap.id+': '+label+' lies in lava');
+      const hot=lavas.some(lv=>{
+        const cx=Math.min(Math.max(p.x,lv.min.x),lv.max.x),cz=Math.min(Math.max(p.z,lv.min.z),lv.max.z);
+        return Math.hypot(p.x-cx,p.z-cz)-R<lavaTun.anchorClear;
+      });
+      if(hot)fails.push(leap.id+': '+label+' is inside lava clearance (body+R)');
     }
+    // Declared landing edge/depth must match a real far-pad solid footprint.
+    const pad=W.solids.find(s=>s.surf==='stone'&&Math.abs(s.max.z-land.edgeZ)<0.05&&Math.abs(s.min.z-land.farZ)<0.05);
+    if(!pad)fails.push(leap.id+': landing edgeZ/farZ do not match a stone pad solid');
     const depth=Math.abs(land.edgeZ-land.farZ);
     if(!(land.minDepth>0))fails.push(leap.id+': landing.minDepth must be a named positive requirement');
     if(depth<land.minDepth)fails.push(leap.id+': landing depth '+depth+' < minDepth '+land.minDepth);
+    // Gap lava on the leap corridor must end before the landing edge (no pad overlap).
+    for(const lv of lavas){
+      const onCorridor=lv.min.x<land.x+6&&lv.max.x>land.x-6;
+      if(!onCorridor)continue;
+      if(lv.min.z<land.edgeZ-0.05&&lv.max.z>land.farZ)fails.push(leap.id+': gap lava overlaps the landing pad (lava z '+lv.min.z.toFixed(2)+'..'+lv.max.z.toFixed(2)+')');
+    }
   }
   return fails;
 }

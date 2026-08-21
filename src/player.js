@@ -86,11 +86,12 @@ function pointInLava(x,y,z){
 }
 function playerInLava(){return pointInLava(P.pos.x,P.pos.y,P.pos.z);}
 function lavaClearance(x,z){
-  // Horizontal distance to the nearest lava AABB (0 if inside the XZ footprint).
+  // Horizontal distance from the player's capsule edge (radius R) to the nearest
+  // lava AABB — not just the center point, which would overstate safety by R.
   let best=Infinity;
   for(const lv of lavas){
     const cx=clamp(x,lv.min.x,lv.max.x),cz=clamp(z,lv.min.z,lv.max.z);
-    const d=Math.hypot(x-cx,z-cz);
+    const d=Math.hypot(x-cx,z-cz)-R;
     if(d<best)best=d;
   }
   return best;
