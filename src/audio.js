@@ -130,6 +130,7 @@ const SFX={
   bubblePop(){noise(0.1,{type:'highpass',freq:2000,gain:0.14});tone(880,0.08,{type:'sine',gain:0.06,slide:520});},
   bubblePower(){if(!AU.ctx)return;[0,3,7,12].forEach((n,i)=>tone(hz(n,523.25),0.35,{at:AU.ctx.currentTime+i*0.07,type:'sine',gain:0.11}));},
   bubbleOut(){noise(0.35,{type:'lowpass',freq:1800,fslide:400,gain:0.1});tone(640,0.3,{type:'triangle',gain:0.07,slide:220});},
+  lavaYeouch(){noise(0.28,{type:'bandpass',freq:1800,fslide:500,gain:0.2,q:0.6});tone(720,0.22,{type:'square',gain:0.1,slide:180});tone(980,0.18,{type:'sine',gain:0.08,slide:1400});noise(0.2,{type:'highpass',freq:2400,gain:0.08});},
   conchOpen(){if(!AU.ctx)return;const c=AU.ctx.currentTime;tone(220,0.55,{at:c,type:'sine',gain:0.16,slide:440,attack:0.04});[0,4,7,12,16].forEach((n,i)=>tone(hz(n,329.63),0.55,{at:c+0.12+i*0.08,type:'triangle',gain:0.12}));noise(0.45,{at:c,type:'bandpass',freq:900,fslide:1800,gain:0.1,attack:0.05});},
   fishPop(){tone(rand(700,950),0.08,{type:'sine',gain:0.1,slide:400});noise(0.06,{type:'highpass',freq:2500,gain:0.08});},
   sharkPop(){noise(0.2,{type:'lowpass',freq:600,fslide:200,gain:0.15});tone(180,0.15,{type:'sine',gain:0.1,slide:90});},

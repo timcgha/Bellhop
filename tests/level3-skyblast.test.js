@@ -20,27 +20,28 @@ function leapOnce(opts){
   const run=!!(opts&&opts.run);
   const hold=!!(opts&&opts.hold);
   const reverse=!!(opts&&opts.reverse);
-  settle(0,0.4,8);
-  P.yaw=Math.PI;
-  P.hasSkyBlast=true;P.puff=true;P.leapBoost.set(0,0,0);
-  if(run){kd({code:'KeyW',preventDefault(){},repeat:false});for(let i=0;i<40;i++)frames(1);}
+  // Measure carry on the near pad along +X so the Stage 2 lava gap cannot interrupt the flight.
+  settle(-6,0.4,8);
+  P.yaw=Math.PI/2;
+  P.hasSkyBlast=true;P.puff=true;P.leapBoost.set(0,0,0);P.inv=99;
+  if(run){kd({code:'KeyD',preventDefault(){},repeat:false});for(let i=0;i<40;i++)frames(1);}
   kd({code:'Space',preventDefault(){},repeat:false});frames(3);ku({code:'Space'});
   frames(8);
-  const z0=P.pos.z;
+  const x0=P.pos.x;
   kd({code:'Space',preventDefault(){},repeat:false});
   frames(2);
   const boost0=Math.hypot(P.leapBoost.x,P.leapBoost.z);
   if(!hold)ku({code:'Space'});
-  if(reverse){ku({code:'KeyW'});kd({code:'KeyS',preventDefault(){},repeat:false});}
-  let maxHoriz=0,zMin=z0;
+  if(reverse){ku({code:'KeyD'});kd({code:'KeyA',preventDefault(){},repeat:false});}
+  let maxHoriz=0,xMax=x0;
   for(let i=0;i<220;i++){
     frames(1);
     maxHoriz=Math.max(maxHoriz,Math.hypot(P.vel.x+P.leapBoost.x,P.vel.z+P.leapBoost.z));
-    zMin=Math.min(zMin,P.pos.z);
+    xMax=Math.max(xMax,P.pos.x);
     if(P.grounded&&i>12)break;
   }
-  ku({code:'Space'});ku({code:'KeyW'});ku({code:'KeyS'});
-  return{z0,zMin,travel:z0-zMin,boost0,maxHoriz};
+  ku({code:'Space'});ku({code:'KeyD'});ku({code:'KeyA'});
+  return{x0,xMax,travel:xMax-x0,boost0,maxHoriz};
 }
 
 // ---- acquiring Sky Blast ----
@@ -74,34 +75,34 @@ ok(run.maxHoriz>ph.speed*1.15,'full powered leap exceeds normal SPEED during the
 ok(run.boost0>sky.boostMax*0.7,'running boost near full strength');
 
 // ---- reverse does not instantly zero boost; boost decays ----
-settle(0,0.4,10);P.hasSkyBlast=true;P.puff=true;P.yaw=Math.PI;P.leapBoost.set(0,0,0);
-kd({code:'KeyW',preventDefault(){},repeat:false});frames(35);
+settle(-4,0.4,8);P.hasSkyBlast=true;P.puff=true;P.yaw=Math.PI/2;P.leapBoost.set(0,0,0);P.inv=99;
+kd({code:'KeyD',preventDefault(){},repeat:false});frames(35);
 kd({code:'Space',preventDefault(){},repeat:false});frames(3);ku({code:'Space'});frames(8);
 kd({code:'Space',preventDefault(){},repeat:false});frames(2);ku({code:'Space'});
 const bFire=Math.hypot(P.leapBoost.x,P.leapBoost.z);
-ku({code:'KeyW'});kd({code:'KeyS',preventDefault(){},repeat:false});
+ku({code:'KeyD'});kd({code:'KeyA',preventDefault(){},repeat:false});
 frames(6);
 const bMid=Math.hypot(P.leapBoost.x,P.leapBoost.z);
 ok(bFire>5,'reverse test started with a live boost');
 ok(bMid>bFire*0.55,'reversing stick does not instantly zero leapBoost ('+bMid.toFixed(2)+' after reverse)');
-ok(P.leapBoost.z<0,'stored boost still points in original leap direction');
+ok(P.leapBoost.x>0,'stored boost still points in original leap direction');
 frames(90);
 ok(Math.hypot(P.leapBoost.x,P.leapBoost.z)<bMid*0.5||P.grounded,'boost decays over time');
-ku({code:'KeyS'});
+ku({code:'KeyA'});
 for(let i=0;i<120;i++){frames(1);if(P.grounded)break;}
 
 // ---- air-slam clears boost ----
-settle(0,0.4,10);P.hasSkyBlast=true;P.puff=true;P.yaw=Math.PI;H.CAM.yaw=0;
-P.vel.set(0,0,-ph.speed); // explicit full run-up toward -Z
-kd({code:'KeyW',preventDefault(){},repeat:false});
+settle(-4,0.4,8);P.hasSkyBlast=true;P.puff=true;P.yaw=Math.PI/2;H.CAM.yaw=0;P.inv=99;
+P.vel.set(ph.speed,0,0);
+kd({code:'KeyD',preventDefault(){},repeat:false});
 kd({code:'Space',preventDefault(){},repeat:false});frames(3);ku({code:'Space'});frames(8);
-P.vel.set(0,P.vel.y,-ph.speed); // keep run-up speed into the powered puff
+P.vel.set(ph.speed,P.vel.y,0);
 kd({code:'Space',preventDefault(){},repeat:false});frames(2);ku({code:'Space'});
 ok(Math.hypot(P.leapBoost.x,P.leapBoost.z)>1,'boost live before slam ('+Math.hypot(P.leapBoost.x,P.leapBoost.z).toFixed(2)+')');
 tap('KeyJ',2);frames(2);
 ok(Math.hypot(P.leapBoost.x,P.leapBoost.z)<0.05,'air-slam clears leapBoost');
 ok(P.slam>0,'slam state engaged');
-ku({code:'KeyW'});
+ku({code:'KeyD'});
 for(let i=0;i<120;i++){frames(1);if(P.grounded&&P.slam===0)break;}
 
 // ---- enemy knockback clears boost and removes hasSkyBlast ----
@@ -164,13 +165,13 @@ ok(powered.cleared,'powered running leap clears the prototype gap (land z='+powe
 ok(powered.airTravel>unpowered.airTravel*1.35,'powered air travel exceeds unpowered ('+powered.airTravel.toFixed(2)+' vs '+unpowered.airTravel.toFixed(2)+')');
 
 // ---- hold-to-float left deliberately untuned: still engages during a live boost ----
-settle(0,0.4,10);P.hasSkyBlast=true;P.puff=true;P.yaw=Math.PI;
-kd({code:'KeyW',preventDefault(){},repeat:false});frames(30);
+settle(-4,0.4,8);P.hasSkyBlast=true;P.puff=true;P.yaw=Math.PI/2;P.inv=99;
+kd({code:'KeyD',preventDefault(){},repeat:false});frames(30);
 kd({code:'Space',preventDefault(){},repeat:false});frames(3);ku({code:'Space'});frames(8);
 kd({code:'Space',preventDefault(){},repeat:false});
 let hovered=false,boostWhileHover=false;
 for(let i=0;i<120;i++){frames(1);if(P.hover)hovered=true;if(P.hover&&Math.hypot(P.leapBoost.x,P.leapBoost.z)>0.2)boostWhileHover=true;if(P.grounded&&i>20)break;}
-ku({code:'Space'});ku({code:'KeyW'});
+ku({code:'Space'});ku({code:'KeyD'});
 ok(hovered,'hold-to-float still engages after Sky Blast puff');
 ok(boostWhileHover,'float can overlap a live leapBoost (intentionally untuned)');
 

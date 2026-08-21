@@ -27,11 +27,15 @@ player=buildPlayer();scene.add(player);
 (function(){const f=new THREE.Group();f.add(mesh(CONE,new THREE.MeshBasicMaterial({color:0xff7a1f}),0,0.14,0,0.13,0.4,0.13));f.add(mesh(CONE,new THREE.MeshBasicMaterial({color:0xffe36b}),0,0.1,0,0.07,0.24,0.07));f.position.y=0.92;f.visible=false;player.userData.head.add(f);player.userData.flame=f;})();
 shadow=new THREE.Mesh(new THREE.CircleGeometry(0.5,20),new THREE.MeshBasicMaterial({color:0x000000,transparent:true,opacity:0.28,depthWrite:false}));shadow.rotation.x=-Math.PI/2;scene.add(shadow);
 
-const P=window.__P={spawn:{x:0,y:0,z:10},pos:new THREE.Vector3(0,0,10),vel:new THREE.Vector3(),yaw:Math.PI,grounded:false,wasGrounded:false,lastGround:-9,jumpBuf:-9,jumping:false,puff:true,slam:0,hangT:0,gustCD:0,bonkCD:0,bonkT:0,sq:1,sqV:0,sqT:1,footT:0,surf:'grass',run:0,mouthT:0,blinkT:2,blinkAnim:0,inFan:false,splT:0,puffAir:0,hover:false,hovT:0,hoverS:null,hp:4,maxHp:4,inv:0,dead:false,deadT:0,inGoo:false,fire:false,bubble:false,hasSkyBlast:false,leapBoost:new THREE.Vector3(),jetT:0,jetP:0,jetHits:[]};
+const P=window.__P={spawn:{x:0,y:0,z:10},pos:new THREE.Vector3(0,0,10),vel:new THREE.Vector3(),yaw:Math.PI,grounded:false,wasGrounded:false,lastGround:-9,jumpBuf:-9,jumping:false,puff:true,slam:0,hangT:0,gustCD:0,bonkCD:0,bonkT:0,sq:1,sqV:0,sqT:1,footT:0,surf:'grass',run:0,mouthT:0,blinkT:2,blinkAnim:0,inFan:false,splT:0,puffAir:0,hover:false,hovT:0,hoverS:null,hp:4,maxHp:4,inv:0,dead:false,deadT:0,inGoo:false,fire:false,bubble:false,hasSkyBlast:false,leapBoost:new THREE.Vector3(),lavaRecT:0,lavaRecMax:0,anchorSettleT:0,safeAnchor:new THREE.Vector3(0,0,10),lavaRecFrom:new THREE.Vector3(),jetT:0,jetP:0,jetHits:[]};
 let R=0.36,H=1.15,SPEED=6.8,ACC=44,DEC=60,AIRACC=20,GRAV=-30,JUMPV=10.5,PUFFV=9.4,MAXFALL=-32,COYOTE=0.12,BUFFER=0.15,STEP=0.42;
 let HOVER_HELD=1.0,HOVER_REL=0.5,HOVER_DRIFT=-1.6,SLAM_HANG=0.14,SLAM_FALL=-34,SLAM_REBOUND=8,JET_T=0.38,BONKR=2.05,BONK_CD=0.5;
 // Sky Blast tuning — inactive until a level supplies skyBlast (Level 3). Separate from ordinary SPEED/PUFFV.
 let SKY={puffVMul:1,boostMax:0,boostDecay:2};
+// Lava recovery / safe-anchor — Level 3. Hurt invulnerability remains 1.4s; recovery must stay ≤ that.
+// Anchor settle rejects momentary clips; clearance keeps the saved point inset from lava edges.
+// Speed is intentionally NOT a gate — a successful running landing must still claim the far pad.
+let LAVA_ANCHOR_SETTLE=0.22,LAVA_ANCHOR_CLEAR=0.85,LAVA_RECOVERY=0.42,HURT_INV=1.4;
 function applyPhysics(ph){
   R=ph.r;H=ph.h;SPEED=ph.speed;ACC=ph.acc;DEC=ph.dec;AIRACC=ph.airAcc;
   GRAV=ph.grav;JUMPV=ph.jumpV;PUFFV=ph.puffV;MAXFALL=ph.maxFall;
@@ -44,8 +48,14 @@ function applySkyBlastTuning(s){
   if(!s){SKY={puffVMul:1,boostMax:0,boostDecay:2};return;}
   SKY={puffVMul:s.puffVMul,boostMax:s.boostMax,boostDecay:s.boostDecay};
 }
+function applyLavaTuning(L){
+  LAVA_ANCHOR_SETTLE=(L&&L.anchorSettle!=null)?L.anchorSettle:0.22;
+  LAVA_ANCHOR_CLEAR=(L&&L.anchorClear!=null)?L.anchorClear:0.85;
+  LAVA_RECOVERY=(L&&L.lavaRecovery!=null)?L.lavaRecovery:0.42;
+}
 window.__PHYS=()=>({speed:SPEED,acc:ACC,dec:DEC,airAcc:AIRACC,grav:GRAV,jumpV:JUMPV,puffV:PUFFV,maxFall:MAXFALL,coyote:COYOTE,buffer:BUFFER,step:STEP,r:R,h:H});
 window.__SKY=()=>({puffVMul:SKY.puffVMul,boostMax:SKY.boostMax,boostDecay:SKY.boostDecay});
+window.__LAVA=()=>({anchorSettle:LAVA_ANCHOR_SETTLE,anchorClear:LAVA_ANCHOR_CLEAR,recovery:LAVA_RECOVERY,hurtInv:HURT_INV});
 function clearLeapBoost(){P.leapBoost.set(0,0,0);}
 function leapBoostMag(){return Math.hypot(P.leapBoost.x,P.leapBoost.z);}
 // Capture run-up into a stored horizontal boost. Does not stack; call only when consuming P.puff.
@@ -64,6 +74,93 @@ function decayLeapBoost(dt){
   const k=Math.exp(-SKY.boostDecay*dt);
   P.leapBoost.x*=k;P.leapBoost.z*=k;
   if(leapBoostMag()<0.05)clearLeapBoost();
+}
+function initSafeAnchor(x,y,z){P.safeAnchor.set(x,y,z);P.anchorSettleT=0;}
+function pointInLava(x,y,z){
+  // Vertical band is tight on purpose: a successful Sky Blast may skim above the
+  // surface; contact should mean falling into / standing in the hazard, not flying over it.
+  for(const lv of lavas){
+    if(x>lv.min.x&&x<lv.max.x&&z>lv.min.z&&z<lv.max.z&&y<lv.max.y+0.35&&y+H>lv.min.y-0.05)return lv;
+  }
+  return null;
+}
+function playerInLava(){return pointInLava(P.pos.x,P.pos.y,P.pos.z);}
+function lavaClearance(x,z){
+  // Horizontal distance from the player's capsule edge (radius R) to the nearest
+  // lava AABB — not just the center point, which would overstate safety by R.
+  let best=Infinity;
+  for(const lv of lavas){
+    const cx=clamp(x,lv.min.x,lv.max.x),cz=clamp(z,lv.min.z,lv.max.z);
+    const d=Math.hypot(x-cx,z-cz)-R;
+    if(d<best)best=d;
+  }
+  return best;
+}
+function surfaceIsAnchorEligible(surf){
+  if(!surf)return false;
+  if(surf==='lava'||surf==='goo'||surf==='water')return false;
+  return true;
+}
+function updateSafeAnchor(dt){
+  if(P.lavaRecT>0||P.dead||P.inv>0.05){P.anchorSettleT=0;return;}
+  if(!P.grounded||playerInLava()){P.anchorSettleT=0;return;}
+  if(!surfaceIsAnchorEligible(P.surf)){P.anchorSettleT=0;return;}
+  // Inset from lava edges — allows full-speed traversal on deep safe ground, rejects lip clips.
+  if(lavaClearance(P.pos.x,P.pos.z)<LAVA_ANCHOR_CLEAR){P.anchorSettleT=0;return;}
+  P.anchorSettleT+=dt;
+  if(P.anchorSettleT>=LAVA_ANCHOR_SETTLE){
+    P.safeAnchor.set(P.pos.x,P.pos.y,P.pos.z);
+    P.anchorSettleT=LAVA_ANCHOR_SETTLE;
+  }
+}
+function lavaYeouchFX(){
+  SFX.lavaYeouch();CAM.shake=Math.max(CAM.shake,0.55);CAM.fovKick=Math.max(CAM.fovKick,7);rumble(160,0.8,0.4);
+  spoutWorld(tmpV);
+  for(let i=0;i<16;i++)spawnP(tmpV.x,tmpV.y,tmpV.z,rand(-2.5,2.5),rand(2,5),rand(-2.5,2.5),rand(0.08,0.16),Math.random()<0.5?0xffe9d0:0xff9a3c,rand(0.4,0.7),0.5,-2,0.85);
+  spawnRing(P.pos.x,P.pos.y+0.1,P.pos.z,0xff9a3c,0.4,5,0.4);
+}
+function beginLavaRecovery(){
+  // Lava never removes hasSkyBlast: the power is the tool for the hazard, so the hazard must not confiscate it
+  // (Level 3 frozen spec — deliberate exception to "kept until something hits you"). Enemy hits still take it.
+  clearLeapBoost();
+  P.puffAir=0;endHover();P.slam=0;P.jumping=false;P.grounded=false;
+  P.lavaRecMax=LAVA_RECOVERY;P.lavaRecT=LAVA_RECOVERY;
+  P.lavaRecFrom.copy(P.pos);
+  P.vel.set(0,0,0);
+  P.anchorSettleT=0;
+}
+function lavaContact(){
+  if(P.dead||P.lavaRecT>0)return;
+  if(P.inv>0)return; // i-frames block another heart, same as goo
+  P.hp--;P.inv=HURT_INV;
+  beginLavaRecovery();
+  lavaYeouchFX();
+  updateHUD();
+  if(P.hp<=0){P.dead=true;P.deadT=1.8;P.lavaRecT=0;SFX.deflate();showToast('Out of puff! Back to the last checkpoint…');}
+  else showToast('Yeouch! Hot!');
+}
+function updateLavaRecovery(dt){
+  if(P.lavaRecT<=0)return false;
+  P.lavaRecT-=dt;
+  clearLeapBoost();
+  const dur=P.lavaRecMax||LAVA_RECOVERY;
+  const k=smooth(clamp(1-Math.max(P.lavaRecT,0)/dur,0,1));
+  const ax=P.safeAnchor.x,ay=P.safeAnchor.y,az=P.safeAnchor.z;
+  P.pos.x=lerp(P.lavaRecFrom.x,ax,k);
+  P.pos.z=lerp(P.lavaRecFrom.z,az,k);
+  // Comic pop arc — never leave him sunk in the hazard volume.
+  P.pos.y=lerp(P.lavaRecFrom.y,ay,k)+Math.sin(k*Math.PI)*2.4;
+  P.vel.set(0,0,0);
+  if(P.lavaRecT<=0){
+    P.lavaRecT=0;
+    P.pos.set(ax,ay,az);
+    P.vel.set(0,0,0);
+    P.grounded=true;P.lastGround=time;P.surf='stone';
+    if(!P.puff){P.puff=true;refillFX();}
+    // Nudge off any residual lava overlap toward the anchor (already on it).
+    if(playerInLava()){P.pos.set(ax,ay+0.05,az);}
+  }
+  return true;
 }
 function hOverlap(s){const p=P.pos;return p.x+R>s.min.x&&p.x-R<s.max.x&&p.z+R>s.min.z&&p.z-R<s.max.z;}
 function pushOutXZ(s){const p=P.pos;const px1=(p.x+R)-s.min.x,px2=s.max.x-(p.x-R),pz1=(p.z+R)-s.min.z,pz2=s.max.z-(p.z-R);const m=Math.min(px1,px2,pz1,pz2);if(m===px1)p.x=s.min.x-R-0.001;else if(m===px2)p.x=s.max.x+R+0.001;else if(m===pz1)p.z=s.min.z-R-0.001;else p.z=s.max.z+R+0.001;}
@@ -88,6 +185,8 @@ function spawnSkySteamTrail(dt){
   for(let i=0;i<n;i++)spawnP(P.pos.x+rand(-0.12,0.12),P.pos.y+0.45+rand(-0.1,0.15),P.pos.z+rand(-0.12,0.12),tx*speed+rand(-0.4,0.4),rand(0.4,1.4),tz*speed+rand(-0.4,0.4),rand(0.08,0.14),Math.random()<0.5?0xfff4e8:0xffd2a8,rand(0.28,0.45)+mag*0.02,1.1+mag*0.04,0,0.7);
 }
 function grantSkyBlastFromVent(){
+  // Steam vent: restores hasSkyBlast and a spent P.puff. Never creates or stacks leapBoost —
+  // the player still has to press Jump to fire the powered stroke.
   const needPower=!P.hasSkyBlast,needPuff=!P.puff;
   if(!needPower&&!needPuff)return false;
   P.hasSkyBlast=true;
@@ -185,7 +284,7 @@ function hurtPlayer(kx,kz,col){if(P.inv>0||P.dead)return;P.hp--;P.inv=1.4;const 
   else if(lostFire)showToast('The fire went out!');
   else if(lostBubble)showToast('The bubbles went away!');
   else if(lostSky)showToast('The Sky Blast went out!');}
-function respawn(){P.pos.set(P.spawn.x,P.spawn.y,P.spawn.z);P.vel.set(0,0,0);P.hp=P.maxHp;P.dead=false;P.inv=1.5;P.puff=true;P.puffAir=0;endHover();clearLeapBoost();P.slam=0;P.sq=1.3;P.yaw=Math.PI;CAM.yaw=0;CAM.pos.set(P.spawn.x,P.spawn.y+5,P.spawn.z+9);CAM.look.set(P.spawn.x,P.spawn.y+1,P.spawn.z);CAM.lastManual=-9;SFX.refill();puffJumpFX();showToast('Back on your feet!');updateHUD();}
+function respawn(){P.pos.set(P.spawn.x,P.spawn.y,P.spawn.z);P.vel.set(0,0,0);P.hp=P.maxHp;P.dead=false;P.inv=1.5;P.puff=true;P.puffAir=0;endHover();clearLeapBoost();P.slam=0;P.lavaRecT=0;P.sq=1.3;P.yaw=Math.PI;CAM.yaw=0;CAM.pos.set(P.spawn.x,P.spawn.y+5,P.spawn.z+9);CAM.look.set(P.spawn.x,P.spawn.y+1,P.spawn.z);CAM.lastManual=-9;initSafeAnchor(P.spawn.x,P.spawn.y,P.spawn.z);SFX.refill();puffJumpFX();showToast('Back on your feet!');updateHUD();}
 function hitGloop(e,dmg,kx,kz){if(!e.alive||e.state==='dying')return;e.hp-=dmg;e.hurtT=0.3;e.vx+=kx;e.vz+=kz;e.wind=0;SFX.blorp();
   for(let i=0;i<8;i++)spawnP(e.x,e.y+0.5,e.z,rand(-3,3),rand(1,4),rand(-3,3),rand(0.06,0.12),e.col,rand(0.3,0.5),0.3,-8,0.9);
   if(e.hp<=0){e.state='dying';e.t=0;e.vx=0;e.vz=0;SFX.dissolve();addPuddle(e.x,e.y,e.z,0.8+e.size*0.6,e.col);if(P.hp<P.maxHp)addHeart(e.x,e.y+0.8,e.z);for(let i=0;i<14;i++)spawnP(e.x,e.y+0.4,e.z,rand(-2,2),rand(1,3),rand(-2,2),rand(0.08,0.16),e.col,rand(0.5,0.9),0.5,-5,0.9);rumble(80,0.3,0.3);}}
@@ -195,6 +294,8 @@ function spit(e){const ox=e.x+Math.sin(e.face)*0.55*e.size,oz=e.z+Math.cos(e.fac
 function killGoo(q){q.alive=false;q.m.visible=false;}
 function updatePlayer(dt){const p=P.pos,v=P.vel;
   P.inv-=dt;if(P.dead){P.deadT-=dt;if(P.deadT<=0)respawn();}
+  // Lava recovery owns motion briefly — skip normal move/input so a live boost cannot fight the fling.
+  if(updateLavaRecovery(dt))return;
   const cy=CAM.yaw,fx=-Math.sin(cy),fz=-Math.cos(cy),rx=Math.cos(cy),rz=-Math.sin(cy);
   let wx=fx*(-IN.mz)+rx*IN.mx,wz=fz*(-IN.mz)+rz*IN.mx;let wl=Math.hypot(wx,wz);if(wl>1){wx/=wl;wz/=wl;wl=1;}if(P.dead){wx=0;wz=0;wl=0;}
   // Ordinary movement stays SPEED-capped. leapBoost is applied separately so stick reverse cannot cancel it.
@@ -251,6 +352,9 @@ function updatePlayer(dt){const p=P.pos,v=P.vel;
   spawnSkySteamTrail(dt);
   P.inGoo=false;if(P.grounded){for(const pu of puddles){if(!pu.alive)continue;if(Math.abs(p.y-pu.y)<0.4&&Math.hypot(p.x-pu.x,p.z-pu.z)<pu.size+R*0.5){P.inGoo=true;break;}}}
   if(P.inGoo){v.x*=Math.exp(-16*dt);v.z*=Math.exp(-16*dt);P.surf='goo';}
+  // Lava contact: one heart + comic yeouch + recover to safe anchor. Keeps hasSkyBlast (unlike enemy hits).
+  if(!P.dead&&!won&&playerInLava())lavaContact();
+  updateSafeAnchor(dt);
   const sp=Math.hypot(v.x,v.z);
   if(P.grounded&&sp>1.5){P.footT+=dt*sp;if(P.footT>2.6){P.footT=0;SFX.step(P.surf);if(P.surf==='grass')spawnP(p.x,p.y+0.05,p.z,rand(-0.5,0.5),rand(0.5,1.2),rand(-0.5,0.5),0.09,0xffffff,0.35,0.6,0,0.35);}}else P.footT=1.5;
   if(P.grounded&&P.surf==='water'&&sp>1){P.splT-=dt;if(P.splT<=0){P.splT=0.09;spawnP(p.x+rand(-0.3,0.3),-0.05,p.z+rand(-0.3,0.3),rand(-1,1),rand(1.5,3.5),rand(-1,1),rand(0.06,0.12),0xdff6ff,rand(0.3,0.5),0.5,-6,0.9);}}

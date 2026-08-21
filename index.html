@@ -58,7 +58,7 @@ body.touch .tbtn{display:flex}
 <div id="hint"></div>
 <div id="start"><div class="card">
 <h1>BELLHOP</h1>
-<div class="sub">v26 · peak leap prototype</div>
+<div class="sub">v27 · lava recovery</div>
 <div class="level-pick">
 <div class="lvl-card sel" id="lvl0"><canvas class="lvl-art" id="art0" width="160" height="100"></canvas><span class="lvl-label">Meadow</span></div>
 <div class="lvl-card" id="lvl1"><canvas class="lvl-art" id="art1" width="160" height="100"></canvas><span class="lvl-label">The Deep</span></div>
@@ -410,17 +410,32 @@ physics:{
   slamHang:0.14,slamFall:-34,slamRebound:8,
   jetTime:0.38,bonkR:2.05,bonkCD:0.5
 },
-// Prototype starting values (1.3–1.5x vertical, ~2.3–2.6x horizontal carry). Phone playtest owns the next pass.
+// Stage 1 prototype values — do not retune in Stage 2; phone playtest owns the next pass.
 skyBlast:{
   puffVMul:1.4,
   boostMax:12.5,
   boostDecay:1.6
 },
+// Safe-anchor settling (seconds of continuous grounded stand on eligible safe ground).
+anchorSettle:0.22,
+// Horizontal inset from lava AABBs required before an anchor may update (not a speed gate).
+anchorClear:0.85,
+// Lava recovery owns motion for at most this long (must stay ≤ hurt inv duration 1.4).
+lavaRecovery:0.42,
 // Prototype gap the unpowered run cannot clear; powered running leap should.
-// Near pad ends at z≈0; far pad begins at z=-10 (10-unit gap). Far pad depth is generous.
 protoGap:{nearZ:0,farZ:-10,farEndZ:-22},
+// Mandatory Sky Blast crossings — CI iterates this list for vent/anchor/depth invariants.
+// Coordinates must match the prototype solids/lava below: near pad ends ~z=0, far pad
+// spans z=-22..-10 (edgeZ/farZ), gap lava currently z≈-8.8..-0.4, vent at takeoff.
+mandatoryLeaps:[{
+  id:'protoLavaCross',
+  takeoff:{x:0,z:1.5,ventReach:5},
+  landing:{x:0,z:-14,edgeZ:-10,farZ:-22,minDepth:8},
+  nearSafe:{x:0,y:0.4,z:3},
+  farSafe:{x:0,y:0.4,z:-14}
+}],
 fence:0x5a2e1a,
-fenceSolids:[[0,0,16,24,1.2,0.6],[0,0,-28,24,1.2,0.6],[-13,0,-6,0.6,1.2,44],[13,0,-6,0.6,1.2,44]],
+fenceSolids:[[0,0,16,26,1.2,0.6],[0,0,-28,26,1.2,0.6],[-13,0,-6,0.6,1.2,44],[13,0,-6,0.6,1.2,44]],
 pathTiles:[],
 hedges:[],
 checks:[[0,12]],
@@ -429,22 +444,31 @@ snoozleHomes:[[0,-24]],
 snoozles:[],
 trees:[],
 steps:[
-  // Broad start terrace (Peak-coloured prototype geometry — not production volcano art)
+  // Broad start terrace
   ['solid',0,0,9,20,0.4,18,0xc45a28,{surf:'stone'}],
-  // Far landing pad — deep enough that a successful leap does not need precise braking
+  // Far landing pad — deliberately generous depth beyond the arrival edge
   ['solid',0,0,-16,20,0.4,12,0xe07a3a,{surf:'stone'}],
-  // Marked landing strip on the far pad
-  ['solid',0,0.4,-11,6,0.08,2.5,0xffd24a,{surf:'stone'}],
-  // Side practice pads (safe, non-hazard)
-  ['solid',-8,0,4,4,0.4,4,0xa84a22,{surf:'stone'}],
-  ['solid',8,0,4,4,0.4,4,0xa84a22,{surf:'stone'}],
-  // Sky Blast pickup (crate) in plain sight on the start pad
+  // Marked landing strip
+  ['solid',0,0.4,-12,6,0.08,2.2,0xffd24a,{surf:'stone'}],
+  // Side practice pads
+  ['solid',-8,0,6,4,0.4,4,0xa84a22,{surf:'stone'}],
+  ['solid',8,0,6,4,0.4,4,0xa84a22,{surf:'stone'}],
+  // Ember-red edges at the mandatory leap lips (readable, still safe stone)
+  ['solid',0,0.4,-0.15,18,0.06,0.35,0x8a2010,{surf:'stone'}],
+  ['solid',0,0.4,-10.15,18,0.06,0.35,0x8a2010,{surf:'stone'}],
+  // Small avoidable lava pool beside the path (teach touch safely)
+  ['lava',7.5,-0.15,8,3.2,0.35,3.2],
+  // Mandatory lava crossing in the gap (near pad ends ~0, far begins ~-10).
+  // Far edge stops short of the landing pad so a clean powered leap is not a skim-hit.
+  ['lava',0,-0.2,-4.6,16,0.45,8.4],
+  // Far-side lava puddle for far-anchor recovery tests (off the main landing line)
+  ['lava',-7.5,-0.15,-16,3.0,0.35,3.0],
+  // Sky Blast crate
   ['crate',0,0.4,8,'sky'],
-  // Prototype steam vent beside the take-off lip (off the run-up line so leap tests stay clean)
-  ['steamVent',5,0.4,1.5,1.4],
-  // One gloop off to the side for knockback / power-loss tests (not on the leap line)
-  ['gloop',-8,4,'small'],
-  // Stage 1 has no real finish — placeholder so loadLevel's FINISH contract is satisfied
+  // Take-off vent for the mandatory leap
+  ['steamVent',0,0.4,1.5,1.4],
+  // Gloop for enemy power-loss tests
+  ['gloop',-8,6,'small'],
   ['unfinishedFinish',0,-24,8]
 ]
 };
@@ -596,6 +620,7 @@ const SFX={
   bubblePop(){noise(0.1,{type:'highpass',freq:2000,gain:0.14});tone(880,0.08,{type:'sine',gain:0.06,slide:520});},
   bubblePower(){if(!AU.ctx)return;[0,3,7,12].forEach((n,i)=>tone(hz(n,523.25),0.35,{at:AU.ctx.currentTime+i*0.07,type:'sine',gain:0.11}));},
   bubbleOut(){noise(0.35,{type:'lowpass',freq:1800,fslide:400,gain:0.1});tone(640,0.3,{type:'triangle',gain:0.07,slide:220});},
+  lavaYeouch(){noise(0.28,{type:'bandpass',freq:1800,fslide:500,gain:0.2,q:0.6});tone(720,0.22,{type:'square',gain:0.1,slide:180});tone(980,0.18,{type:'sine',gain:0.08,slide:1400});noise(0.2,{type:'highpass',freq:2400,gain:0.08});},
   conchOpen(){if(!AU.ctx)return;const c=AU.ctx.currentTime;tone(220,0.55,{at:c,type:'sine',gain:0.16,slide:440,attack:0.04});[0,4,7,12,16].forEach((n,i)=>tone(hz(n,329.63),0.55,{at:c+0.12+i*0.08,type:'triangle',gain:0.12}));noise(0.45,{at:c,type:'bandpass',freq:900,fslide:1800,gain:0.1,attack:0.05});},
   fishPop(){tone(rand(700,950),0.08,{type:'sine',gain:0.1,slide:400});noise(0.06,{type:'highpass',freq:2500,gain:0.08});},
   sharkPop(){noise(0.2,{type:'lowpass',freq:600,fslide:200,gain:0.15});tone(180,0.15,{type:'sine',gain:0.1,slide:90});},
@@ -720,7 +745,7 @@ function updateZ(dt){for(const o of ZS){if(o.life<=0)continue;o.life-=dt;if(o.li
 
 // ===== src/entities.js =====
 const solids=[],wobblers=[],pinwheels=[],toss=[],notes=[],dust=[],snoozles=[],fans=[],clouds=[],gloops=[],goos=[],puddles=[],hearts=[],crates=[],powers=[],fires=[];
-const sharks=[],fish=[],spikefish=[],clams=[],bubbleShots=[],steamVents=[];
+const sharks=[],fish=[],spikefish=[],clams=[],bubbleShots=[],steamVents=[],lavas=[];
 let seenGloop=false,seenCrate=false;
 let BOAT=null,WM=null,player=null,shadow=null,RAINBOW=null,FINISH=null;
 const checks=[];let won=false,winT=0,confT=0;
@@ -817,6 +842,7 @@ function clearLevelWorld(){
   for(const o of snoozles)rem(o.g);snoozles.length=0;
   for(const o of fans)rem(o.g);fans.length=0;
   for(const o of steamVents)rem(o.g);steamVents.length=0;
+  for(const o of lavas){rem(o.g);if(o.edge)rem(o.edge);}lavas.length=0;
   for(const o of clouds)rem(o.g);clouds.length=0;
   for(const o of gloops)rem(o.g);gloops.length=0;
   for(const o of hearts)rem(o.g);hearts.length=0;
@@ -914,6 +940,29 @@ function addSteamVent(x,y,z,r){r=r||1.2;const g=new THREE.Group();g.position.set
   g.add(mesh(CYL,lam(0x2e2420),0,0.14,0,r*0.55,0.08,r*0.55));
   const crack=pho(0xff7a2a,40,0xffa060);g.add(mesh(BOXG,crack,0.12,0.18,0,0.08,0.06,r*0.7));g.add(mesh(BOXG,crack,-0.1,0.18,0.05,0.06,0.05,r*0.5));
   scene.add(g);steamVents.push({g,x,y,z,r,pt:0});}
+// Lava is a hazard volume, not a walkable solid. Contact is handled by lavaContact in player.js.
+function addLava(x,y,z,w,h,d){
+  const g=new THREE.Group();g.position.set(x,y,z);
+  const body=mesh(BOXG,new THREE.MeshBasicMaterial({color:0xff6a18}),0,h/2,0,w,h,d);g.add(body);
+  const glow=mesh(BOXG,new THREE.MeshBasicMaterial({color:0xff9a3c,transparent:true,opacity:0.55}),0,h+0.02,0,w*0.98,0.04,d*0.98);g.add(glow);
+  // Ember-red rim so the safe/hot boundary stays obvious.
+  const edge=mesh(BOXG,new THREE.MeshBasicMaterial({color:0x8a2010}),0,h+0.01,0,w+0.25,0.03,d+0.25);
+  scene.add(g);scene.add(edge);
+  lavas.push({g,edge,body,glow,x,y,z,w,h,d,min:new THREE.Vector3(x-w/2,y,z-d/2),max:new THREE.Vector3(x+w/2,y+h,z+d/2),pt:0,ph:rand(0,TAU)});
+}
+// Ambient lava decoration only — collision state is always on (no timed hazard cycles).
+function updateLavas(dt){
+  for(const lv of lavas){
+    lv.pt-=dt;
+    if(lv.pt<=0){
+      lv.pt=0.1+Math.random()*0.22;
+      const bx=lv.x+rand(-lv.w*0.42,lv.w*0.42),bz=lv.z+rand(-lv.d*0.42,lv.d*0.42);
+      spawnP(bx,lv.max.y+0.04,bz,rand(-0.35,0.35),rand(0.6,2.0),rand(-0.35,0.35),rand(0.07,0.13),Math.random()<0.45?0xffe9d0:0xff6a18,rand(0.35,0.65),0.55,-1.2,0.75);
+      if(Math.random()<0.3)spawnP(bx,lv.max.y+0.08,bz,rand(-1.2,1.2),rand(1.8,4.2),rand(-1.2,1.2),rand(0.04,0.08),0xffc04a,rand(0.25,0.45),0.45,-4,0.9);
+    }
+    if(lv.glow&&lv.glow.material)lv.glow.material.opacity=0.42+0.18*Math.sin(time*1.6+lv.ph);
+  }
+}
 const FIREGEO=new THREE.SphereGeometry(1,9,7);
 for(let i=0;i<26;i++){const m=new THREE.Mesh(FIREGEO,new THREE.MeshBasicMaterial({color:0xff8a2b}));m.scale.setScalar(0.24);m.visible=false;scene.add(m);fires.push({m,pos:new THREE.Vector3(),vel:new THREE.Vector3(),life:0,alive:false,trailT:0});}
 function buildHeart(){const g=new THREE.Group();const m=pho(0xff5a7a,120,0xffffff);g.add(mesh(SPH,m,-0.11,0.1,0,0.16));g.add(mesh(SPH,m,0.11,0.1,0,0.16));const c=mesh(CONE,m,0,-0.06,0,0.26,0.36,0.16);c.rotation.z=Math.PI;g.add(c);g.scale.setScalar(0.9);return g;}
@@ -983,11 +1032,12 @@ function loadLevel(L){
   FINISH=null;
   if(L.physics)applyPhysics(L.physics);
   applySkyBlastTuning(L.skyBlast);
+  applyLavaTuning(L);
   CURRENT_LEVEL=L;
   setSong(L.music||'meadow');
   if(L.underwater)beginUnderwaterLevel(L);else beginLandLevel();
-  P.fire=false;P.bubble=false;P.hasSkyBlast=false;clearLeapBoost();P.puff=true;P.puffAir=0;endHover();P.slam=0;
-  if(L.spawn){P.spawn.x=L.spawn.x;P.spawn.y=L.spawn.y;P.spawn.z=L.spawn.z;P.pos.set(L.spawn.x,L.spawn.y,L.spawn.z);P.vel.set(0,0,0);}
+  P.fire=false;P.bubble=false;P.hasSkyBlast=false;clearLeapBoost();P.puff=true;P.puffAir=0;endHover();P.slam=0;P.lavaRecT=0;P.anchorSettleT=0;
+  if(L.spawn){P.spawn.x=L.spawn.x;P.spawn.y=L.spawn.y;P.spawn.z=L.spawn.z;P.pos.set(L.spawn.x,L.spawn.y,L.spawn.z);P.vel.set(0,0,0);initSafeAnchor(L.spawn.x,L.spawn.y,L.spawn.z);}
   const fence=L.fence;
   for(const s of L.fenceSolids)addSolid(s[0],s[1],s[2],s[3],s[4],s[5],fence);
   for(const p of L.pathTiles)pathTile(p[0],p[1],p[2],p[3]);
@@ -1006,6 +1056,7 @@ function loadLevel(L){
     else if(k==='boat')buildBoat(step[1],step[2]);
     else if(k==='fan')addFan(step[1],step[2],step[3],step[4]);
     else if(k==='steamVent')addSteamVent(step[1],step[2],step[3],step[4]);
+    else if(k==='lava')addLava(step[1],step[2],step[3],step[4],step[5],step[6]);
     else if(k==='windmill')buildWindmill(step[1],step[2]);
     else if(k==='rainbow')RAINBOW=buildRainbow(step[1],step[2]);
     else if(k==='pinwheelRow'){for(let i=0;i<step[4];i++)addPinwheel(step[1]+i*step[5],step[2]+i*step[6],step[3]);}
@@ -1083,11 +1134,15 @@ player=buildPlayer();scene.add(player);
 (function(){const f=new THREE.Group();f.add(mesh(CONE,new THREE.MeshBasicMaterial({color:0xff7a1f}),0,0.14,0,0.13,0.4,0.13));f.add(mesh(CONE,new THREE.MeshBasicMaterial({color:0xffe36b}),0,0.1,0,0.07,0.24,0.07));f.position.y=0.92;f.visible=false;player.userData.head.add(f);player.userData.flame=f;})();
 shadow=new THREE.Mesh(new THREE.CircleGeometry(0.5,20),new THREE.MeshBasicMaterial({color:0x000000,transparent:true,opacity:0.28,depthWrite:false}));shadow.rotation.x=-Math.PI/2;scene.add(shadow);
 
-const P=window.__P={spawn:{x:0,y:0,z:10},pos:new THREE.Vector3(0,0,10),vel:new THREE.Vector3(),yaw:Math.PI,grounded:false,wasGrounded:false,lastGround:-9,jumpBuf:-9,jumping:false,puff:true,slam:0,hangT:0,gustCD:0,bonkCD:0,bonkT:0,sq:1,sqV:0,sqT:1,footT:0,surf:'grass',run:0,mouthT:0,blinkT:2,blinkAnim:0,inFan:false,splT:0,puffAir:0,hover:false,hovT:0,hoverS:null,hp:4,maxHp:4,inv:0,dead:false,deadT:0,inGoo:false,fire:false,bubble:false,hasSkyBlast:false,leapBoost:new THREE.Vector3(),jetT:0,jetP:0,jetHits:[]};
+const P=window.__P={spawn:{x:0,y:0,z:10},pos:new THREE.Vector3(0,0,10),vel:new THREE.Vector3(),yaw:Math.PI,grounded:false,wasGrounded:false,lastGround:-9,jumpBuf:-9,jumping:false,puff:true,slam:0,hangT:0,gustCD:0,bonkCD:0,bonkT:0,sq:1,sqV:0,sqT:1,footT:0,surf:'grass',run:0,mouthT:0,blinkT:2,blinkAnim:0,inFan:false,splT:0,puffAir:0,hover:false,hovT:0,hoverS:null,hp:4,maxHp:4,inv:0,dead:false,deadT:0,inGoo:false,fire:false,bubble:false,hasSkyBlast:false,leapBoost:new THREE.Vector3(),lavaRecT:0,lavaRecMax:0,anchorSettleT:0,safeAnchor:new THREE.Vector3(0,0,10),lavaRecFrom:new THREE.Vector3(),jetT:0,jetP:0,jetHits:[]};
 let R=0.36,H=1.15,SPEED=6.8,ACC=44,DEC=60,AIRACC=20,GRAV=-30,JUMPV=10.5,PUFFV=9.4,MAXFALL=-32,COYOTE=0.12,BUFFER=0.15,STEP=0.42;
 let HOVER_HELD=1.0,HOVER_REL=0.5,HOVER_DRIFT=-1.6,SLAM_HANG=0.14,SLAM_FALL=-34,SLAM_REBOUND=8,JET_T=0.38,BONKR=2.05,BONK_CD=0.5;
 // Sky Blast tuning — inactive until a level supplies skyBlast (Level 3). Separate from ordinary SPEED/PUFFV.
 let SKY={puffVMul:1,boostMax:0,boostDecay:2};
+// Lava recovery / safe-anchor — Level 3. Hurt invulnerability remains 1.4s; recovery must stay ≤ that.
+// Anchor settle rejects momentary clips; clearance keeps the saved point inset from lava edges.
+// Speed is intentionally NOT a gate — a successful running landing must still claim the far pad.
+let LAVA_ANCHOR_SETTLE=0.22,LAVA_ANCHOR_CLEAR=0.85,LAVA_RECOVERY=0.42,HURT_INV=1.4;
 function applyPhysics(ph){
   R=ph.r;H=ph.h;SPEED=ph.speed;ACC=ph.acc;DEC=ph.dec;AIRACC=ph.airAcc;
   GRAV=ph.grav;JUMPV=ph.jumpV;PUFFV=ph.puffV;MAXFALL=ph.maxFall;
@@ -1100,8 +1155,14 @@ function applySkyBlastTuning(s){
   if(!s){SKY={puffVMul:1,boostMax:0,boostDecay:2};return;}
   SKY={puffVMul:s.puffVMul,boostMax:s.boostMax,boostDecay:s.boostDecay};
 }
+function applyLavaTuning(L){
+  LAVA_ANCHOR_SETTLE=(L&&L.anchorSettle!=null)?L.anchorSettle:0.22;
+  LAVA_ANCHOR_CLEAR=(L&&L.anchorClear!=null)?L.anchorClear:0.85;
+  LAVA_RECOVERY=(L&&L.lavaRecovery!=null)?L.lavaRecovery:0.42;
+}
 window.__PHYS=()=>({speed:SPEED,acc:ACC,dec:DEC,airAcc:AIRACC,grav:GRAV,jumpV:JUMPV,puffV:PUFFV,maxFall:MAXFALL,coyote:COYOTE,buffer:BUFFER,step:STEP,r:R,h:H});
 window.__SKY=()=>({puffVMul:SKY.puffVMul,boostMax:SKY.boostMax,boostDecay:SKY.boostDecay});
+window.__LAVA=()=>({anchorSettle:LAVA_ANCHOR_SETTLE,anchorClear:LAVA_ANCHOR_CLEAR,recovery:LAVA_RECOVERY,hurtInv:HURT_INV});
 function clearLeapBoost(){P.leapBoost.set(0,0,0);}
 function leapBoostMag(){return Math.hypot(P.leapBoost.x,P.leapBoost.z);}
 // Capture run-up into a stored horizontal boost. Does not stack; call only when consuming P.puff.
@@ -1120,6 +1181,93 @@ function decayLeapBoost(dt){
   const k=Math.exp(-SKY.boostDecay*dt);
   P.leapBoost.x*=k;P.leapBoost.z*=k;
   if(leapBoostMag()<0.05)clearLeapBoost();
+}
+function initSafeAnchor(x,y,z){P.safeAnchor.set(x,y,z);P.anchorSettleT=0;}
+function pointInLava(x,y,z){
+  // Vertical band is tight on purpose: a successful Sky Blast may skim above the
+  // surface; contact should mean falling into / standing in the hazard, not flying over it.
+  for(const lv of lavas){
+    if(x>lv.min.x&&x<lv.max.x&&z>lv.min.z&&z<lv.max.z&&y<lv.max.y+0.35&&y+H>lv.min.y-0.05)return lv;
+  }
+  return null;
+}
+function playerInLava(){return pointInLava(P.pos.x,P.pos.y,P.pos.z);}
+function lavaClearance(x,z){
+  // Horizontal distance from the player's capsule edge (radius R) to the nearest
+  // lava AABB — not just the center point, which would overstate safety by R.
+  let best=Infinity;
+  for(const lv of lavas){
+    const cx=clamp(x,lv.min.x,lv.max.x),cz=clamp(z,lv.min.z,lv.max.z);
+    const d=Math.hypot(x-cx,z-cz)-R;
+    if(d<best)best=d;
+  }
+  return best;
+}
+function surfaceIsAnchorEligible(surf){
+  if(!surf)return false;
+  if(surf==='lava'||surf==='goo'||surf==='water')return false;
+  return true;
+}
+function updateSafeAnchor(dt){
+  if(P.lavaRecT>0||P.dead||P.inv>0.05){P.anchorSettleT=0;return;}
+  if(!P.grounded||playerInLava()){P.anchorSettleT=0;return;}
+  if(!surfaceIsAnchorEligible(P.surf)){P.anchorSettleT=0;return;}
+  // Inset from lava edges — allows full-speed traversal on deep safe ground, rejects lip clips.
+  if(lavaClearance(P.pos.x,P.pos.z)<LAVA_ANCHOR_CLEAR){P.anchorSettleT=0;return;}
+  P.anchorSettleT+=dt;
+  if(P.anchorSettleT>=LAVA_ANCHOR_SETTLE){
+    P.safeAnchor.set(P.pos.x,P.pos.y,P.pos.z);
+    P.anchorSettleT=LAVA_ANCHOR_SETTLE;
+  }
+}
+function lavaYeouchFX(){
+  SFX.lavaYeouch();CAM.shake=Math.max(CAM.shake,0.55);CAM.fovKick=Math.max(CAM.fovKick,7);rumble(160,0.8,0.4);
+  spoutWorld(tmpV);
+  for(let i=0;i<16;i++)spawnP(tmpV.x,tmpV.y,tmpV.z,rand(-2.5,2.5),rand(2,5),rand(-2.5,2.5),rand(0.08,0.16),Math.random()<0.5?0xffe9d0:0xff9a3c,rand(0.4,0.7),0.5,-2,0.85);
+  spawnRing(P.pos.x,P.pos.y+0.1,P.pos.z,0xff9a3c,0.4,5,0.4);
+}
+function beginLavaRecovery(){
+  // Lava never removes hasSkyBlast: the power is the tool for the hazard, so the hazard must not confiscate it
+  // (Level 3 frozen spec — deliberate exception to "kept until something hits you"). Enemy hits still take it.
+  clearLeapBoost();
+  P.puffAir=0;endHover();P.slam=0;P.jumping=false;P.grounded=false;
+  P.lavaRecMax=LAVA_RECOVERY;P.lavaRecT=LAVA_RECOVERY;
+  P.lavaRecFrom.copy(P.pos);
+  P.vel.set(0,0,0);
+  P.anchorSettleT=0;
+}
+function lavaContact(){
+  if(P.dead||P.lavaRecT>0)return;
+  if(P.inv>0)return; // i-frames block another heart, same as goo
+  P.hp--;P.inv=HURT_INV;
+  beginLavaRecovery();
+  lavaYeouchFX();
+  updateHUD();
+  if(P.hp<=0){P.dead=true;P.deadT=1.8;P.lavaRecT=0;SFX.deflate();showToast('Out of puff! Back to the last checkpoint…');}
+  else showToast('Yeouch! Hot!');
+}
+function updateLavaRecovery(dt){
+  if(P.lavaRecT<=0)return false;
+  P.lavaRecT-=dt;
+  clearLeapBoost();
+  const dur=P.lavaRecMax||LAVA_RECOVERY;
+  const k=smooth(clamp(1-Math.max(P.lavaRecT,0)/dur,0,1));
+  const ax=P.safeAnchor.x,ay=P.safeAnchor.y,az=P.safeAnchor.z;
+  P.pos.x=lerp(P.lavaRecFrom.x,ax,k);
+  P.pos.z=lerp(P.lavaRecFrom.z,az,k);
+  // Comic pop arc — never leave him sunk in the hazard volume.
+  P.pos.y=lerp(P.lavaRecFrom.y,ay,k)+Math.sin(k*Math.PI)*2.4;
+  P.vel.set(0,0,0);
+  if(P.lavaRecT<=0){
+    P.lavaRecT=0;
+    P.pos.set(ax,ay,az);
+    P.vel.set(0,0,0);
+    P.grounded=true;P.lastGround=time;P.surf='stone';
+    if(!P.puff){P.puff=true;refillFX();}
+    // Nudge off any residual lava overlap toward the anchor (already on it).
+    if(playerInLava()){P.pos.set(ax,ay+0.05,az);}
+  }
+  return true;
 }
 function hOverlap(s){const p=P.pos;return p.x+R>s.min.x&&p.x-R<s.max.x&&p.z+R>s.min.z&&p.z-R<s.max.z;}
 function pushOutXZ(s){const p=P.pos;const px1=(p.x+R)-s.min.x,px2=s.max.x-(p.x-R),pz1=(p.z+R)-s.min.z,pz2=s.max.z-(p.z-R);const m=Math.min(px1,px2,pz1,pz2);if(m===px1)p.x=s.min.x-R-0.001;else if(m===px2)p.x=s.max.x+R+0.001;else if(m===pz1)p.z=s.min.z-R-0.001;else p.z=s.max.z+R+0.001;}
@@ -1144,6 +1292,8 @@ function spawnSkySteamTrail(dt){
   for(let i=0;i<n;i++)spawnP(P.pos.x+rand(-0.12,0.12),P.pos.y+0.45+rand(-0.1,0.15),P.pos.z+rand(-0.12,0.12),tx*speed+rand(-0.4,0.4),rand(0.4,1.4),tz*speed+rand(-0.4,0.4),rand(0.08,0.14),Math.random()<0.5?0xfff4e8:0xffd2a8,rand(0.28,0.45)+mag*0.02,1.1+mag*0.04,0,0.7);
 }
 function grantSkyBlastFromVent(){
+  // Steam vent: restores hasSkyBlast and a spent P.puff. Never creates or stacks leapBoost —
+  // the player still has to press Jump to fire the powered stroke.
   const needPower=!P.hasSkyBlast,needPuff=!P.puff;
   if(!needPower&&!needPuff)return false;
   P.hasSkyBlast=true;
@@ -1241,7 +1391,7 @@ function hurtPlayer(kx,kz,col){if(P.inv>0||P.dead)return;P.hp--;P.inv=1.4;const 
   else if(lostFire)showToast('The fire went out!');
   else if(lostBubble)showToast('The bubbles went away!');
   else if(lostSky)showToast('The Sky Blast went out!');}
-function respawn(){P.pos.set(P.spawn.x,P.spawn.y,P.spawn.z);P.vel.set(0,0,0);P.hp=P.maxHp;P.dead=false;P.inv=1.5;P.puff=true;P.puffAir=0;endHover();clearLeapBoost();P.slam=0;P.sq=1.3;P.yaw=Math.PI;CAM.yaw=0;CAM.pos.set(P.spawn.x,P.spawn.y+5,P.spawn.z+9);CAM.look.set(P.spawn.x,P.spawn.y+1,P.spawn.z);CAM.lastManual=-9;SFX.refill();puffJumpFX();showToast('Back on your feet!');updateHUD();}
+function respawn(){P.pos.set(P.spawn.x,P.spawn.y,P.spawn.z);P.vel.set(0,0,0);P.hp=P.maxHp;P.dead=false;P.inv=1.5;P.puff=true;P.puffAir=0;endHover();clearLeapBoost();P.slam=0;P.lavaRecT=0;P.sq=1.3;P.yaw=Math.PI;CAM.yaw=0;CAM.pos.set(P.spawn.x,P.spawn.y+5,P.spawn.z+9);CAM.look.set(P.spawn.x,P.spawn.y+1,P.spawn.z);CAM.lastManual=-9;initSafeAnchor(P.spawn.x,P.spawn.y,P.spawn.z);SFX.refill();puffJumpFX();showToast('Back on your feet!');updateHUD();}
 function hitGloop(e,dmg,kx,kz){if(!e.alive||e.state==='dying')return;e.hp-=dmg;e.hurtT=0.3;e.vx+=kx;e.vz+=kz;e.wind=0;SFX.blorp();
   for(let i=0;i<8;i++)spawnP(e.x,e.y+0.5,e.z,rand(-3,3),rand(1,4),rand(-3,3),rand(0.06,0.12),e.col,rand(0.3,0.5),0.3,-8,0.9);
   if(e.hp<=0){e.state='dying';e.t=0;e.vx=0;e.vz=0;SFX.dissolve();addPuddle(e.x,e.y,e.z,0.8+e.size*0.6,e.col);if(P.hp<P.maxHp)addHeart(e.x,e.y+0.8,e.z);for(let i=0;i<14;i++)spawnP(e.x,e.y+0.4,e.z,rand(-2,2),rand(1,3),rand(-2,2),rand(0.08,0.16),e.col,rand(0.5,0.9),0.5,-5,0.9);rumble(80,0.3,0.3);}}
@@ -1251,6 +1401,8 @@ function spit(e){const ox=e.x+Math.sin(e.face)*0.55*e.size,oz=e.z+Math.cos(e.fac
 function killGoo(q){q.alive=false;q.m.visible=false;}
 function updatePlayer(dt){const p=P.pos,v=P.vel;
   P.inv-=dt;if(P.dead){P.deadT-=dt;if(P.deadT<=0)respawn();}
+  // Lava recovery owns motion briefly — skip normal move/input so a live boost cannot fight the fling.
+  if(updateLavaRecovery(dt))return;
   const cy=CAM.yaw,fx=-Math.sin(cy),fz=-Math.cos(cy),rx=Math.cos(cy),rz=-Math.sin(cy);
   let wx=fx*(-IN.mz)+rx*IN.mx,wz=fz*(-IN.mz)+rz*IN.mx;let wl=Math.hypot(wx,wz);if(wl>1){wx/=wl;wz/=wl;wl=1;}if(P.dead){wx=0;wz=0;wl=0;}
   // Ordinary movement stays SPEED-capped. leapBoost is applied separately so stick reverse cannot cancel it.
@@ -1307,6 +1459,9 @@ function updatePlayer(dt){const p=P.pos,v=P.vel;
   spawnSkySteamTrail(dt);
   P.inGoo=false;if(P.grounded){for(const pu of puddles){if(!pu.alive)continue;if(Math.abs(p.y-pu.y)<0.4&&Math.hypot(p.x-pu.x,p.z-pu.z)<pu.size+R*0.5){P.inGoo=true;break;}}}
   if(P.inGoo){v.x*=Math.exp(-16*dt);v.z*=Math.exp(-16*dt);P.surf='goo';}
+  // Lava contact: one heart + comic yeouch + recover to safe anchor. Keeps hasSkyBlast (unlike enemy hits).
+  if(!P.dead&&!won&&playerInLava())lavaContact();
+  updateSafeAnchor(dt);
   const sp=Math.hypot(v.x,v.z);
   if(P.grounded&&sp>1.5){P.footT+=dt*sp;if(P.footT>2.6){P.footT=0;SFX.step(P.surf);if(P.surf==='grass')spawnP(p.x,p.y+0.05,p.z,rand(-0.5,0.5),rand(0.5,1.2),rand(-0.5,0.5),0.09,0xffffff,0.35,0.6,0,0.35);}}else P.footT=1.5;
   if(P.grounded&&P.surf==='water'&&sp>1){P.splT-=dt;if(P.splT<=0){P.splT=0.09;spawnP(p.x+rand(-0.3,0.3),-0.05,p.z+rand(-0.3,0.3),rand(-1,1),rand(1.5,3.5),rand(-1,1),rand(0.06,0.12),0xdff6ff,rand(0.3,0.5),0.5,-6,0.9);}}
@@ -2524,7 +2679,7 @@ updatePickerUI();
 // ===== src/game.js =====
 let time=0,rescued=0,gotNotes=0;
 let started=false;
-window.__W={solids,gloops,goos,hearts,crates,powers,fires,checks,snoozles,notes,dust,puddles,sharks,fish,spikefish,clams,bubbleShots,kelps,steamVents,celebrationParticles:PART,get underwaterGroup(){return underwaterGroup;},get won(){return won;},get WM(){return WM;},get RAINBOW(){return RAINBOW;},get FINISH(){return FINISH;},get sfx(){return SFX;},get wreck(){return WRECK;},get conch(){return CONCH;}};
+window.__W={solids,gloops,goos,hearts,crates,powers,fires,checks,snoozles,notes,dust,puddles,sharks,fish,spikefish,clams,bubbleShots,kelps,steamVents,lavas,celebrationParticles:PART,get underwaterGroup(){return underwaterGroup;},get won(){return won;},get WM(){return WM;},get RAINBOW(){return RAINBOW;},get FINISH(){return FINISH;},get sfx(){return SFX;},get wreck(){return WRECK;},get conch(){return CONCH;}};
 window.__started=()=>started;
 
 // ---------- camera ----------
@@ -2568,7 +2723,7 @@ function frame(now){requestAnimationFrame(frame);let dt=(now-last)/1000;last=now
   if(!started){updateClouds(dt);updateSnoozles(dt);updateZ(dt);updatePlayerVisual(dt);renderer.render(scene,camera);return;}
   time+=dt;
   readKeys(dt);if(T.stickId!==null){IN.mx=T.jx;IN.mz=T.jy;}if(HELD.a)IN.jumpHeld=true;if(HELD.b)IN.bHeld=true;
-  updatePlayer(dt);updateWobblers(dt);updatePinwheels(dt);updateToss(dt);updateNotes(dt);updateSnoozles(dt);updateBoat(dt);updateWindmill(dt);updateFans(dt);updateSteamVents(dt);updateClouds(dt);updateGloops(dt);updateGoos(dt);updatePuddles(dt);updateFires(dt);updateCrates(dt);updatePowers(dt);updateHearts(dt);updateChecks(dt);
+  updatePlayer(dt);updateWobblers(dt);updatePinwheels(dt);updateToss(dt);updateNotes(dt);updateSnoozles(dt);updateBoat(dt);updateWindmill(dt);updateFans(dt);updateSteamVents(dt);updateLavas(dt);updateClouds(dt);updateGloops(dt);updateGoos(dt);updatePuddles(dt);updateFires(dt);updateCrates(dt);updatePowers(dt);updateHearts(dt);updateChecks(dt);
   updateSharks(dt);updateFish(dt);updateSpikefish(dt);updateBubbleShots(dt);updateClams(dt);updateKelp(dt);
   updateWin(dt);if(FINISH)FINISH.update(dt,won?winT:-1);
   updateParticles(dt);updateRings(dt);updateZ(dt);updateCamera(dt);updatePlayerVisual(dt);

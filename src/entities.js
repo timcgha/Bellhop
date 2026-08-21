@@ -1,5 +1,5 @@
 const solids=[],wobblers=[],pinwheels=[],toss=[],notes=[],dust=[],snoozles=[],fans=[],clouds=[],gloops=[],goos=[],puddles=[],hearts=[],crates=[],powers=[],fires=[];
-const sharks=[],fish=[],spikefish=[],clams=[],bubbleShots=[],steamVents=[];
+const sharks=[],fish=[],spikefish=[],clams=[],bubbleShots=[],steamVents=[],lavas=[];
 let seenGloop=false,seenCrate=false;
 let BOAT=null,WM=null,player=null,shadow=null,RAINBOW=null,FINISH=null;
 const checks=[];let won=false,winT=0,confT=0;
@@ -96,6 +96,7 @@ function clearLevelWorld(){
   for(const o of snoozles)rem(o.g);snoozles.length=0;
   for(const o of fans)rem(o.g);fans.length=0;
   for(const o of steamVents)rem(o.g);steamVents.length=0;
+  for(const o of lavas){rem(o.g);if(o.edge)rem(o.edge);}lavas.length=0;
   for(const o of clouds)rem(o.g);clouds.length=0;
   for(const o of gloops)rem(o.g);gloops.length=0;
   for(const o of hearts)rem(o.g);hearts.length=0;
@@ -193,6 +194,29 @@ function addSteamVent(x,y,z,r){r=r||1.2;const g=new THREE.Group();g.position.set
   g.add(mesh(CYL,lam(0x2e2420),0,0.14,0,r*0.55,0.08,r*0.55));
   const crack=pho(0xff7a2a,40,0xffa060);g.add(mesh(BOXG,crack,0.12,0.18,0,0.08,0.06,r*0.7));g.add(mesh(BOXG,crack,-0.1,0.18,0.05,0.06,0.05,r*0.5));
   scene.add(g);steamVents.push({g,x,y,z,r,pt:0});}
+// Lava is a hazard volume, not a walkable solid. Contact is handled by lavaContact in player.js.
+function addLava(x,y,z,w,h,d){
+  const g=new THREE.Group();g.position.set(x,y,z);
+  const body=mesh(BOXG,new THREE.MeshBasicMaterial({color:0xff6a18}),0,h/2,0,w,h,d);g.add(body);
+  const glow=mesh(BOXG,new THREE.MeshBasicMaterial({color:0xff9a3c,transparent:true,opacity:0.55}),0,h+0.02,0,w*0.98,0.04,d*0.98);g.add(glow);
+  // Ember-red rim so the safe/hot boundary stays obvious.
+  const edge=mesh(BOXG,new THREE.MeshBasicMaterial({color:0x8a2010}),0,h+0.01,0,w+0.25,0.03,d+0.25);
+  scene.add(g);scene.add(edge);
+  lavas.push({g,edge,body,glow,x,y,z,w,h,d,min:new THREE.Vector3(x-w/2,y,z-d/2),max:new THREE.Vector3(x+w/2,y+h,z+d/2),pt:0,ph:rand(0,TAU)});
+}
+// Ambient lava decoration only — collision state is always on (no timed hazard cycles).
+function updateLavas(dt){
+  for(const lv of lavas){
+    lv.pt-=dt;
+    if(lv.pt<=0){
+      lv.pt=0.1+Math.random()*0.22;
+      const bx=lv.x+rand(-lv.w*0.42,lv.w*0.42),bz=lv.z+rand(-lv.d*0.42,lv.d*0.42);
+      spawnP(bx,lv.max.y+0.04,bz,rand(-0.35,0.35),rand(0.6,2.0),rand(-0.35,0.35),rand(0.07,0.13),Math.random()<0.45?0xffe9d0:0xff6a18,rand(0.35,0.65),0.55,-1.2,0.75);
+      if(Math.random()<0.3)spawnP(bx,lv.max.y+0.08,bz,rand(-1.2,1.2),rand(1.8,4.2),rand(-1.2,1.2),rand(0.04,0.08),0xffc04a,rand(0.25,0.45),0.45,-4,0.9);
+    }
+    if(lv.glow&&lv.glow.material)lv.glow.material.opacity=0.42+0.18*Math.sin(time*1.6+lv.ph);
+  }
+}
 const FIREGEO=new THREE.SphereGeometry(1,9,7);
 for(let i=0;i<26;i++){const m=new THREE.Mesh(FIREGEO,new THREE.MeshBasicMaterial({color:0xff8a2b}));m.scale.setScalar(0.24);m.visible=false;scene.add(m);fires.push({m,pos:new THREE.Vector3(),vel:new THREE.Vector3(),life:0,alive:false,trailT:0});}
 function buildHeart(){const g=new THREE.Group();const m=pho(0xff5a7a,120,0xffffff);g.add(mesh(SPH,m,-0.11,0.1,0,0.16));g.add(mesh(SPH,m,0.11,0.1,0,0.16));const c=mesh(CONE,m,0,-0.06,0,0.26,0.36,0.16);c.rotation.z=Math.PI;g.add(c);g.scale.setScalar(0.9);return g;}
@@ -262,11 +286,12 @@ function loadLevel(L){
   FINISH=null;
   if(L.physics)applyPhysics(L.physics);
   applySkyBlastTuning(L.skyBlast);
+  applyLavaTuning(L);
   CURRENT_LEVEL=L;
   setSong(L.music||'meadow');
   if(L.underwater)beginUnderwaterLevel(L);else beginLandLevel();
-  P.fire=false;P.bubble=false;P.hasSkyBlast=false;clearLeapBoost();P.puff=true;P.puffAir=0;endHover();P.slam=0;
-  if(L.spawn){P.spawn.x=L.spawn.x;P.spawn.y=L.spawn.y;P.spawn.z=L.spawn.z;P.pos.set(L.spawn.x,L.spawn.y,L.spawn.z);P.vel.set(0,0,0);}
+  P.fire=false;P.bubble=false;P.hasSkyBlast=false;clearLeapBoost();P.puff=true;P.puffAir=0;endHover();P.slam=0;P.lavaRecT=0;P.anchorSettleT=0;
+  if(L.spawn){P.spawn.x=L.spawn.x;P.spawn.y=L.spawn.y;P.spawn.z=L.spawn.z;P.pos.set(L.spawn.x,L.spawn.y,L.spawn.z);P.vel.set(0,0,0);initSafeAnchor(L.spawn.x,L.spawn.y,L.spawn.z);}
   const fence=L.fence;
   for(const s of L.fenceSolids)addSolid(s[0],s[1],s[2],s[3],s[4],s[5],fence);
   for(const p of L.pathTiles)pathTile(p[0],p[1],p[2],p[3]);
@@ -285,6 +310,7 @@ function loadLevel(L){
     else if(k==='boat')buildBoat(step[1],step[2]);
     else if(k==='fan')addFan(step[1],step[2],step[3],step[4]);
     else if(k==='steamVent')addSteamVent(step[1],step[2],step[3],step[4]);
+    else if(k==='lava')addLava(step[1],step[2],step[3],step[4],step[5],step[6]);
     else if(k==='windmill')buildWindmill(step[1],step[2]);
     else if(k==='rainbow')RAINBOW=buildRainbow(step[1],step[2]);
     else if(k==='pinwheelRow'){for(let i=0;i<step[4];i++)addPinwheel(step[1]+i*step[5],step[2]+i*step[6],step[3]);}
