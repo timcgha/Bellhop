@@ -246,6 +246,8 @@ function checkMandatoryLeaps(leaps,vents,lavas){
     for(const label of ['nearSafe','farSafe']){
       const p=leap[label];
       const hot=lavas.some(lv=>{
+        // Ground basins under elevated pads are vertically irrelevant to standing clearance.
+        if(!(p.y<lv.max.y+0.5&&p.y+1.15>lv.min.y-0.05))return false;
         const cx=Math.min(Math.max(p.x,lv.min.x),lv.max.x),cz=Math.min(Math.max(p.z,lv.min.z),lv.max.z);
         return Math.hypot(p.x-cx,p.z-cz)-R<lavaTun.anchorClear;
       });
@@ -259,6 +261,8 @@ function checkMandatoryLeaps(leaps,vents,lavas){
     for(const lv of lavas){
       const onCorridor=lv.min.x<land.x+6&&lv.max.x>land.x-6;
       if(!onCorridor)continue;
+      // Only elevated / pad-height lava must stay clear of the landing volume.
+      if(lv.max.y<pad.max.y-1.5)continue;
       if(lv.min.z<land.edgeZ-0.05&&lv.max.z>land.farZ)fails.push(leap.id+': gap lava overlaps the landing pad (lava z '+lv.min.z.toFixed(2)+'..'+lv.max.z.toFixed(2)+')');
     }
   }

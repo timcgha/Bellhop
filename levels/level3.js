@@ -12,8 +12,13 @@ physics:{
   slamHang:0.14,slamFall:-34,slamRebound:8,
   jetTime:0.38,bonkR:2.05,bonkCD:0.5
 },
-// Phone feel pass still owns the next Sky Blast retune — do not change here.
-skyBlast:{puffVMul:1.4,boostMax:12.5,boostDecay:1.6},
+// Phone feel pass still owns the next Sky Blast retune — do not change base leap here.
+// Glide is the Stage 4.5 addition: short automatic descent softener after the powered crest.
+skyBlast:{
+  puffVMul:1.4,boostMax:12.5,boostDecay:1.6,
+  // Bounded post-crest softener. Cap sits near hover drift so gaps still clear; timer (not hold) ends it.
+  glideDur:0.55,glideFallCap:-2.2,glideStartVy:0.2
+},
 anchorSettle:0.22,
 anchorClear:0.85,
 lavaRecovery:0.42,
@@ -60,6 +65,14 @@ route:{
   sideLava:{x:10,z:10},
   snoozle1:{x:-5,z:6},
   cinderTerrace:{x:-2,z:-24},
+  skyCrates:[
+    {x:0,z:-52,area:2,note:'teaching'},
+    {x:5,z:-68,area:2,note:'preFirstLava'},
+    {x:-4,z:-98,area:3,note:'afterFirstLava'},
+    {x:4,z:-128,area:3,note:'betweenIslands'},
+    {x:-5,z:-162,area:3,note:'preWideRiver'},
+    {x:5,z:-194,area:3,note:'preGeyser'}
+  ],
   skyCrate:{x:0,z:-52},
   snoozle2:{x:-9,z:-78},
   wispOpen:{x:6,z:-230},
@@ -132,6 +145,7 @@ steps:[
   ['solid',0,2.2,-62.5,18,0.4,12,0x3a3028,{surf:'stone'}],
   ['solid',-12,3.5,-62,6,0.4,14,0x4a3a32,{surf:'stone'}],
   ['solid',-12,5.5,-68,6,0.4,8,0x5a4a40,{surf:'stone'}],
+  ['crate',5,6.9,-68,'sky'],
   // Snoozle 2 ledge
   ['solid',0,7.5,-70,10,0.4,6,0x5a4a40,{surf:'stone'}],
   ['steamVent',0,7.9,-70,1.35],
@@ -145,7 +159,12 @@ steps:[
   ['solid',0,8.0,-92.5,16,0.4,12,0x6a4a38,{surf:'stone'}],
   ['solid',0,8.4,-86.65,14,0.06,0.35,0x8a2010,{surf:'stone'}],
   ['solid',0,8.4,-90,5,0.08,2.2,0xffd24a,{surf:'stone'}],
-  ['lava',0,7.2,-81.75,14,0.55,8.0],
+  ['lava',0,6.0,-81.75,16,0.55,9.0],
+  // Basin under / beside first leap — miss the elevated route, hit lava
+  ['lava',0,-0.15,-82,28,0.55,28],
+  ['lava',-12,-0.15,-82,8,0.55,22],
+  ['lava',12,-0.15,-82,8,0.55,22],
+  ['crate',-4,8.4,-98,'sky'],
 
   // ========== AREA 3 — stairs up, then flat leaps ==========
   // Stair climb to islandA height
@@ -156,7 +175,11 @@ steps:[
   ['solid',0,11.4,-107.7,12,0.06,0.35,0x8a2010,{surf:'stone'}],
   ['solid',0,11.0,-123.5,12,0.4,12,0x5a4a40,{surf:'stone'}],
   ['solid',0,11.4,-117.65,10,0.06,0.35,0x8a2010,{surf:'stone'}],
-  ['lava',0,10.2,-112.75,14,0.55,8.0],
+  ['lava',0,9.0,-112.75,16,0.55,9.0],
+  ['lava',0,-0.15,-113,26,0.55,24],
+  ['lava',-11,-0.15,-113,7,0.55,20],
+  ['lava',11,-0.15,-113,7,0.55,20],
+  ['crate',4,11.4,-128,'sky'],
 
   // Stair to islandB
   ['solid',0,12.0,-130,12,0.4,4,0x5a4a40,{surf:'stone'}],
@@ -165,7 +188,10 @@ steps:[
   ['solid',0,13.4,-137.7,10,0.06,0.35,0x8a2010,{surf:'stone'}],
   ['solid',0,13.0,-153.5,12,0.4,12,0x5a4a40,{surf:'stone'}],
   ['solid',0,13.4,-147.65,10,0.06,0.35,0x8a2010,{surf:'stone'}],
-  ['lava',0,12.2,-142.75,14,0.55,8.0],
+  ['lava',0,11.0,-142.75,16,0.55,9.0],
+  ['lava',0,-0.15,-143,26,0.55,24],
+  ['lava',-11,-0.15,-143,7,0.55,20],
+  ['lava',11,-0.15,-143,7,0.55,20],
 
   // Stair to wideRiver
   ['solid',0,14.0,-160,14,0.4,4,0x5a4a40,{surf:'stone'}],
@@ -175,7 +201,11 @@ steps:[
   ['solid',0,15.0,-184.5,16,0.4,14,0x6a4a38,{surf:'stone'}],
   ['solid',0,15.4,-177.65,14,0.06,0.35,0x8a2010,{surf:'stone'}],
   ['solid',0,15.4,-182,5,0.08,2.2,0xffd24a,{surf:'stone'}],
-  ['lava',0,14.2,-172.75,16,0.6,8.0],
+  ['lava',0,13.0,-172.75,18,0.6,10.0],
+  ['lava',0,-0.15,-173,30,0.55,28],
+  ['lava',-12,-0.15,-173,8,0.55,24],
+  ['lava',12,-0.15,-173,8,0.55,24],
+  ['crate',-5,15.4,-162,'sky'],
 
   // Stair to geyserApproach
   ['solid',0,16.0,-192,14,0.4,4,0x5a4a40,{surf:'stone'}],
@@ -184,9 +214,16 @@ steps:[
   ['solid',0,17.4,-199.7,12,0.06,0.35,0x8a2010,{surf:'stone'}],
   ['solid',0,17.0,-215.5,14,0.4,12,0x6a4a38,{surf:'stone'}],
   ['solid',0,17.4,-209.65,12,0.06,0.35,0x8a2010,{surf:'stone'}],
-  ['lava',0,16.2,-204.75,14,0.55,8.0],
+  ['lava',0,15.0,-204.75,16,0.55,9.0],
+  ['lava',0,-0.15,-205,28,0.55,26],
+  ['lava',-11,-0.15,-205,8,0.55,22],
+  ['lava',11,-0.15,-205,8,0.55,22],
+  ['crate',5,17.4,-194,'sky'],
   ['geyser',0,17.4,-216,1.2],
   ['solid',0,21.0,-220,12,0.4,8,0x5a4a40,{surf:'stone'}],
+  // Low basin under geyser / approach sides
+  ['lava',-10,-0.15,-218,10,0.55,14],
+  ['lava',10,-0.15,-218,10,0.55,14],
 
   // Open Wisp terrace
   ['solid',0,19.0,-228,16,0.4,6,0x4a3a35,{surf:'stone'}],

@@ -215,6 +215,7 @@ module.exports = function boot(opts = {}) {
     getPhys: () => window.__PHYS && window.__PHYS(),
     getSky: () => window.__SKY && window.__SKY(),
     getLava: () => window.__LAVA && window.__LAVA(),
+    getPlayer: () => window.__PLAYER && window.__PLAYER(),
     isStarted: () => window.__started && window.__started(),
     pickerIdx: () => window.__pickerIdx && window.__pickerIdx(),
     touchArmed: () => !!(window.__touchArmed && window.__touchArmed()),
