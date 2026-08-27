@@ -208,14 +208,11 @@ for(let i=0;i<320;i++){
 release();
 ok(landed&&!lavaHit,'first mandatory leap still clears (z='+P.pos.z.toFixed(2)+')');
 
-// Endpoint still non-winning
+// Prototype soft-return removed — Organ FINISH owns the end
 H.test.loadLevel(2);
-const ep=W.protoEndpoints[0];
-settle(ep.x,ep.y,ep.z+3);P.pos.set(ep.x,ep.y+0.2,ep.z+2.6);P.vel.set(0,0,-1);
-for(let i=0;i<40;i++)frames(1);
-ok(ep.triggered,'endpoint approach engages');
-for(let i=0;i<100;i++)frames(1);
-ok(!W.won,'Geode endpoint remains non-winning');
+ok(!W.protoEndpoints||W.protoEndpoints.length===0,'no proto endpoint after Stage 7');
+ok(W.organ&&typeof W.FINISH.onAllAwake==='function','Steam Organ FINISH present');
+ok(!W.won,'Organ presence alone does not win');
 
 // Regressions
 H.test.loadLevel(0);

@@ -9,7 +9,7 @@ ok(Math.abs(L.spawn.z-24)<0.01&&Math.abs(P.pos.z-24)<0.5,'boots at Warm Slopes s
 ok(L.peakAtmosphere===true,'Peak atmosphere flag set');
 ok(H.getSky().puffVMul===1.4&&H.getSky().boostMax===12.5&&H.getSky().boostDecay===1.6,'Sky Blast tuning unchanged');
 ok(L.snoozleGoal===4,'finished Level 3 still expects four Snoozles');
-ok(W.snoozles.length===3,'three physical Snoozles in the Stage 6 production slice');
+ok(W.snoozles.length===4,'four physical Snoozles in the finished Level 3');
 ok(el('snz').textContent==='😴 0/4','HUD shows 0/4 against the finished goal');
 
 // Prototype arena is gone — no flat Stage 2 pads at z=9/-16 as the playable boot.
@@ -239,24 +239,21 @@ ok(noteSal.note&&noteSal.note.hidden,'note salamander holds a pre-placed note');
 P.pos.set(noteSal.x,0.4,noteSal.z+1);P.yaw=Math.atan2(noteSal.x-P.pos.x,noteSal.z-P.pos.z);P.inv=99;tap('KeyJ',2);frames(6);
 ok(noteSal.note.hidden===false&&W.notes.length===notes0,'note salamanders / held notes obey fixed-note rule');
 
-// ---- Temporary endpoint does not trigger final FINISH/win ----
+// ---- Stage 6 soft-return endpoint is gone; real Crater finish owns the end ----
 H.test.loadLevel(2);
-ok(W.protoEndpoints&&W.protoEndpoints.length===1,'temporary proto endpoint exists');
-const ep=W.protoEndpoints[0];
-ok(Math.abs(ep.z-R.endpoint.z)<2,'endpoint sits at crater rim (Climb summit)');
-ok(ep.z<R.climbRim.z+5,'Stage 6 endpoint is past the Climb, not the Hollow exit');
-ok(!L.steps.some(s=>s[0]==='protoEndpoint'&&s[3]>-270),'old Stage 4 mouth blocker endpoint removed');
-ok(!L.steps.some(s=>s[0]==='protoEndpoint'&&Math.abs(s[3]-(-368))<1),'Stage 5 Hollow-exit endpoint removed');
-// Stand on the rim approach in front of the soft-return silhouette
-settle(ep.x,ep.y,ep.z+3.2);
-P.pos.set(ep.x,ep.y+0.2,ep.z+2.6);P.vel.set(0,0,-1);P.grounded=true;
-for(let i=0;i<30;i++)frames(1);
-ok(ep.triggered,'endpoint approach engaged');
-for(let i=0;i<100;i++)frames(1);
-ok(!W.won,'temporary endpoint does not set won / final Level 3 win');
-ok(!el('win')||el('win').style.display!=='flex','CONGRATULATIONS banner stays hidden');
-ok(!H.isStarted(),'endpoint returns to the level picker');
-ok(!W.won,'picker return does not mark the level completed');
+ok(!W.protoEndpoints||W.protoEndpoints.length===0,'no temporary proto endpoint remains');
+ok(!L.steps.some(s=>s[0]==='protoEndpoint'),'no protoEndpoint steps in Level 3 data');
+ok(!L.route.endpoint,'Stage 6 route.endpoint marker removed');
+ok(W.organ&&W.FINISH&&W.FINISH.winMsg==='The mountain is singing!','Great Steam Organ registers FINISH');
+ok(L.route.snoozle4&&L.route.keyboard&&L.route.organ,'Crater route markers present');
+settle(0,44.4,-590);
+P.pos.set(0,44.5,-608);P.vel.set(0,0,0);P.grounded=true;frames(8);
+ok(P.pos.z<-600&&P.pos.y>42,'victory-walk terrace near Organ is standable');
+ok(!W.won,'standing in the Crater before all awake does not win');
+// Keyboard before 4 awake must not win
+const kb=W.organ.trigger;
+P.pos.set(kb.x,kb.y+0.4,kb.z);frames(10);
+ok(!W.won,'keyboard before all four awake does not win');
 
 // ---- Regressions ----
 H.test.loadLevel(0);
@@ -264,7 +261,7 @@ ok(H.getLevel().id==='level1'&&H.getPhys().grav===-30&&H.getSky().boostMax===0,'
 H.test.loadLevel(1);
 ok(H.getLevel().id==='level2'&&H.getPhys().grav===-6,'Level 2 regression');
 H.test.loadLevel(2);
-ok(H.getLevel().id==='level3'&&H.getSky().boostMax===12.5&&W.snoozles.length===3,'Level 3 production slice restores');
+ok(H.getLevel().id==='level3'&&H.getSky().boostMax===12.5&&W.snoozles.length===4,'Level 3 production slice restores');
 ok(H.getLevel().snoozleGoal===4,'Level 3 snoozleGoal still 4 after reload');
 
 report();

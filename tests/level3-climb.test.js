@@ -1,4 +1,4 @@
-// Level 3 Stage 6: The Climb — vertical ascent, optional challenge, crater-rim endpoint.
+// Level 3 Stage 6: The Climb — vertical ascent, optional challenge, crater rim.
 const H=require('./harness.js')({autostart:false});
 const {P,W,frames,tap,ok,kd,ku,report,el}=H;
 
@@ -6,13 +6,13 @@ H.startLevel(2);
 const L=H.getLevel();
 const R=L.route;
 ok(L&&L.id==='level3','boots Level 3');
-ok(R.climbBase&&R.climbHalfway&&R.climbRim&&R.endpoint,'Climb route markers present');
+ok(R.climbBase&&R.climbHalfway&&R.climbRim&&R.snoozle4,'Climb route markers present');
 ok(H.getSky().puffVMul===1.4&&H.getSky().boostMax===12.5&&H.getSky().boostDecay===1.6,'Sky Blast tuning unchanged');
 ok(H.getSky().glideDur===0.55&&H.getSky().glideFallCap===-2.2&&H.getSky().glideStartVy===0.2,'glide unchanged');
 ok(L.snoozleGoal===4,'snoozleGoal remains 4');
-ok(W.snoozles.length===3,'exactly three physical Snoozles (no Snoozle 4 yet)');
+ok(W.snoozles.length===4,'exactly four physical Snoozles');
 ok(el('snz').textContent==='😴 0/4','HUD 0/4');
-ok(H.getCamDiag().VERSION_BASE==='v35 · The Climb','version stamp is The Climb');
+ok(H.getCamDiag().VERSION_BASE==='v36 · The Peak Complete','version stamp is The Peak Complete');
 
 const climbLeaps=L.mandatoryLeaps.filter(l=>/^climb/.test(l.id));
 const lavaLeaps=L.mandatoryLeaps.filter(l=>['firstLavaLeap','islandA','islandB','wideRiver','geyserApproach'].includes(l.id));
@@ -293,27 +293,23 @@ const amb0=W.notes.length;
 for(let i=0;i<30;i++)frames(1);
 ok(W.notes.length===amb0,'ambient entities never increase counted-note total');
 
-// ---- Rim endpoint: no Snoozle 4, no Organ, no win ----
+// ---- Rim leads to Snoozle 4 / Organ — no prototype soft-return ----
 reloadL3();
-const ep=W.protoEndpoints[0];
-ok(ep&&Math.abs(ep.z-R.endpoint.z)<1,'crater-rim endpoint present');
-ok(W.snoozles.length===3,'reaching rim setup still has three Snoozles');
-settle(ep.x,ep.y,ep.z+3);
-P.pos.set(ep.x,ep.y+0.2,ep.z+2.6);P.vel.set(0,0,-1);
-for(let i=0;i<40;i++)frames(1);
-ok(ep.triggered,'rim endpoint engages');
-for(let i=0;i<100;i++)frames(1);
-ok(!W.won,'rim endpoint does not win');
-ok(!el('win')||el('win').style.display!=='flex','no CONGRATULATIONS at rim');
-ok(!H.isStarted(),'rim soft-returns to picker');
-ok(W.snoozles.length===3||true,'Snoozle 4 was never created');
+ok(!W.protoEndpoints||W.protoEndpoints.length===0,'no crater-rim proto endpoint');
+ok(W.snoozles.length===4,'four Snoozles including rim Snoozle 4');
+const s4=W.snoozles[3];
+ok(s4&&Math.abs(s4.g.position.z-R.snoozle4.z)<1,'Snoozle 4 on crater rim');
+ok(W.organ&&!W.organ.active,'Organ present and dark before all awake');
+settle(R.snoozle4.x,R.snoozle4.y,R.snoozle4.z+1.2);
+ok(H.isStarted(),'rim does not soft-return to picker');
+ok(!W.won,'standing on rim does not win');
 
-// ---- World bounds: ceiling above rim, far wall past endpoint ----
+// ---- World bounds: ceiling above Organ, far wall past Crater ----
 H.startLevel(2);
-const ceil=W.solids.find(s=>s.min.y>=60&&s.max.y<=66&&(s.max.x-s.min.x)>30);
-ok(!!ceil&&ceil.min.y>=60,'invisible ceiling leaves Stage 7 room above rim');
+const ceil=W.solids.find(s=>s.min.y>=68&&s.max.y<=76&&(s.max.x-s.min.x)>30);
+ok(!!ceil&&ceil.min.y>=68,'invisible ceiling clears Organ pipes');
 ok(ceil.min.y>R.climbRim.y+10,'ceiling does not cut rim traversal');
-ok(W.solids.some(s=>s.max.z<-590&&s.min.z<-600&&(s.max.x-s.min.x)>30),'far perimeter wall past Climb end');
+ok(W.solids.some(s=>s.max.z<-650&&(s.max.x-s.min.x)>30),'far perimeter wall past Crater Organ');
 
 // ---- Camera probe (diagnostic untouched; report effective distance) ----
 reloadL3();
@@ -335,7 +331,7 @@ ok(H.getLevel().id==='level1'&&H.getPhys().grav===-30&&H.getSky().boostMax===0,'
 H.test.loadLevel(1);
 ok(H.getLevel().id==='level2'&&H.getPhys().grav===-6,'Level 2 unchanged');
 H.test.loadLevel(2);
-ok(H.getSky().boostMax===12.5&&H.getSky().glideDur===0.55&&W.snoozles.length===3,'Level 3 Climb slice restores');
+ok(H.getSky().boostMax===12.5&&H.getSky().glideDur===0.55&&W.snoozles.length===4,'Level 3 Climb slice restores');
 ok(H.getLevel().snoozleGoal===4,'snoozleGoal still 4');
 ok(W.notes.length===10,'note total restores to 10');
 

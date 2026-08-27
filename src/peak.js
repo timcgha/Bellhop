@@ -221,6 +221,7 @@ function updatePeak(dt){
   updateCinders(dt);updateEmbers(dt);updateWisps(dt);updateSalamanders(dt);updateGeysers(dt);
   updateDriftSparks(dt);updateProtoEndpoints(dt);
   updateSteamCurtains(dt);updateCrystalSparks(dt);updateGeodeAmbience(dt);
+  // Steam Organ finish update is owned by FINISH.update — do not double-drive here.
 }
 
 // ---- Stage 4 presentation + temporary endpoint + Stage 5 Geode Hollow ----
@@ -243,6 +244,8 @@ function clearPeakWorld(){
   for(const s of driftSparks)rem(s.m);driftSparks.length=0;
   for(const c of steamCurtains){rem(c.g);if(c.sol&&c.sol.mesh)rem(c.sol.mesh);}steamCurtains.length=0;
   for(const s of crystalSparks)rem(s.m);crystalSparks.length=0;
+  for(const f of organFireworks){if(f.m)rem(f.m);}organFireworks.length=0;
+  if(ORGAN&&ORGAN.g)rem(ORGAN.g);ORGAN=null;
   geodeAmbT=0;geodeInside=false;
 }
 function addVolcanoLandmark(x,y,z,scale){
@@ -507,3 +510,191 @@ function updateGeodeAmbience(dt){
     else if(AU.ctx){const c=chordNow();tone(hz(c[Math.floor(Math.random()*3)]+24,523.25),0.45,{type:'sine',gain:0.045,attack:0.02});}
   }
 }
+
+// ---- Great Steam Organ + crater finish (Stage 7) ----
+let ORGAN=null;
+const organFireworks=[];
+function playerInOrganKeyboard(){
+  if(!ORGAN||!ORGAN.trigger||!ORGAN.active)return false;
+  const t=ORGAN.trigger,p=P.pos;
+  return Math.abs(p.x-t.x)<t.hx&&Math.abs(p.z-t.z)<t.hz&&p.y>t.y-0.4&&p.y<t.y+t.hy;
+}
+function activateSteamOrgan(){
+  if(!ORGAN||ORGAN.active)return;
+  ORGAN.active=true;ORGAN.activateT=0;
+  if(typeof SFX.organSwell==='function')SFX.organSwell();
+  else SFX.wake();
+  CAM.fovKick=Math.max(CAM.fovKick,5);CAM.shake=Math.max(CAM.shake,0.22);
+  spawnRing(ORGAN.cx,ORGAN.deckY+1.2,ORGAN.cz+6,0xffd24a,0.45,8,0.6);
+  spawnRing(ORGAN.cx,ORGAN.deckY+2.4,ORGAN.cz+2,0xff9a3c,0.3,7,0.5);
+  for(let i=0;i<28;i++){
+    spawnP(ORGAN.cx+rand(-3,3),ORGAN.deckY+rand(1,6),ORGAN.cz+rand(0,8),
+      rand(-1.5,1.5),rand(1,4),rand(-1,2),0.1,Math.random()<0.5?0xffe36b:0xff9a3c,0.8,0.35,-3,1);
+  }
+  showToast('The mountain woke up!');
+}
+function stageOrganWinPose(){
+  if(!ORGAN)return;
+  const kx=ORGAN.trigger.x,kz=ORGAN.trigger.z,ky=ORGAN.deckY+0.4;
+  P.pos.set(kx,ky,kz);P.vel.set(0,0,0);P.yaw=Math.PI;P.grounded=true;P.puff=true;P.puffAir=0;endHover();
+  // Camera from the rim side (+Z), looking toward Organ (−Z). Pling stays in front of pipes.
+  CAM.look.set(kx,ky+1.6,kz-1.5);
+  CAM.pos.set(kx+0.4,ky+4.2,kz+13.5);
+  CAM.yaw=0.02;CAM.pitch=0.22;CAM.boomDist=14;CAM.targetDist=14;CAM.mode='finish';
+  CAM.fovKick=Math.max(CAM.fovKick,8);CAM.shake=Math.max(CAM.shake,0.3);
+  CAM.lastManual=time+99;
+}
+function spawnOrganFireworkBurst(){
+  if(!ORGAN)return;
+  // Behind / beside / above the celebration — never a bright flash over Pling.
+  const baseZ=ORGAN.cz-2,baseY=ORGAN.deckY+10;
+  for(let n=0;n<3;n++){
+    const ox=ORGAN.cx+rand(-10,10),oy=baseY+rand(0,6),oz=baseZ+rand(-8,2);
+    const col=Math.random()<0.34?0xff6a18:(Math.random()<0.5?0xffe36b:0xff9a3c);
+    for(let i=0;i<14;i++){
+      const a=rand(0,TAU),sp=rand(2,7);
+      const m=mesh(SPH,new THREE.MeshBasicMaterial({color:col,transparent:true,opacity:0.95}),0,0,0,0.12);
+      m.position.set(ox,oy,oz);scene.add(m);
+      organFireworks.push({m,vx:Math.cos(a)*sp,vy:rand(2,8),vz:Math.sin(a)*sp*0.5,life:rand(0.7,1.4),grav:-9,kind:'fw'});
+    }
+    spawnRing(ox,oy,oz,col,0.35,6,0.55);
+  }
+}
+function updateOrganFireworks(dt){
+  for(let i=organFireworks.length-1;i>=0;i--){
+    const f=organFireworks[i];
+    f.life-=dt;f.vy+=f.grav*dt;f.m.position.x+=f.vx*dt;f.m.position.y+=f.vy*dt;f.m.position.z+=f.vz*dt;
+    f.m.material.opacity=Math.max(0,f.life*0.9);
+    if(f.life<=0){if(f.m.parent)f.m.parent.remove(f.m);else scene.remove(f.m);organFireworks.splice(i,1);}
+  }
+}
+function setOrganVisualState(lit,playing){
+  if(!ORGAN)return;
+  const glow=lit?(playing?0.85:0.55):(0.04+Math.sin(time*0.7)*0.015);
+  const steamOp=lit?(playing?0.55:0.38):(0.06+Math.sin(time*0.5)*0.02);
+  if(ORGAN.pipeLights)for(const L of ORGAN.pipeLights){
+    L.m.material.opacity=glow*(0.55+0.45*Math.sin(time*(playing?4:1.4)+L.ph));
+  }
+  if(ORGAN.valves)for(const v of ORGAN.valves){
+    if(v.glow)v.glow.material.opacity=lit?(playing?0.7:0.45):(0.05+Math.sin(time*0.9+v.ph)*0.02);
+  }
+  if(ORGAN.steamPuffs)for(const s of ORGAN.steamPuffs){
+    s.m.material.opacity=steamOp*(0.6+0.4*Math.sin(time*2+s.ph));
+    if(lit)s.m.position.y=s.baseY+((time*0.7+s.ph)%2.4);
+  }
+  if(ORGAN.keyGlow)ORGAN.keyGlow.material.opacity=lit?(0.22+Math.sin(time*1.6)*0.1):(0.04);
+  if(ORGAN.keyGlow)ORGAN.keyGlow.visible=!!lit;
+}
+function organCamHold(dt){
+  if(!ORGAN)return;
+  const kx=ORGAN.trigger.x,kz=ORGAN.trigger.z,ky=ORGAN.deckY+0.4;
+  const lookX=kx,lookY=ky+1.7,lookZ=kz-2.0;
+  const posX=kx+0.35,posY=ky+4.4,posZ=kz+14.2;
+  CAM.look.x=damp(CAM.look.x,lookX,8,dt);CAM.look.y=damp(CAM.look.y,lookY,8,dt);CAM.look.z=damp(CAM.look.z,lookZ,8,dt);
+  CAM.pos.x=damp(CAM.pos.x,posX,7,dt);CAM.pos.y=damp(CAM.pos.y,posY,7,dt);CAM.pos.z=damp(CAM.pos.z,posZ,7,dt);
+  CAM.yaw=0.02;CAM.pitch=0.22;CAM.boomDist=14;CAM.targetDist=14;CAM.mode='finish';
+  CAM.effectiveDist=Math.hypot(CAM.pos.x-CAM.look.x,CAM.pos.y-CAM.look.y,CAM.pos.z-CAM.look.z);
+  CAM.collisionPulled=false;
+}
+function updateSteamOrgan(dt,winT){
+  if(!ORGAN)return;
+  if(ORGAN.active)ORGAN.activateT+=dt;
+  setOrganVisualState(ORGAN.active,won);
+  updateOrganFireworks(dt);
+  if(winT>=0){
+    ORGAN.fwT=(ORGAN.fwT||0)-dt;
+    if(ORGAN.fwT<=0&&winT<14){ORGAN.fwT=0.55;spawnOrganFireworkBurst();}
+    return;
+  }
+  if(ORGAN.active&&!won&&playerInOrganKeyboard()){
+    if(typeof SFX.organKey==='function')SFX.organKey();
+    triggerWin();
+  }
+}
+function buildSteamOrgan(cx,deckY,cz){
+  deckY=deckY!=null?deckY:44.4;cz=cz!=null?cz:-640;
+  const g=new THREE.Group();g.position.set(cx,0,cz);
+  const brassDark=lam(0x5a4030),brass=lam(0xb08a4a),brassLite=pho(0xd4a85a,40,0xffe0a0);
+  const rock=lam(0x3a3538),rockDeep=lam(0x2a2218);
+  // Monumental pipe bank rising from volcanic rock.
+  const pipes=[
+    {x:-6.2,z:-2.0,h:12.5,r:0.55},
+    {x:-3.4,z:-3.5,h:15.5,r:0.48},
+    {x:-0.8,z:-4.2,h:17.2,r:0.62},
+    {x:2.2,z:-3.2,h:14.0,r:0.5},
+    {x:5.4,z:-1.6,h:11.8,r:0.58},
+    {x:7.6,z:-3.8,h:13.6,r:0.42},
+    {x:-7.8,z:-4.5,h:10.5,r:0.4}
+  ];
+  ORGAN={cx,cz,deckY,active:false,playing:false,activateT:0,pipeLights:[],valves:[],steamPuffs:[],homes:[],fwT:0,g};
+  for(const p of pipes){
+    const body=mesh(CYL,brassDark,p.x,deckY+p.h*0.5,p.z,p.r,p.h,p.r);g.add(body);
+    const rim=mesh(CYL,brass,p.x,deckY+p.h+0.08,p.z,p.r*1.15,0.16,p.r*1.15);g.add(rim);
+    const light=mesh(SPH,new THREE.MeshBasicMaterial({color:0xff9a3c,transparent:true,opacity:0.05,depthWrite:false}),p.x,deckY+p.h*0.65,p.z,p.r*0.85);
+    g.add(light);ORGAN.pipeLights.push({m:light,ph:rand(0,TAU)});
+  }
+  // Rock plinth under pipes
+  g.add(mesh(BOXG,rock,0,deckY-0.2,-3.2,18,1.2,8));
+  g.add(mesh(BOXG,rockDeep,0,deckY+1.2,-4.5,14,3.5,4));
+  // Valves along the bank
+  for(let i=0;i<6;i++){
+    const vx=-7+i*2.6,vz=-1.2;
+    g.add(mesh(CYL,brass,vx,deckY+1.1,vz,0.22,0.7,0.22));
+    const glow=mesh(SPH,new THREE.MeshBasicMaterial({color:0xff6a18,transparent:true,opacity:0.05,depthWrite:false}),vx,deckY+1.55,vz,0.28);
+    g.add(glow);ORGAN.valves.push({glow,ph:i*0.7});
+  }
+  // Walkways / side rails — frame, not cover, the keyboard.
+  addSolid(cx-9.5,deckY,cz+4,2.4,0.4,14,0x4a3a32,{surf:'stone'});
+  addSolid(cx+9.5,deckY,cz+4,2.4,0.4,14,0x4a3a32,{surf:'stone'});
+  g.add(mesh(BOXG,brass,-9.5,deckY+1.1,4,0.2,2.0,12));
+  g.add(mesh(BOXG,brass,9.5,deckY+1.1,4,0.2,2.0,12));
+  // Keyboard deck — broad, readable keys, easy entry from +Z.
+  const keyZ=8.5;
+  addSolid(cx,deckY,cz+keyZ,12,0.4,7,0x5a4030,{surf:'stone'});
+  for(let i=0;i<8;i++){
+    const kx=-5.2+i*1.45;
+    const key=mesh(BOXG,i%2?brassLite:brass,kx,deckY+0.28,keyZ,1.2,0.16,4.8);
+    g.add(key);
+  }
+  const keyGlow=mesh(BOXG,new THREE.MeshBasicMaterial({color:0xffe36b,transparent:true,opacity:0.04,depthWrite:false}),0,deckY+0.35,keyZ,10,0.05,5.2);
+  keyGlow.visible=false;g.add(keyGlow);ORGAN.keyGlow=keyGlow;
+  // Subtle ambient steam (always faint); grows when active.
+  for(let i=0;i<8;i++){
+    const sx=rand(-6,6),sz=rand(-4,2);
+    const m=mesh(SPH,new THREE.MeshBasicMaterial({color:0xffe0c0,transparent:true,opacity:0.08,depthWrite:false}),sx,deckY+3+i*0.4,sz,0.5+i*0.05);
+    g.add(m);ORGAN.steamPuffs.push({m,baseY:deckY+2.5+i*0.35,ph:rand(0,TAU)});
+  }
+  // Pipe-top home pads (collision so surface/home settle reads) — offset so Snoozles frame Pling.
+  const homes=[
+    {x:cx-6.2,y:deckY+12.7,z:cz-2.0},
+    {x:cx+5.4,y:deckY+12.0,z:cz-1.6},
+    {x:cx-3.4,y:deckY+15.7,z:cz-3.5},
+    {x:cx+2.2,y:deckY+14.2,z:cz-3.2}
+  ];
+  for(const h of homes){
+    addSolid(h.x,h.y-0.15,h.z,1.1,0.3,1.1,0xb08a4a,{surf:'stone'});
+    ORGAN.homes.push(h);
+  }
+  ORGAN.trigger={x:cx,y:deckY,z:cz+keyZ,hx:5.2,hy:2.4,hz:3.0};
+  ORGAN.keyboard={x:cx,y:deckY,z:cz+keyZ,w:12,d:7};
+  scene.add(g);levelDecor.push(g);
+  setOrganVisualState(false,false);
+  registerFinish({
+    x:cx,z:cz+keyZ,top:deckY+16,
+    winMsg:'The mountain is singing!',
+    onAllAwake(){activateSteamOrgan();},
+    onWin(){
+      ORGAN.playing=true;
+      // Organ layer joins only at keyboard win — keeps climax/finish distinct.
+      AU.layers=Math.max(AU.layers,5);
+      stageOrganWinPose();
+      spawnOrganFireworkBurst();
+      ORGAN.fwT=0.35;
+    },
+    camHold(dt){organCamHold(dt);},
+    update(dt,t){updateSteamOrgan(dt,t);}
+  });
+  return ORGAN;
+}
+window.__ORGAN=()=>ORGAN;
+window.__organFireworks=()=>organFireworks;

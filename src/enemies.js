@@ -39,7 +39,7 @@ function updateSnoozles(dt){for(const s of snoozles){const g=s.g;
   if(s.state==='sleep'){if(s.boat&&BOAT){g.position.set(BOAT.pos.x,0.28,BOAT.pos.z);g.rotation.y=BOAT.yaw+Math.PI/2;}
     g.scale.set(1,1+Math.sin(time*2+s.ph)*0.03,1);s.zz-=dt;if(s.zz<=0){s.zz=rand(0.8,1.3);spawnZ(g.position.x+0.2,g.position.y+0.8,g.position.z);}}
   else if(s.state==='wake'){s.t+=dt;const k=Math.min(s.t/1.1,1);g.position.y=s.baseY+Math.sin(k*Math.PI)*1.3;g.rotation.y+=dt*10;
-    if(s.t>1.1){s.t=0;s.fx=g.position.x;s.fy=s.baseY;s.fz=g.position.z;s.homeY=groundHeightAt(s.home.x,s.home.z);
+    if(s.t>1.1){s.t=0;s.fx=g.position.x;s.fy=s.baseY;s.fz=g.position.z;s.homeY=(s.home.y!=null)?s.home.y:groundHeightAt(s.home.x,s.home.z);
       if(s.path&&s.path.length){s.state='path';s.pathIdx=0;}else s.state='zoom';}}
   else if(s.state==='path'){s.t+=dt;const dur=1.15;const k=Math.min(s.t/dur,1);const tgt=s.path[s.pathIdx];
     g.position.x=lerp(s.fx,tgt.x,k);g.position.y=lerp(s.fy,tgt.y,k);g.position.z=lerp(s.fz,tgt.z,k);

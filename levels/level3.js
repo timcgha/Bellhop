@@ -1,6 +1,6 @@
 const LEVEL3={
 id:'level3',
-music:'meadow',
+music:'peak',
 peakAtmosphere:true,
 // Warm Slopes start — production boot, not the Stage 1–3 prototype arena.
 spawn:{x:0,y:0.4,z:24},
@@ -129,36 +129,39 @@ route:{
   climbRim:{x:0,y:44.4,z:-585},
   challengeBranch:{x:8.5,y:28.4,z:-441},
   challengeReward:{x:11.0,y:29.0,z:-472},
-  endpoint:{x:0,y:44.4,z:-596}
+  snoozle4:{x:-5,y:44.55,z:-590},
+  craterRim:{x:0,y:44.4,z:-592},
+  organ:{x:0,y:44.4,z:-640},
+  keyboard:{x:0,y:44.4,z:-631.5}
 },
 fence:0x5a2e1a,
 fenceSolids:[
-  [0,0,30,36,2.2,0.7],[0,0,-605,36,2.2,0.7],
-  [-18,0,-287,0.7,2.2,640],[18,0,-287,0.7,2.2,640]
+  [0,0,30,36,2.2,0.7],[0,0,-670,36,2.2,0.7],
+  [-18,0,-320,0.7,2.2,700],[18,0,-320,0.7,2.2,700]
 ],
 pathTiles:[],
 hedges:[],
-checks:[[0,22],[0,-4,2.2],[0,-34,5.2],[0,-70,8.2],[0,-100,11.2],[0,-134,13.2],[0,-168,15.2],[0,-240,19.2],[0,-272,20.2],[0,-350,21.2],[0,-378,21.7],[0,-441,28.4]],
-tower:{tx:0,tz:-260},
-// Homes sit on the open approach plaza. Snoozle 3 follows a corridor path out of the Hollow
-// before the final zoom so it does not cut through cave walls (no shared wake special-case).
+checks:[[0,22],[0,-4,2.2],[0,-34,5.2],[0,-70,8.2],[0,-100,11.2],[0,-134,13.2],[0,-168,15.2],[0,-240,19.2],[0,-272,20.2],[0,-350,21.2],[0,-378,21.7],[0,-441,28.4],[0,-585,44.4]],
+tower:{tx:0,tz:-640},
+// Four pipe-top homes on the Great Steam Organ. Paths stay outside mountain solids.
+// Format: [x, z, pathWaypoints?, homeY]
 snoozleHomes:[
-  [-3,-258],
-  [3,-258],
-  [-4,-260,[[3.2,23.5,-318],[0,22.8,-300],[0,22.0,-280],[0,21.5,-272]]],
-  [2,-266]
+  [-6.2,-642,[[-8,10,-40],[-14,18,-140],[-14,26,-280],[-14,36,-420],[-12,46,-540],[-10,52,-600],[-8,54,-620]],57.1],
+  [5.4,-641.6,[[-12,14,-150],[-14,22,-260],[-14,34,-400],[-12,44,-520],[-8,52,-580],[2,54,-610]],56.4],
+  [-3.4,-643.5,[[3.2,23.5,-318],[0,22.8,-300],[0,22.0,-280],[0,22.5,-268],[0,24.5,-252],[-14,28,-252],[-16,34,-320],[-16,42,-420],[-16,50,-520],[-12,54,-590],[-8,56,-620]],60.1],
+  [2.2,-643.2,[[-3,48,-610],[0,52,-625]],58.6]
 ],
-snoozles:[[-5,0.55,6,0,false],[-9,8.55,-78,1,false],[3.2,20.55,-330,2,false]],
+snoozles:[[-5,0.55,6,0,false],[-9,8.55,-78,1,false],[3.2,20.55,-330,2,false],[-5,44.55,-590,3,false]],
 trees:[],
 steps:[
   ['volcanoLandmark',0,0,-290,1.35],
   ['driftSparks',22],
-  // World bounds — raised ceiling leaves Stage 7 Organ room above the rim; far face past Climb end.
-  ['solid',0,62,-287,38,2,640,0xffc48a,{invisible:true}],
+  // World bounds — ceiling clears Organ pipes; far face past Crater; sides cover full route.
+  ['solid',0,72,-320,38,2,700,0xffc48a,{invisible:true}],
   ['solid',0,20,30,36.5,50,0.7,0x5a2e1a,{invisible:true}],
-  ['solid',0,20,-605,36.5,50,0.7,0x5a2e1a,{invisible:true}],
-  ['solid',-18,20,-287,0.7,50,640,0x5a2e1a,{invisible:true}],
-  ['solid',18,20,-287,0.7,50,640,0x5a2e1a,{invisible:true}],
+  ['solid',0,20,-670,36.5,50,0.7,0x5a2e1a,{invisible:true}],
+  ['solid',-18,20,-320,0.7,50,700,0x5a2e1a,{invisible:true}],
+  ['solid',18,20,-320,0.7,50,700,0x5a2e1a,{invisible:true}],
 
   // ========== AREA 1 — The Warm Slopes ==========
   // Volcanic sand / dark warm earth — green is accent tufts only, not the floor.
@@ -509,15 +512,24 @@ steps:[
   ['solid',0,44.4,-579.65,14,0.06,0.35,0x8a2010,{surf:'stone'}],
   ['lava',0,42.0,-575.0,16,0.55,8.0],
   ['lava',0,-0.15,-575,28,0.55,24],
-  // Broad crater-rim summit — room for future Snoozle 4; Stage 6 endpoint only
-  ['solid',0,44.0,-592,18,0.4,14,0x4a3a32,{surf:'stone'}],
-  ['solid',0,44.2,-592,7,0.06,8,0xffd24a,{surf:'stone'}],
-  ['solid',-8,44.0,-592,3,5,10,0x1a1614,{surf:'stone'}],
-  ['solid',8,44.0,-592,3,5,10,0x1a1614,{surf:'stone'}],
-  ['basaltRock',-5,44.0,-590,1.1],['basaltRock',5,44.0,-594,1.0],
-  ['lava',0,36.0,-600,12,0.4,8],
-  ['solid',0,46.0,-600,4,0.3,2,0x5a4030,{surf:'stone'}],
-  ['protoEndpoint',0,44.4,-596,'climb'],
-  ['unfinishedFinish',0,-592,70]
+
+  // ========== AREA 6 — The Crater ==========
+  // Broad rim summit: Snoozle 4 reward platform, Organ visible ahead (−Z).
+  ['solid',0,44.0,-592,20,0.4,16,0x4a3a32,{surf:'stone'}],
+  ['solid',0,44.2,-590,6,0.06,6,0xc45a28,{surf:'stone'}],
+  ['solid',-5,44.0,-590,4.2,0.45,4.2,0xc45a28,{surf:'stone'}],
+  ['solid',-5,44.45,-590,3.0,0.08,3.0,0xe07a3a,{surf:'stone'}],
+  ['basaltRock',-9,44.0,-588,1.1],['basaltRock',6,44.0,-594,1.0],
+  // Caldera walls + distant molten glow (deep decorative lava — not on the victory walk).
+  ['solid',-14,44.0,-620,4,8,40,0x1a1614,{surf:'stone'}],
+  ['solid',14,44.0,-620,4,8,40,0x1a1614,{surf:'stone'}],
+  ['lava',0,28.0,-640,22,0.5,28],
+  // Short forgiving victory walk from Snoozle 4 to the keyboard.
+  ['solid',0,44.0,-608,14,0.4,12,0x3a3538,{surf:'stone'}],
+  ['solid',0,44.0,-620,14,0.4,10,0x4a3a32,{surf:'stone'}],
+  ['solid',0,44.2,-614,5,0.06,8,0x5a4030,{surf:'stone'}],
+  ['basaltRock',-6,44.0,-612,0.9],['basaltRock',7,44.0,-618,1.0],
+  // Great Steam Organ + keyboard finish (registers FINISH).
+  ['steamOrgan',0,44.4,-640]
 ]
 };
