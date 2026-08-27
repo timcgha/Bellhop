@@ -421,6 +421,10 @@ skyBlast:{
 anchorSettle:0.22,
 anchorClear:0.85,
 lavaRecovery:0.42,
+// Impossible-world floor: below every legitimate route Y, lava surface, and recovery arc.
+// Warm Slopes tops ≈0.4; lava basins ≈-0.15; default Peak voidFloor is -25.
+voidY:-4,
+voidFloor:-25,
 snoozleGoal:4,
 teachGaps:[{
   id:'teachFail',nearLipZ:-38,farEdgeZ:-47.5,failFloorY:1.6,failFloorZ:-42.5
@@ -504,14 +508,11 @@ route:{
   cinderTerrace:{x:-2,z:-24},
   skyCrates:[
     {x:9,z:-50,area:2,note:'teaching',y:5.9},
-    {x:5,z:-70,area:2,note:'preFirstLava',y:8.4},
-    {x:-5,z:-90,area:3,note:'afterFirstLava',y:8.4},
-    {x:4,z:-121,area:3,note:'betweenIslands',y:11.4},
-    {x:-5,z:-182,area:3,note:'postWideRiver',y:15.4},
-    {x:5,z:-194,area:3,note:'preGeyser',y:17.4}
+    {x:-5,z:-90,area:3,note:'postLeapRecovery',y:8.4}
   ],
   skyCrate:{x:9,z:-50},
   snoozle2:{x:-9,z:-78},
+  powerLossCinder:{x:5,z:-95},
   wispOpen:{x:6,z:-230},
   wispCorridor:{x:0,z:-248},
   geyser:{x:0,y:17.4,z:-216},
@@ -564,13 +565,16 @@ steps:[
 
   // ========== AREA 1 — The Warm Slopes ==========
   // Volcanic sand / dark warm earth — green is accent tufts only, not the floor.
-  ['solid',0,0,12,26,0.4,28,0x2a2218,{surf:'stone'}],
-  ['solid',0,0.4,18,8,0.06,6,0x3a2a22,{surf:'stone'}],
-  ['solid',0,0.42,8,5.5,0.05,18,0x4a3228,{surf:'stone'}],
-  ['solid',6,1.2,0,10,0.4,8,0x3a3530,{surf:'stone'}],
-  ['solid',-4,2.0,-8,12,0.4,8,0x4a3a32,{surf:'stone'}],
-  ['solid',-5,0,6,4.5,0.45,4.5,0xc45a28,{surf:'stone'}],
-  ['solid',-5,0.45,6,3.2,0.08,3.2,0xe07a3a,{surf:'stone'}],
+  // Safe ground must read as solid rock (never bright molten orange).
+  ['solid',0,0,12,26,0.4,28,0x2a2218,{surf:'stone',role:'safeRock'}],
+  ['solid',0,0.4,18,8,0.06,6,0x3a2a22,{surf:'stone',role:'safeRock'}],
+  ['solid',0,0.42,8,5.5,0.05,18,0x4a3228,{surf:'stone',role:'safeRock'}],
+  ['solid',6,1.2,0,10,0.4,8,0x3a3530,{surf:'stone',role:'safeRock'}],
+  ['solid',-4,2.0,-8,12,0.4,8,0x3a3228,{surf:'stone',role:'safeRock'}],
+  // Snoozle 1 pad — charcoal rock with a thin warm crack, not a lava pool lookalike.
+  ['solid',-5,0,6,4.5,0.45,4.5,0x2e2620,{surf:'stone',role:'safeRock'}],
+  ['solid',-5,0.45,6,3.2,0.06,0.12,0x8a2010,{surf:'stone',role:'safeCrack'}],
+  ['solid',-5,0.45,6,0.12,0.06,3.2,0x8a2010,{surf:'stone',role:'safeCrack'}],
   ['lava',10,-0.15,10,4.0,0.4,4.0],
   ['salamander',4,14,{}],
   ['salamander',-8,10,{path:[{x:-9,z:11},{x:-6,z:9},{x:-8,z:12}]}],
@@ -581,110 +585,112 @@ steps:[
   ['basaltRock',-10,0,14,1.2],['basaltRock',11,0,4,1.0],['basaltRock',-8,0,-2,1.4],
 
   // ========== AREA 2 — The Cinder Steps ==========
-  ['solid',0,3.5,-18,18,0.4,12,0x2e2a2c,{surf:'stone'}],
-  ['solid',0,4.0,-18,6,0.08,4,0x8a4a2a,{surf:'stone'}],
-  ['solid',-2,4.5,-26,16,0.4,12,0x3a322e,{surf:'stone'}],
+  ['solid',0,3.5,-18,18,0.4,12,0x2e2a2c,{surf:'stone',role:'safeRock'}],
+  ['solid',0,4.0,-18,6,0.08,4,0x3a322e,{surf:'stone',role:'safeRock'}],
+  ['solid',0,4.02,-18,4.5,0.04,0.1,0x8a2010,{surf:'stone',role:'safeCrack'}],
+  ['solid',-2,4.5,-26,16,0.4,12,0x3a322e,{surf:'stone',role:'safeRock'}],
   ['cinder',-2,-26,'mid'],
   ['basaltRock',6,4.5,-22,0.9],['basaltRock',-8,4.5,-28,1.1],
   ['peakTuft',5,-20,0.55],
   // Teach gap A (flat 5.9 tops, safe volcanic floor below)
-  ['solid',0,5.5,-34,16,0.4,8,0x3a3538,{surf:'stone'}],
-  ['solid',0,5.9,-37.7,14,0.06,0.35,0x8a2010,{surf:'stone'}],
-  ['solid',0,5.5,-52,16,0.4,9,0x3a3538,{surf:'stone'}],
-  ['solid',0,5.9,-47.7,14,0.06,0.35,0x8a2010,{surf:'stone'}],
-  ['solid',0,1.4,-42.5,18,0.4,12,0x2a2420,{surf:'stone'}],
-  ['solid',12,2.0,-42,6,0.4,16,0x3a322e,{surf:'stone'}],
-  ['solid',12,3.5,-48,6,0.4,8,0x3a322e,{surf:'stone'}],
-  ['solid',12,5.0,-52,6,0.4,6,0x3a3538,{surf:'stone'}],
-  ['solid',8,5.5,-50,8,0.4,6,0x3a3538,{surf:'stone'}],
+  ['solid',0,5.5,-34,16,0.4,8,0x3a3538,{surf:'stone',role:'safeRock'}],
+  ['solid',0,5.9,-37.7,14,0.06,0.35,0x8a2010,{surf:'stone',role:'safeCrack'}],
+  ['solid',0,5.5,-52,16,0.4,9,0x3a3538,{surf:'stone',role:'safeRock'}],
+  ['solid',0,5.9,-47.7,14,0.06,0.35,0x8a2010,{surf:'stone',role:'safeCrack'}],
+  ['solid',0,1.4,-42.5,18,0.4,12,0x2a2420,{surf:'stone',role:'safeRock'}],
+  ['solid',12,2.0,-42,6,0.4,16,0x3a322e,{surf:'stone',role:'safeRock'}],
+  ['solid',12,3.5,-48,6,0.4,8,0x3a322e,{surf:'stone',role:'safeRock'}],
+  ['solid',12,5.0,-52,6,0.4,6,0x3a3538,{surf:'stone',role:'safeRock'}],
+  ['solid',8,5.5,-50,8,0.4,6,0x3a3538,{surf:'stone',role:'safeRock'}],
   // Side ledge — clear of the overlapping teach-B pad above the center
   ['crate',9,5.9,-50,'sky'],
   // Teach gap B
-  ['solid',0,6.5,-54,16,0.4,8,0x3a3538,{surf:'stone'}],
-  ['solid',0,6.9,-57.7,14,0.06,0.35,0x8a2010,{surf:'stone'}],
-  ['solid',0,6.5,-72,16,0.4,9,0x3a3538,{surf:'stone'}],
-  ['solid',0,6.9,-67.7,14,0.06,0.35,0x8a2010,{surf:'stone'}],
-  ['solid',0,2.2,-62.5,18,0.4,12,0x2a2420,{surf:'stone'}],
-  ['solid',-12,3.5,-62,6,0.4,14,0x3a322e,{surf:'stone'}],
-  ['solid',-12,5.5,-68,6,0.4,8,0x3a3538,{surf:'stone'}],
-  // Snoozle 2 ledge
-  ['solid',0,7.5,-70,10,0.4,6,0x3a3538,{surf:'stone'}],
+  ['solid',0,6.5,-54,16,0.4,8,0x3a3538,{surf:'stone',role:'safeRock'}],
+  ['solid',0,6.9,-57.7,14,0.06,0.35,0x8a2010,{surf:'stone',role:'safeCrack'}],
+  ['solid',0,6.5,-72,16,0.4,9,0x3a3538,{surf:'stone',role:'safeRock'}],
+  ['solid',0,6.9,-67.7,14,0.06,0.35,0x8a2010,{surf:'stone',role:'safeCrack'}],
+  ['solid',0,2.2,-62.5,18,0.4,12,0x2a2420,{surf:'stone',role:'safeRock'}],
+  ['solid',-12,3.5,-62,6,0.4,14,0x3a322e,{surf:'stone',role:'safeRock'}],
+  ['solid',-12,5.5,-68,6,0.4,8,0x3a3538,{surf:'stone',role:'safeRock'}],
+  // Snoozle 2 ledge — dark basalt, thin crack (was bright orange false-lava).
+  ['solid',0,7.5,-70,10,0.4,6,0x3a3538,{surf:'stone',role:'safeRock'}],
   ['steamVent',0,7.9,-70,1.35],
-  ['solid',-9,8.0,-78,5.5,0.4,5.5,0xe07a3a,{surf:'stone'}],
-  ['solid',-9,2.5,-74,8,0.4,10,0x2a2420,{surf:'stone'}],
+  ['solid',-9,8.0,-78,5.5,0.4,5.5,0x2e2620,{surf:'stone',role:'safeRock'}],
+  ['solid',-9,8.4,-78,3.5,0.05,0.1,0x8a2010,{surf:'stone',role:'safeCrack'}],
+  ['solid',-9,2.5,-74,8,0.4,10,0x2a2420,{surf:'stone',role:'safeRock'}],
 
   // First mandatory lava leap — SAME height 8.4 both sides
-  ['solid',0,8.0,-72,16,0.4,10,0x3a3538,{surf:'stone'}],
-  ['solid',0,8.4,-76.7,14,0.06,0.35,0x8a2010,{surf:'stone'}],
+  ['solid',0,8.0,-72,16,0.4,10,0x3a3538,{surf:'stone',role:'safeRock'}],
+  ['solid',0,8.4,-76.7,14,0.06,0.35,0x8a2010,{surf:'stone',role:'safeCrack'}],
   ['steamVent',0,8.4,-72,1.4],
-  // On takeoff top — not buried under a higher pad
-  ['crate',5,8.4,-70,'sky'],
-  ['solid',0,8.0,-92.5,16,0.4,12,0x4a3a32,{surf:'stone'}],
-  ['solid',0,8.4,-86.65,14,0.06,0.35,0x8a2010,{surf:'stone'}],
-  ['solid',0,8.4,-90,5,0.08,2.2,0xffd24a,{surf:'stone'}],
+  ['solid',0,8.0,-92.5,16,0.4,12,0x3a3228,{surf:'stone',role:'safeRock'}],
+  ['solid',0,8.4,-86.65,14,0.06,0.35,0x8a2010,{surf:'stone',role:'safeCrack'}],
+  // Landing marker — muted stone + crack, not glossy gold false-lava.
+  ['solid',0,8.4,-90,5,0.08,2.2,0x3a322e,{surf:'stone',role:'safeRock'}],
+  ['solid',0,8.48,-90,3.5,0.04,0.1,0x8a2010,{surf:'stone',role:'safeCrack'}],
   ['lava',0,6.0,-81.75,16,0.55,9.0],
   // Basin under / beside first leap — miss the elevated route, hit lava
   ['lava',0,-0.15,-82,30,0.55,32],
   ['lava',-13,-0.15,-82,10,0.55,26],
   ['lava',13,-0.15,-82,10,0.55,26],
-  // Mid landing pad (clear of stair overlap at z≈-98)
+  // Fair mid Cinder on the broad landing — visible, avoidable; can remove Sky Blast.
+  ['cinder',5,-95,'mid'],
+  // Recovery mystery box after the power-loss chance (not next to a takeoff vent).
   ['crate',-5,8.4,-90,'sky'],
 
   // ========== AREA 3 — stairs up, then flat leaps ==========
   // Stair climb to islandA height
-  ['solid',0,9.0,-100,14,0.4,6,0x2e2a28,{surf:'stone'}],
-  ['solid',0,10.0,-102,14,0.4,4,0x2e2a28,{surf:'stone'}],
-  ['solid',0,11.0,-104,16,0.4,8,0x2e2a28,{surf:'stone'}],
+  ['solid',0,9.0,-100,14,0.4,6,0x2e2a28,{surf:'stone',role:'safeRock'}],
+  ['solid',0,10.0,-102,14,0.4,4,0x2e2a28,{surf:'stone',role:'safeRock'}],
+  ['solid',0,11.0,-104,16,0.4,8,0x2e2a28,{surf:'stone',role:'safeRock'}],
   ['steamVent',0,11.4,-104,1.35],
-  ['solid',0,11.4,-107.7,12,0.06,0.35,0x8a2010,{surf:'stone'}],
-  ['solid',0,11.0,-123.5,12,0.4,12,0x3a3538,{surf:'stone'}],
-  ['solid',0,11.4,-117.65,10,0.06,0.35,0x8a2010,{surf:'stone'}],
+  ['solid',0,11.4,-107.7,12,0.06,0.35,0x8a2010,{surf:'stone',role:'safeCrack'}],
+  ['solid',0,11.0,-123.5,12,0.4,12,0x3a3538,{surf:'stone',role:'safeRock'}],
+  ['solid',0,11.4,-117.65,10,0.06,0.35,0x8a2010,{surf:'stone',role:'safeCrack'}],
   ['lava',0,9.0,-112.75,16,0.55,9.0],
   ['lava',0,-0.15,-113,28,0.55,28],
   ['lava',-12,-0.15,-113,9,0.55,24],
   ['lava',12,-0.15,-113,9,0.55,24],
-  ['crate',4,11.4,-121,'sky'],
 
   // Stair to islandB
-  ['solid',0,12.0,-130,12,0.4,4,0x3a3538,{surf:'stone'}],
-  ['solid',0,13.0,-134,12,0.4,8,0x3a3538,{surf:'stone'}],
+  ['solid',0,12.0,-130,12,0.4,4,0x3a3538,{surf:'stone',role:'safeRock'}],
+  ['solid',0,13.0,-134,12,0.4,8,0x3a3538,{surf:'stone',role:'safeRock'}],
   ['steamVent',0,13.4,-134,1.3],
-  ['solid',0,13.4,-137.7,10,0.06,0.35,0x8a2010,{surf:'stone'}],
-  ['solid',0,13.0,-153.5,12,0.4,12,0x3a3538,{surf:'stone'}],
-  ['solid',0,13.4,-147.65,10,0.06,0.35,0x8a2010,{surf:'stone'}],
+  ['solid',0,13.4,-137.7,10,0.06,0.35,0x8a2010,{surf:'stone',role:'safeCrack'}],
+  ['solid',0,13.0,-153.5,12,0.4,12,0x3a3538,{surf:'stone',role:'safeRock'}],
+  ['solid',0,13.4,-147.65,10,0.06,0.35,0x8a2010,{surf:'stone',role:'safeCrack'}],
   ['lava',0,11.0,-142.75,16,0.55,9.0],
   ['lava',0,-0.15,-143,28,0.55,28],
   ['lava',-12,-0.15,-143,9,0.55,24],
   ['lava',12,-0.15,-143,9,0.55,24],
 
   // Stair to wideRiver
-  ['solid',0,14.0,-160,14,0.4,4,0x3a3538,{surf:'stone'}],
-  ['solid',0,15.0,-164,14,0.4,8,0x3a3538,{surf:'stone'}],
+  ['solid',0,14.0,-160,14,0.4,4,0x3a3538,{surf:'stone',role:'safeRock'}],
+  ['solid',0,15.0,-164,14,0.4,8,0x3a3538,{surf:'stone',role:'safeRock'}],
   ['steamVent',0,15.4,-164,1.4],
-  ['solid',0,15.4,-167.7,12,0.06,0.35,0x8a2010,{surf:'stone'}],
-  ['solid',0,15.0,-184.5,16,0.4,14,0x4a3a32,{surf:'stone'}],
-  ['solid',0,15.4,-177.65,14,0.06,0.35,0x8a2010,{surf:'stone'}],
-  ['solid',0,15.4,-182,5,0.08,2.2,0xffd24a,{surf:'stone'}],
+  ['solid',0,15.4,-167.7,12,0.06,0.35,0x8a2010,{surf:'stone',role:'safeCrack'}],
+  ['solid',0,15.0,-184.5,16,0.4,14,0x3a3228,{surf:'stone',role:'safeRock'}],
+  ['solid',0,15.4,-177.65,14,0.06,0.35,0x8a2010,{surf:'stone',role:'safeCrack'}],
+  ['solid',0,15.4,-182,5,0.08,2.2,0x3a322e,{surf:'stone',role:'safeRock'}],
+  ['solid',0,15.48,-182,3.5,0.04,0.1,0x8a2010,{surf:'stone',role:'safeCrack'}],
   ['lava',0,13.0,-172.75,18,0.6,10.0],
   ['lava',0,-0.15,-173,32,0.55,32],
   ['lava',-13,-0.15,-173,10,0.55,28],
   ['lava',13,-0.15,-173,10,0.55,28],
-  ['crate',-5,15.4,-182,'sky'],
 
   // Stair to geyserApproach
-  ['solid',0,16.0,-192,14,0.4,4,0x3a3538,{surf:'stone'}],
-  ['solid',0,17.0,-196,14,0.4,8,0x3a3538,{surf:'stone'}],
+  ['solid',0,16.0,-192,14,0.4,4,0x3a3538,{surf:'stone',role:'safeRock'}],
+  ['solid',0,17.0,-196,14,0.4,8,0x3a3538,{surf:'stone',role:'safeRock'}],
   ['steamVent',0,17.4,-196,1.35],
-  ['solid',0,17.4,-199.7,12,0.06,0.35,0x8a2010,{surf:'stone'}],
-  ['solid',0,17.0,-215.5,14,0.4,12,0x4a3a32,{surf:'stone'}],
-  ['solid',0,17.4,-209.65,12,0.06,0.35,0x8a2010,{surf:'stone'}],
+  ['solid',0,17.4,-199.7,12,0.06,0.35,0x8a2010,{surf:'stone',role:'safeCrack'}],
+  ['solid',0,17.0,-215.5,14,0.4,12,0x3a3228,{surf:'stone',role:'safeRock'}],
+  ['solid',0,17.4,-209.65,12,0.06,0.35,0x8a2010,{surf:'stone',role:'safeCrack'}],
   ['lava',0,15.0,-204.75,16,0.55,9.0],
   ['lava',0,-0.15,-205,30,0.55,30],
   ['lava',-12,-0.15,-205,10,0.55,26],
   ['lava',12,-0.15,-205,10,0.55,26],
-  ['crate',5,17.4,-194,'sky'],
   ['geyser',0,17.4,-216,1.2],
-  ['solid',0,21.0,-220,12,0.4,8,0x3a3538,{surf:'stone'}],
+  ['solid',0,21.0,-220,12,0.4,8,0x3a3538,{surf:'stone',role:'safeRock'}],
   // Low basin under geyser / approach / later elevated route
   ['lava',-10,-0.15,-218,12,0.55,18],
   ['lava',10,-0.15,-218,12,0.55,18],
@@ -693,8 +699,8 @@ steps:[
   ['lava',12,-0.15,-248,10,0.55,28],
 
   // Open Wisp terrace
-  ['solid',0,19.0,-228,16,0.4,6,0x2e2a28,{surf:'stone'}],
-  ['solid',0,19.5,-234,18,0.4,14,0x2e2a28,{surf:'stone'}],
+  ['solid',0,19.0,-228,16,0.4,6,0x2e2a28,{surf:'stone',role:'safeRock'}],
+  ['solid',0,19.5,-234,18,0.4,14,0x2e2a28,{surf:'stone',role:'safeRock'}],
   ['wisp',[
     {x:6,y:20.4,z:-230},{x:8,y:20.6,z:-234},{x:6,y:20.4,z:-238},{x:4,y:20.5,z:-234}
   ],{speed:1.9}],
@@ -705,25 +711,27 @@ steps:[
   ['salamander',4,-236,{}],
   ['cinder',-6,-232,'small'],
   // Forced Wisp corridor
-  ['solid',-5,19.5,-248,6,3.2,0.7,0x2a2624,{surf:'stone'}],
-  ['solid',5,19.5,-248,6,3.2,0.7,0x2a2624,{surf:'stone'}],
-  ['solid',0,19.5,-256,10,0.4,16,0x2e2a28,{surf:'stone'}],
+  ['solid',-5,19.5,-248,6,3.2,0.7,0x2a2624,{surf:'stone',role:'safeRock'}],
+  ['solid',5,19.5,-248,6,3.2,0.7,0x2a2624,{surf:'stone',role:'safeRock'}],
+  ['solid',0,19.5,-256,10,0.4,16,0x2e2a28,{surf:'stone',role:'safeRock'}],
   ['wisp',[
     {x:0,y:20.3,z:-246},{x:0,y:20.5,z:-250},{x:0,y:20.3,z:-254}
   ],{speed:1.6}],
-  ['solid',0,20.0,-262,14,0.4,10,0x2a2624,{surf:'stone'}],
+  // Approach pad extended through the cave mouth (was a 2u floor gap at z≈-268).
+  ['solid',0,20.0,-262,14,0.4,14,0x2a2624,{surf:'stone',role:'safeRock'}],
   ['basaltRock',-6,20.0,-258,1.2],['basaltRock',6,20.0,-260,1.0],
   ['salamander',5,-260,{}],
 
   // ========== AREA 4 — The Geode Hollow ==========
   // Open mouth (Stage 4 blocker removed). Cool register begins here.
   ['geodeMouth',0,20.0,-268],
-  ['solid',0,20.0,-278,12,0.4,18,0x2a1e38,{surf:'stone'}],
-  ['solid',0,20.15,-278,6,0.06,14,0x3a2e55,{surf:'stone'}],
+  // Hollow floor pulled forward so it overlaps the mouth sill / approach pad.
+  ['solid',0,20.0,-276,12,0.4,22,0x2a1e38,{surf:'stone',role:'safeRock'}],
+  ['solid',0,20.15,-278,6,0.06,14,0x3a2e55,{surf:'stone',role:'safeRock'}],
   // Entrance corridor walls / ceiling
-  ['solid',-8.5,20.0,-278,3.5,6.5,16,0x1a1228,{surf:'stone'}],
-  ['solid',8.5,20.0,-278,3.5,6.5,16,0x1a1228,{surf:'stone'}],
-  ['solid',0,26.2,-278,20,1.2,18,0x1a1228,{surf:'stone'}],
+  ['solid',-8.5,20.0,-278,3.5,6.5,16,0x1a1228,{surf:'stone',role:'safeRock'}],
+  ['solid',8.5,20.0,-278,3.5,6.5,16,0x1a1228,{surf:'stone',role:'safeRock'}],
+  ['solid',0,26.2,-278,20,1.2,18,0x1a1228,{surf:'stone',role:'safeRock'}],
   ['crystalCluster',-5.5,20.0,-274,1.1,true],
   ['crystalCluster',5.8,20.0,-280,0.95,true],
   ['crystalCluster',-4.2,20.0,-288,0.55,false],
@@ -731,48 +739,49 @@ steps:[
   ['crystalSparks',10,0,-290,7],
 
   // Mid path — east wall continuous; west wall gapped for the steam-curtain secret
-  ['solid',0,20.0,-300,14,0.4,20,0x2a1e38,{surf:'stone'}],
-  ['solid',0,20.15,-300,5.5,0.06,16,0x4a3a78,{surf:'stone'}],
-  ['solid',8.5,20.0,-300,3.5,6.5,20,0x1a1228,{surf:'stone'}],
+  // Floor overlaps entrance and chamber (no under-world seams).
+  ['solid',0,20.0,-296,14,0.4,28,0x2a1e38,{surf:'stone',role:'safeRock'}],
+  ['solid',0,20.15,-300,5.5,0.06,16,0x4a3a78,{surf:'stone',role:'safeRock'}],
+  ['solid',8.5,20.0,-300,3.5,6.5,20,0x1a1228,{surf:'stone',role:'safeRock'}],
   // West wall split: gap around z=-308 for the side steam curtain
-  ['solid',-8.5,20.0,-294,3.5,6.5,10,0x1a1228,{surf:'stone'}],
-  ['solid',-8.5,20.0,-322,3.5,6.5,12,0x1a1228,{surf:'stone'}],
-  ['solid',0,26.4,-304,22,1.2,28,0x1a1228,{surf:'stone'}],
+  ['solid',-8.5,20.0,-294,3.5,6.5,10,0x1a1228,{surf:'stone',role:'safeRock'}],
+  ['solid',-8.5,20.0,-322,3.5,6.5,12,0x1a1228,{surf:'stone',role:'safeRock'}],
+  ['solid',0,26.4,-304,22,1.2,28,0x1a1228,{surf:'stone',role:'safeRock'}],
   ['crystalCluster',6.2,20.0,-302,1.2,true],
   ['crystalCluster',-3.5,20.0,-318,0.7,false],
 
   // Side secret — steam curtain fills the west-wall gap (optional; main route stays center).
   ['steamCurtain',-7.0,20.0,-308,5.0,3.8,'x'],
-  ['solid',-12.2,20.0,-308,6.0,0.4,8,0x2a1e38,{surf:'stone'}],
-  ['solid',-15.0,20.0,-308,1.4,4.5,8,0x1a1228,{surf:'stone'}],
-  ['solid',-12.2,20.0,-312.2,6.0,4.5,1.4,0x1a1228,{surf:'stone'}],
-  ['solid',-12.2,20.0,-303.8,6.0,4.5,1.4,0x1a1228,{surf:'stone'}],
-  ['solid',-12.2,24.2,-308,6.0,1.0,8,0x1a1228,{surf:'stone'}],
+  ['solid',-12.2,20.0,-308,6.0,0.4,8,0x2a1e38,{surf:'stone',role:'safeRock'}],
+  ['solid',-15.0,20.0,-308,1.4,4.5,8,0x1a1228,{surf:'stone',role:'safeRock'}],
+  ['solid',-12.2,20.0,-312.2,6.0,4.5,1.4,0x1a1228,{surf:'stone',role:'safeRock'}],
+  ['solid',-12.2,20.0,-303.8,6.0,4.5,1.4,0x1a1228,{surf:'stone',role:'safeRock'}],
+  ['solid',-12.2,24.2,-308,6.0,1.0,8,0x1a1228,{surf:'stone',role:'safeRock'}],
   // Secret notes exist at build time (visible, blocked by curtain until gust).
   ['note',-11.8,21.1,-306.5,false],
   ['note',-12.6,21.3,-309.2,false],
   ['crystalCluster',-13.2,20.0,-308,0.85,true],
 
   // Main chamber — Snoozle 3 in a cracked-open geode offset east so the center exit stays clear.
-  ['solid',0,20.0,-328,16,0.4,22,0x2a1e38,{surf:'stone'}],
-  ['solid',0,20.18,-328,7,0.06,14,0x5a48a0,{surf:'stone'}],
-  ['solid',-10.5,20.0,-328,4.0,6.5,22,0x1a1228,{surf:'stone'}],
-  ['solid',10.5,20.0,-328,4.0,6.5,22,0x1a1228,{surf:'stone'}],
-  ['solid',0,26.6,-328,24,1.2,24,0x1a1228,{surf:'stone'}],
+  ['solid',0,20.0,-326,16,0.4,32,0x2a1e38,{surf:'stone',role:'safeRock'}],
+  ['solid',0,20.18,-328,7,0.06,14,0x5a48a0,{surf:'stone',role:'safeRock'}],
+  ['solid',-10.5,20.0,-328,4.0,6.5,22,0x1a1228,{surf:'stone',role:'safeRock'}],
+  ['solid',10.5,20.0,-328,4.0,6.5,22,0x1a1228,{surf:'stone',role:'safeRock'}],
+  ['solid',0,26.6,-328,24,1.2,24,0x1a1228,{surf:'stone',role:'safeRock'}],
   ['crackedGeode',3.2,20.0,-330,1.55],
   ['crystalCluster',-6.5,20.0,-334,1.15,true],
   ['crystalCluster',-2.5,20.0,-322,0.55,false],
   ['crystalCluster',7.2,20.0,-338,0.55,false],
   ['crystalSparks',14,0,-328,9],
 
-  // Exit corridor — opens onto the Climb / caldera reveal (Stage 5 soft-return removed).
-  ['solid',0,20.5,-348,12,0.4,14,0x2a1e38,{surf:'stone'}],
-  ['solid',0,20.7,-348,5,0.06,10,0x3a2e55,{surf:'stone'}],
-  ['solid',-7.5,20.5,-348,3.5,6.0,16,0x1a1228,{surf:'stone'}],
-  ['solid',7.5,20.5,-348,3.5,6.0,16,0x1a1228,{surf:'stone'}],
-  ['solid',0,26.5,-348,18,1.0,16,0x1a1228,{surf:'stone'}],
-  ['solid',0,21.5,-360,12,0.4,12,0x2e2438,{surf:'stone'}],
-  ['solid',0,21.7,-360,5,0.06,8,0x4a3a60,{surf:'stone'}],
+  // Exit corridor — same floor height as chamber so STEP is not required at the lip.
+  ['solid',0,20.0,-350,12,0.4,20,0x2a1e38,{surf:'stone',role:'safeRock'}],
+  ['solid',0,20.2,-348,5,0.06,10,0x3a2e55,{surf:'stone',role:'safeRock'}],
+  ['solid',-7.5,20.0,-348,3.5,6.0,16,0x1a1228,{surf:'stone',role:'safeRock'}],
+  ['solid',7.5,20.0,-348,3.5,6.0,16,0x1a1228,{surf:'stone',role:'safeRock'}],
+  ['solid',0,26.5,-348,18,1.0,16,0x1a1228,{surf:'stone',role:'safeRock'}],
+  ['solid',0,21.5,-360,12,0.4,14,0x2e2438,{surf:'stone',role:'safeRock'}],
+  ['solid',0,21.7,-360,5,0.06,8,0x4a3a60,{surf:'stone',role:'safeRock'}],
   ['crystalCluster',-4.5,21.5,-356,0.9,true],
   ['crystalCluster',4.8,21.5,-358,0.5,false],
 
@@ -1260,8 +1269,25 @@ let CURRENT_LEVEL=null;
 function isUnderwater(){return !!(CURRENT_LEVEL&&CURRENT_LEVEL.underwater);}
 const POND={x0:-6,x1:6,z0:-33,z1:-25};
 function inPond(x,z){return x>POND.x0&&x<POND.x1&&z>POND.z0&&z<POND.z1;}
-function groundHeightAt(x,z){if(isUnderwater())return 0;return inPond(x,z)?-0.4:0;}
+function groundHeightAt(x,z){
+  if(isUnderwater())return 0;
+  // Peak has no infinite meadow floor. Gaps without authored solids fall into the void
+  // (Level 3 voidY recovery). Levels 1–2 keep the old y=0 / pond floor.
+  if(CURRENT_LEVEL&&CURRENT_LEVEL.peakAtmosphere)
+    return CURRENT_LEVEL.voidFloor!=null?CURRENT_LEVEL.voidFloor:-25;
+  return inPond(x,z)?-0.4:0;
+}
 function surfaceHeightAt(x,z,belowY,r){r=r||0.2;let h=groundHeightAt(x,z);for(const s of solids){if(x+r>s.min.x&&x-r<s.max.x&&z+r>s.min.z&&z-r<s.max.z&&s.max.y<=belowY+0.05&&s.max.y>h)h=s.max.y;}return h;}
+// Walkable tops only — skips tall wall/ceiling slabs that surfaceHeightAt would otherwise prefer.
+function walkSurfaceAt(x,z,r){
+  r=r||0.25;let h=groundHeightAt(x,z);
+  for(const s of solids){
+    if(x+r<=s.min.x||x-r>=s.max.x||z+r<=s.min.z||z-r>=s.max.z)continue;
+    if(s.max.y-s.min.y>1.6)continue;
+    if(s.max.y>h)h=s.max.y;
+  }
+  return h;
+}
 // Shadow receiving surface: nearest mostly-horizontal top beneath Pling, including lava.
 // Physics still uses surfaceHeightAt (solids + ground only). Readability may land on lava.
 let _shadowStick=null;
@@ -1294,7 +1320,7 @@ function shadowReceiveAt(x,z,belowY,r){
 window.__shadowReceiveAt=(x,z,belowY,r)=>shadowReceiveAt(x,z,belowY,r);
 function insideSolid(x,y,z,m){for(const s of solids){if(x>s.min.x-m&&x<s.max.x+m&&y>s.min.y-m&&y<s.max.y+m&&z>s.min.z-m&&z<s.max.z+m)return true;}return false;}
 function addSolid(x,y,z,w,h,d,color,opts){const m=new THREE.Mesh(BOXG,lam(color));m.scale.set(w,h,d);m.position.set(x,y+h/2,z);if(opts&&opts.invisible)m.visible=false;scene.add(m);
-  const s={min:new THREE.Vector3(x-w/2,y,z-d/2),max:new THREE.Vector3(x+w/2,y+h,z+d/2),mesh:m,surf:(opts&&opts.surf)||'wood'};solids.push(s);return s;}
+  const s={min:new THREE.Vector3(x-w/2,y,z-d/2),max:new THREE.Vector3(x+w/2,y+h,z+d/2),mesh:m,surf:(opts&&opts.surf)||'wood',role:(opts&&opts.role)||null,color:color|0};solids.push(s);return s;}
 
 // ground with a hole for the pond
 function grassTex(){const cv=document.createElement('canvas');cv.width=cv.height=256;const g=cv.getContext('2d');g.fillStyle='#78c65a';g.fillRect(0,0,256,256);
@@ -1517,12 +1543,14 @@ function addSteamVent(x,y,z,r){r=r||1.2;const g=new THREE.Group();g.position.set
 // Lava is a hazard volume, not a walkable solid. Contact is handled by lavaContact in player.js.
 function addLava(x,y,z,w,h,d){
   const g=new THREE.Group();g.position.set(x,y,z);
+  // Hazard visual language: bright molten center, hot glow sheet, dark crust rim.
   const body=mesh(BOXG,new THREE.MeshBasicMaterial({color:0xff6a18}),0,h/2,0,w,h,d);g.add(body);
-  const glow=mesh(BOXG,new THREE.MeshBasicMaterial({color:0xff9a3c,transparent:true,opacity:0.55}),0,h+0.02,0,w*0.98,0.04,d*0.98);g.add(glow);
+  const core=mesh(BOXG,new THREE.MeshBasicMaterial({color:0xffe14a,transparent:true,opacity:0.55}),0,h*0.72,0,w*0.55,h*0.35,d*0.55);g.add(core);
+  const glow=mesh(BOXG,new THREE.MeshBasicMaterial({color:0xff9a3c,transparent:true,opacity:0.6}),0,h+0.02,0,w*0.98,0.04,d*0.98);g.add(glow);
   // Ember-red rim so the safe/hot boundary stays obvious.
   const edge=mesh(BOXG,new THREE.MeshBasicMaterial({color:0x8a2010}),0,h+0.01,0,w+0.25,0.03,d+0.25);
   scene.add(g);scene.add(edge);
-  lavas.push({g,edge,body,glow,x,y,z,w,h,d,min:new THREE.Vector3(x-w/2,y,z-d/2),max:new THREE.Vector3(x+w/2,y+h,z+d/2),pt:0,ph:rand(0,TAU)});
+  lavas.push({g,edge,body,core,glow,x,y,z,w,h,d,role:'lava',min:new THREE.Vector3(x-w/2,y,z-d/2),max:new THREE.Vector3(x+w/2,y+h,z+d/2),pt:0,ph:rand(0,TAU)});
 }
 // Ambient lava decoration only — collision state is always on (no timed hazard cycles).
 function updateLavas(dt){
@@ -1535,6 +1563,7 @@ function updateLavas(dt){
       if(Math.random()<0.3)spawnP(bx,lv.max.y+0.08,bz,rand(-1.2,1.2),rand(1.8,4.2),rand(-1.2,1.2),rand(0.04,0.08),0xffc04a,rand(0.25,0.45),0.45,-4,0.9);
     }
     if(lv.glow&&lv.glow.material)lv.glow.material.opacity=0.42+0.18*Math.sin(time*1.6+lv.ph);
+    if(lv.core&&lv.core.material)lv.core.material.opacity=0.42+0.2*Math.sin(time*2.1+lv.ph*1.3);
   }
 }
 const FIREGEO=new THREE.SphereGeometry(1,9,7);
@@ -1811,6 +1840,7 @@ function applyLavaTuning(L){
 window.__PHYS=()=>({speed:SPEED,acc:ACC,dec:DEC,airAcc:AIRACC,grav:GRAV,jumpV:JUMPV,puffV:PUFFV,maxFall:MAXFALL,coyote:COYOTE,buffer:BUFFER,step:STEP,r:R,h:H});
 window.__SKY=()=>({puffVMul:SKY.puffVMul,boostMax:SKY.boostMax,boostDecay:SKY.boostDecay,glideDur:SKY.glideDur,glideFallCap:SKY.glideFallCap,glideStartVy:SKY.glideStartVy});
 window.__LAVA=()=>({anchorSettle:LAVA_ANCHOR_SETTLE,anchorClear:LAVA_ANCHOR_CLEAR,recovery:LAVA_RECOVERY,hurtInv:HURT_INV});
+window.__VOID=()=>({y:CURRENT_LEVEL&&CURRENT_LEVEL.voidY!=null?CURRENT_LEVEL.voidY:null,floor:CURRENT_LEVEL&&CURRENT_LEVEL.voidFloor!=null?CURRENT_LEVEL.voidFloor:null});
 function clearLeapBoost(){P.leapBoost.set(0,0,0);}
 function clearGlide(){P.glideT=0;P.glideArmed=false;P.wingsOut=false;}
 function leapBoostMag(){return Math.hypot(P.leapBoost.x,P.leapBoost.z);}
@@ -1894,6 +1924,13 @@ function beginLavaRecovery(){
   P.lavaRecFrom.copy(P.pos);
   P.vel.set(0,0,0);
   P.anchorSettleT=0;
+}
+function beginVoidRecovery(){
+  // Level-owned impossible-world safety net. No heart cost — this is a geometry bug state, not a hazard.
+  if(won||P.dead||P.lavaRecT>0)return;
+  beginLavaRecovery();
+  SFX.refill();CAM.shake=Math.max(CAM.shake,0.25);
+  showToast('Whoops!');
 }
 function lavaContact(){
   if(won||P.dead||P.lavaRecT>0)return;
@@ -2140,7 +2177,10 @@ function updatePlayer(dt){const p=P.pos,v=P.vel;
   if(p.y<=gy&&gy>landY){landY=gy;landSurf=(CURRENT_LEVEL&&CURRENT_LEVEL.peakAtmosphere)?'stone':(inPond(p.x,p.z)?'water':'grass');}
   if(landY>-Infinity){p.y=landY;landOn(landSurf);}
   else if(bump){p.y=bumpY-H-0.001;if(v.y>0)v.y=0;}
-  if(p.y<-6){p.set(P.spawn.x,P.spawn.y,P.spawn.z);v.set(0,0,0);clearLeapBoost();clearGlide();}
+  // Level-owned void recovery runs before the crude y<-6 spawn snap.
+  // Levels without voidY keep the old failsafe. No heart cost; celebration skipped via !won.
+  if(!P.dead&&!won&&P.lavaRecT<=0&&CURRENT_LEVEL&&CURRENT_LEVEL.voidY!=null&&p.y<CURRENT_LEVEL.voidY)beginVoidRecovery();
+  else if(p.y<-6){p.set(P.spawn.x,P.spawn.y,P.spawn.z);v.set(0,0,0);clearLeapBoost();clearGlide();}
   if(P.jetT>0){P.jetT-=dt;jetDamage();
     P.jetP-=dt;if(P.jetP<=0){P.jetP=0.028;const cy=Math.cos(P.yaw),sy=Math.sin(P.yaw);
       for(let sg=-1;sg<=1;sg+=2)spawnP(p.x+sg*0.12*cy,p.y-0.04,p.z-sg*0.12*sy,rand(-0.8,0.8),rand(-4,-1.8),rand(-0.8,0.8),rand(0.07,0.13),Math.random()<0.5?0x5ec8ff:0xe4f8ff,rand(0.25,0.42),1.1,0,0.85);}}
@@ -2385,7 +2425,9 @@ function buildCinder(size){
   g.userData={shell};g.scale.setScalar(size);return g;
 }
 function addCinder(x,z,type){
-  const T=CTYPE[type]||CTYPE.mid;const g=buildCinder(T.size);const y=groundHeightAt(x,z);
+  const T=CTYPE[type]||CTYPE.mid;const g=buildCinder(T.size);
+  // Spawn on the authored walk surface (elevated pads), not the Peak void floor or world ceiling.
+  const y=walkSurfaceAt(x,z,0.4);
   g.position.set(x,y,z);scene.add(g);
   cinders.push({g,x,z,hx:x,hz:z,y,type:type||'mid',size:T.size,hp:T.hp,maxHp:T.hp,hopMul:T.hopMul,spitMul:T.spitMul,hopPow:T.hopPow,
     state:'idle',t:0,spitT:rand(1.4,2.8),wind:0,vx:0,vz:0,hurtT:0,stunT:0,backT:0,alive:true,ph:rand(0,TAU),face:rand(0,TAU),hopT:rand(0.4,1.6),hopA:0,note:null});
@@ -2423,7 +2465,7 @@ function updateCinders(dt){
     const dHome2=Math.hypot(e.x-e.hx,e.z-e.hz);
     // Soft home pull when past leash — mirrors shark return behavior.
     if(dHome2>CINDER_LEASH){e.x=damp(e.x,e.hx,2.8,dt);e.z=damp(e.z,e.hz,2.8,dt);}
-    e.y=surfaceHeightAt(e.x,e.z,e.y+0.5,0.3);
+    e.y=walkSurfaceAt(e.x,e.z,0.3);
     const dHomeNow=Math.hypot(e.x-e.hx,e.z-e.hz);
     const near=d<CINDER_AGGRO&&Math.abs(dy)<6&&!P.dead&&e.backT<=0&&dHomeNow<CINDER_LEASH;
     if(near)e.face=Math.atan2(dx,dz);
@@ -2504,7 +2546,9 @@ function buildSalamander(gold){
   return g;
 }
 function addSalamander(x,z,opts){
-  opts=opts||{};const gold=!!opts.note;const g=buildSalamander(gold);const y=groundHeightAt(x,z)+0.02;
+  opts=opts||{};const gold=!!opts.note;const g=buildSalamander(gold);
+  // Peak voidFloor is deep — place on the authored walk surface, same as Cinders.
+  const y=walkSurfaceAt(x,z,0.4)+0.02;
   g.position.set(x,y,z);scene.add(g);
   const home={x,z};const pts=opts.path||[{x:x+rand(-1.5,1.5),z:z+rand(-1.5,1.5)},{x:x+rand(-1.5,1.5),z:z+rand(-1.5,1.5)},home];
   let note=null;if(opts.note===true)note=addNote(x,y+0.55,z,true);else if(opts.note&&typeof opts.note==='object')note=opts.note;
@@ -2520,7 +2564,7 @@ function updateSalamanders(dt){
       if(s.t>=1){s.t-=1;s.idx=(s.idx+1)%s.pts.length;}
       s.x=lerp(a.x,b.x,s.t);s.z=lerp(a.z,b.z,s.t);
     }
-    s.y=surfaceHeightAt(s.x,s.z,s.y+0.4,0.15)+0.02;
+    s.y=walkSurfaceAt(s.x,s.z,0.15)+0.02;
     s.g.position.set(s.x,s.y+(s.hideT>0?-0.06:0)+Math.sin(time*5+s.ph)*0.02,s.z);
     s.g.rotation.y=Math.atan2(s.pts[(s.idx+1)%s.pts.length].x-s.x,s.pts[(s.idx+1)%s.pts.length].z-s.z);
     if(s.kind==='note')s.g.scale.setScalar(1+Math.sin(time*8+s.ph)*0.06);
@@ -2721,22 +2765,51 @@ function addCrystalCluster(x,y,z,scale,blocking){
   return g;
 }
 function addGeodeMouth(x,y,z){
-  // Open cave mouth — crystal frame, no blocking wall (replaces Stage 4 blocker).
+  // Natural volcanic cave mouth — irregular basalt, not a rectangular door/box.
+  // Cool light spills from inside; crystals begin at the rim. Floor solid matches the opening.
   const g=new THREE.Group();g.position.set(x,y,z);
-  g.add(mesh(BOXG,lam(GEODE_ROCK),-4.2,2.4,0,1.6,4.8,2.2));
-  g.add(mesh(BOXG,lam(GEODE_ROCK),4.2,2.4,0,1.6,4.8,2.2));
-  g.add(mesh(BOXG,lam(GEODE_DEEP),0,4.6,0,7.2,1.2,2.0));
-  g.add(mesh(BOXG,lam(0x3a2a48),0,2.0,0.35,5.2,3.6,0.35));
-  addCrystalShard(g,-3.2,3.6,0.4,0.35,1.3,0.35,GEODE_CRYSTAL2,0xffffff);
-  addCrystalShard(g,3.0,3.8,0.35,0.3,1.2,0.3,GEODE_CRYSTAL,0xc8b0ff);
-  addCrystalShard(g,-1.2,4.8,0.3,0.22,0.9,0.22,GEODE_PALE,0xffffff);
-  addCrystalShard(g,1.4,4.9,0.25,0.2,0.85,0.2,GEODE_CRYSTAL2,0xffffff);
-  // Soft cool wash so the opening reads as "inside is different".
-  g.add(mesh(BOXG,new THREE.MeshBasicMaterial({color:0xa090ff,transparent:true,opacity:0.18}),0,2.2,-0.6,4.6,3.6,0.08));
+  const basalt=lam(0x2a221c),dark=lam(0x1a1410),rim=lam(0x3a2e28),deep=lam(GEODE_DEEP);
+  // Floor sill through the mouth (visual + matched by collision below).
+  g.add(mesh(BOXG,basalt,0,0.2,0,8.4,0.4,3.6));
+  g.add(mesh(BOXG,lam(0x2a1e38),0,0.42, -0.4,5.2,0.08,2.4));
+  // Left basalt mass — stacked uneven chunks, not a flat pillar.
+  g.add(mesh(BOXG,basalt,-4.6,1.4,0.2,2.4,2.8,3.0));
+  g.add(mesh(BOXG,dark,-5.2,2.8,-0.3,2.0,2.4,2.4));
+  g.add(mesh(BOXG,rim,-3.6,3.6,0.35,1.6,1.8,2.0));
+  g.add(mesh(BOXG,basalt,-4.0,4.6,-0.2,2.2,1.2,2.2));
+  // Right basalt mass — deliberately asymmetric silhouette.
+  g.add(mesh(BOXG,basalt,4.8,1.2,0.15,2.6,2.4,2.8));
+  g.add(mesh(BOXG,dark,5.1,2.9,0.4,2.1,2.6,2.2));
+  g.add(mesh(BOXG,rim,3.7,3.4,-0.25,1.5,2.0,2.1));
+  g.add(mesh(BOXG,basalt,4.2,4.8,0.1,2.0,1.4,2.0));
+  // Broken lintel / irregular arch crown (jagged top, not a flat beam).
+  g.add(mesh(BOXG,dark,-1.6,5.1,0,2.4,1.1,2.4));
+  g.add(mesh(BOXG,basalt,1.4,5.35,0.15,2.8,1.4,2.2));
+  g.add(mesh(BOXG,rim,0.2,5.7,-0.35,3.6,0.9,1.8));
+  g.add(mesh(BOXG,dark,-2.8,4.9,0.4,1.2,0.8,1.6));
+  // Inner cave shadow — open passage, not a door fill.
+  g.add(mesh(BOXG,deep,0,2.4,-0.9,5.0,4.2,0.5));
+  // Cool wash spilling out of the Hollow.
+  g.add(mesh(BOXG,new THREE.MeshBasicMaterial({color:0xa090ff,transparent:true,opacity:0.22}),0,2.3,-0.35,4.4,3.4,0.12));
+  g.add(mesh(BOXG,new THREE.MeshBasicMaterial({color:0x88ccff,transparent:true,opacity:0.12}),0,2.0,0.55,3.6,2.8,0.08));
+  // Crystal growth beginning at the mouth.
+  addCrystalShard(g,-3.4,3.2,0.55,0.32,1.2,0.32,GEODE_CRYSTAL2,0xffffff);
+  addCrystalShard(g,3.2,3.5,0.45,0.28,1.15,0.28,GEODE_CRYSTAL,0xc8b0ff);
+  addCrystalShard(g,-1.0,4.9,0.35,0.2,0.85,0.2,GEODE_PALE,0xffffff);
+  addCrystalShard(g,1.6,5.1,0.2,0.18,0.75,0.18,GEODE_CRYSTAL2,0xffffff);
+  addCrystalShard(g,-2.2,2.2,0.7,0.16,0.7,0.16,GEODE_CRYSTAL,0xc8b0ff);
+  // Thin steam leaking from cracks.
+  for(let i=0;i<4;i++){
+    g.add(mesh(SPH,new THREE.MeshBasicMaterial({color:0xe8f0ff,transparent:true,opacity:0.28}),
+      rand(-3.5,3.5),1.2+i*0.7,0.6+rand(-0.2,0.2),0.22+i*0.04));
+  }
   scene.add(g);levelDecor.push(g);
-  addSolid(x-4.2,y,z,1.6,4.8,2.2,GEODE_ROCK,{surf:'stone',invisible:true});
-  addSolid(x+4.2,y,z,1.6,4.8,2.2,GEODE_ROCK,{surf:'stone',invisible:true});
-  addSolid(x,y+4.0,z,7.2,1.2,2.0,GEODE_DEEP,{surf:'stone',invisible:true});
+  // Collision: floor sill through the mouth + irregular side masses + crown.
+  // Opening stays open on the centerline (~|x|<3.2).
+  addSolid(x,y,z,8.6,0.4,3.8,0x2a221c,{surf:'stone',invisible:true,role:'safeRock'});
+  addSolid(x-4.6,y,z,2.6,5.2,3.2,0x2a221c,{surf:'stone',invisible:true,role:'safeRock'});
+  addSolid(x+4.7,y,z,2.7,5.2,3.0,0x2a221c,{surf:'stone',invisible:true,role:'safeRock'});
+  addSolid(x,y+4.7,z,8.0,1.5,2.6,0x1a1410,{surf:'stone',invisible:true,role:'safeRock'});
 }
 function addCrackedGeode(x,y,z,scale){
   // Large broken crystal shell open toward +Z (player approach). Snoozle sits inside.
@@ -4128,7 +4201,7 @@ window.__started=()=>started;
 // ---------- camera ----------
 const CAM=window.__CAM={yaw:0,pitch:0.42,dist:8.5,pos:new THREE.Vector3(0,5,19),look:new THREE.Vector3(0,1,10),shake:0,fovKick:0,lastManual:-9,boomDist:8.5,targetDist:8.5,effectiveDist:8.5,collisionPulled:false,mode:'outdoor'};
 // Stage 4.8A — temporary Level 3 landscape camera-distance diagnostic (not a shipping profile).
-const VERSION_BASE='v36 · The Peak Complete';
+const VERSION_BASE='v37 · Peak playtest fixes';
 const CAMDIST_ALLOW={'8.5':8.5,'8.50':8.5,'6.8':6.8,'6.80':6.8,'6.07':6.07,'5':5,'5.0':5,'5.00':5,'3.93':3.93};
 const CAMDIST_STEPS=[8.5,6.8,6.07,5,3.93];
 function parseCamDistQuery(search){

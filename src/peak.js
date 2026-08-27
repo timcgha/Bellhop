@@ -22,7 +22,9 @@ function buildCinder(size){
   g.userData={shell};g.scale.setScalar(size);return g;
 }
 function addCinder(x,z,type){
-  const T=CTYPE[type]||CTYPE.mid;const g=buildCinder(T.size);const y=groundHeightAt(x,z);
+  const T=CTYPE[type]||CTYPE.mid;const g=buildCinder(T.size);
+  // Spawn on the authored walk surface (elevated pads), not the Peak void floor or world ceiling.
+  const y=walkSurfaceAt(x,z,0.4);
   g.position.set(x,y,z);scene.add(g);
   cinders.push({g,x,z,hx:x,hz:z,y,type:type||'mid',size:T.size,hp:T.hp,maxHp:T.hp,hopMul:T.hopMul,spitMul:T.spitMul,hopPow:T.hopPow,
     state:'idle',t:0,spitT:rand(1.4,2.8),wind:0,vx:0,vz:0,hurtT:0,stunT:0,backT:0,alive:true,ph:rand(0,TAU),face:rand(0,TAU),hopT:rand(0.4,1.6),hopA:0,note:null});
@@ -60,7 +62,7 @@ function updateCinders(dt){
     const dHome2=Math.hypot(e.x-e.hx,e.z-e.hz);
     // Soft home pull when past leash — mirrors shark return behavior.
     if(dHome2>CINDER_LEASH){e.x=damp(e.x,e.hx,2.8,dt);e.z=damp(e.z,e.hz,2.8,dt);}
-    e.y=surfaceHeightAt(e.x,e.z,e.y+0.5,0.3);
+    e.y=walkSurfaceAt(e.x,e.z,0.3);
     const dHomeNow=Math.hypot(e.x-e.hx,e.z-e.hz);
     const near=d<CINDER_AGGRO&&Math.abs(dy)<6&&!P.dead&&e.backT<=0&&dHomeNow<CINDER_LEASH;
     if(near)e.face=Math.atan2(dx,dz);
@@ -141,7 +143,9 @@ function buildSalamander(gold){
   return g;
 }
 function addSalamander(x,z,opts){
-  opts=opts||{};const gold=!!opts.note;const g=buildSalamander(gold);const y=groundHeightAt(x,z)+0.02;
+  opts=opts||{};const gold=!!opts.note;const g=buildSalamander(gold);
+  // Peak voidFloor is deep — place on the authored walk surface, same as Cinders.
+  const y=walkSurfaceAt(x,z,0.4)+0.02;
   g.position.set(x,y,z);scene.add(g);
   const home={x,z};const pts=opts.path||[{x:x+rand(-1.5,1.5),z:z+rand(-1.5,1.5)},{x:x+rand(-1.5,1.5),z:z+rand(-1.5,1.5)},home];
   let note=null;if(opts.note===true)note=addNote(x,y+0.55,z,true);else if(opts.note&&typeof opts.note==='object')note=opts.note;
@@ -157,7 +161,7 @@ function updateSalamanders(dt){
       if(s.t>=1){s.t-=1;s.idx=(s.idx+1)%s.pts.length;}
       s.x=lerp(a.x,b.x,s.t);s.z=lerp(a.z,b.z,s.t);
     }
-    s.y=surfaceHeightAt(s.x,s.z,s.y+0.4,0.15)+0.02;
+    s.y=walkSurfaceAt(s.x,s.z,0.15)+0.02;
     s.g.position.set(s.x,s.y+(s.hideT>0?-0.06:0)+Math.sin(time*5+s.ph)*0.02,s.z);
     s.g.rotation.y=Math.atan2(s.pts[(s.idx+1)%s.pts.length].x-s.x,s.pts[(s.idx+1)%s.pts.length].z-s.z);
     if(s.kind==='note')s.g.scale.setScalar(1+Math.sin(time*8+s.ph)*0.06);
@@ -358,22 +362,51 @@ function addCrystalCluster(x,y,z,scale,blocking){
   return g;
 }
 function addGeodeMouth(x,y,z){
-  // Open cave mouth — crystal frame, no blocking wall (replaces Stage 4 blocker).
+  // Natural volcanic cave mouth — irregular basalt, not a rectangular door/box.
+  // Cool light spills from inside; crystals begin at the rim. Floor solid matches the opening.
   const g=new THREE.Group();g.position.set(x,y,z);
-  g.add(mesh(BOXG,lam(GEODE_ROCK),-4.2,2.4,0,1.6,4.8,2.2));
-  g.add(mesh(BOXG,lam(GEODE_ROCK),4.2,2.4,0,1.6,4.8,2.2));
-  g.add(mesh(BOXG,lam(GEODE_DEEP),0,4.6,0,7.2,1.2,2.0));
-  g.add(mesh(BOXG,lam(0x3a2a48),0,2.0,0.35,5.2,3.6,0.35));
-  addCrystalShard(g,-3.2,3.6,0.4,0.35,1.3,0.35,GEODE_CRYSTAL2,0xffffff);
-  addCrystalShard(g,3.0,3.8,0.35,0.3,1.2,0.3,GEODE_CRYSTAL,0xc8b0ff);
-  addCrystalShard(g,-1.2,4.8,0.3,0.22,0.9,0.22,GEODE_PALE,0xffffff);
-  addCrystalShard(g,1.4,4.9,0.25,0.2,0.85,0.2,GEODE_CRYSTAL2,0xffffff);
-  // Soft cool wash so the opening reads as "inside is different".
-  g.add(mesh(BOXG,new THREE.MeshBasicMaterial({color:0xa090ff,transparent:true,opacity:0.18}),0,2.2,-0.6,4.6,3.6,0.08));
+  const basalt=lam(0x2a221c),dark=lam(0x1a1410),rim=lam(0x3a2e28),deep=lam(GEODE_DEEP);
+  // Floor sill through the mouth (visual + matched by collision below).
+  g.add(mesh(BOXG,basalt,0,0.2,0,8.4,0.4,3.6));
+  g.add(mesh(BOXG,lam(0x2a1e38),0,0.42, -0.4,5.2,0.08,2.4));
+  // Left basalt mass — stacked uneven chunks, not a flat pillar.
+  g.add(mesh(BOXG,basalt,-4.6,1.4,0.2,2.4,2.8,3.0));
+  g.add(mesh(BOXG,dark,-5.2,2.8,-0.3,2.0,2.4,2.4));
+  g.add(mesh(BOXG,rim,-3.6,3.6,0.35,1.6,1.8,2.0));
+  g.add(mesh(BOXG,basalt,-4.0,4.6,-0.2,2.2,1.2,2.2));
+  // Right basalt mass — deliberately asymmetric silhouette.
+  g.add(mesh(BOXG,basalt,4.8,1.2,0.15,2.6,2.4,2.8));
+  g.add(mesh(BOXG,dark,5.1,2.9,0.4,2.1,2.6,2.2));
+  g.add(mesh(BOXG,rim,3.7,3.4,-0.25,1.5,2.0,2.1));
+  g.add(mesh(BOXG,basalt,4.2,4.8,0.1,2.0,1.4,2.0));
+  // Broken lintel / irregular arch crown (jagged top, not a flat beam).
+  g.add(mesh(BOXG,dark,-1.6,5.1,0,2.4,1.1,2.4));
+  g.add(mesh(BOXG,basalt,1.4,5.35,0.15,2.8,1.4,2.2));
+  g.add(mesh(BOXG,rim,0.2,5.7,-0.35,3.6,0.9,1.8));
+  g.add(mesh(BOXG,dark,-2.8,4.9,0.4,1.2,0.8,1.6));
+  // Inner cave shadow — open passage, not a door fill.
+  g.add(mesh(BOXG,deep,0,2.4,-0.9,5.0,4.2,0.5));
+  // Cool wash spilling out of the Hollow.
+  g.add(mesh(BOXG,new THREE.MeshBasicMaterial({color:0xa090ff,transparent:true,opacity:0.22}),0,2.3,-0.35,4.4,3.4,0.12));
+  g.add(mesh(BOXG,new THREE.MeshBasicMaterial({color:0x88ccff,transparent:true,opacity:0.12}),0,2.0,0.55,3.6,2.8,0.08));
+  // Crystal growth beginning at the mouth.
+  addCrystalShard(g,-3.4,3.2,0.55,0.32,1.2,0.32,GEODE_CRYSTAL2,0xffffff);
+  addCrystalShard(g,3.2,3.5,0.45,0.28,1.15,0.28,GEODE_CRYSTAL,0xc8b0ff);
+  addCrystalShard(g,-1.0,4.9,0.35,0.2,0.85,0.2,GEODE_PALE,0xffffff);
+  addCrystalShard(g,1.6,5.1,0.2,0.18,0.75,0.18,GEODE_CRYSTAL2,0xffffff);
+  addCrystalShard(g,-2.2,2.2,0.7,0.16,0.7,0.16,GEODE_CRYSTAL,0xc8b0ff);
+  // Thin steam leaking from cracks.
+  for(let i=0;i<4;i++){
+    g.add(mesh(SPH,new THREE.MeshBasicMaterial({color:0xe8f0ff,transparent:true,opacity:0.28}),
+      rand(-3.5,3.5),1.2+i*0.7,0.6+rand(-0.2,0.2),0.22+i*0.04));
+  }
   scene.add(g);levelDecor.push(g);
-  addSolid(x-4.2,y,z,1.6,4.8,2.2,GEODE_ROCK,{surf:'stone',invisible:true});
-  addSolid(x+4.2,y,z,1.6,4.8,2.2,GEODE_ROCK,{surf:'stone',invisible:true});
-  addSolid(x,y+4.0,z,7.2,1.2,2.0,GEODE_DEEP,{surf:'stone',invisible:true});
+  // Collision: floor sill through the mouth + irregular side masses + crown.
+  // Opening stays open on the centerline (~|x|<3.2).
+  addSolid(x,y,z,8.6,0.4,3.8,0x2a221c,{surf:'stone',invisible:true,role:'safeRock'});
+  addSolid(x-4.6,y,z,2.6,5.2,3.2,0x2a221c,{surf:'stone',invisible:true,role:'safeRock'});
+  addSolid(x+4.7,y,z,2.7,5.2,3.0,0x2a221c,{surf:'stone',invisible:true,role:'safeRock'});
+  addSolid(x,y+4.7,z,8.0,1.5,2.6,0x1a1410,{surf:'stone',invisible:true,role:'safeRock'});
 }
 function addCrackedGeode(x,y,z,scale){
   // Large broken crystal shell open toward +Z (player approach). Snoozle sits inside.

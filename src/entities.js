@@ -13,8 +13,25 @@ let CURRENT_LEVEL=null;
 function isUnderwater(){return !!(CURRENT_LEVEL&&CURRENT_LEVEL.underwater);}
 const POND={x0:-6,x1:6,z0:-33,z1:-25};
 function inPond(x,z){return x>POND.x0&&x<POND.x1&&z>POND.z0&&z<POND.z1;}
-function groundHeightAt(x,z){if(isUnderwater())return 0;return inPond(x,z)?-0.4:0;}
+function groundHeightAt(x,z){
+  if(isUnderwater())return 0;
+  // Peak has no infinite meadow floor. Gaps without authored solids fall into the void
+  // (Level 3 voidY recovery). Levels 1–2 keep the old y=0 / pond floor.
+  if(CURRENT_LEVEL&&CURRENT_LEVEL.peakAtmosphere)
+    return CURRENT_LEVEL.voidFloor!=null?CURRENT_LEVEL.voidFloor:-25;
+  return inPond(x,z)?-0.4:0;
+}
 function surfaceHeightAt(x,z,belowY,r){r=r||0.2;let h=groundHeightAt(x,z);for(const s of solids){if(x+r>s.min.x&&x-r<s.max.x&&z+r>s.min.z&&z-r<s.max.z&&s.max.y<=belowY+0.05&&s.max.y>h)h=s.max.y;}return h;}
+// Walkable tops only — skips tall wall/ceiling slabs that surfaceHeightAt would otherwise prefer.
+function walkSurfaceAt(x,z,r){
+  r=r||0.25;let h=groundHeightAt(x,z);
+  for(const s of solids){
+    if(x+r<=s.min.x||x-r>=s.max.x||z+r<=s.min.z||z-r>=s.max.z)continue;
+    if(s.max.y-s.min.y>1.6)continue;
+    if(s.max.y>h)h=s.max.y;
+  }
+  return h;
+}
 // Shadow receiving surface: nearest mostly-horizontal top beneath Pling, including lava.
 // Physics still uses surfaceHeightAt (solids + ground only). Readability may land on lava.
 let _shadowStick=null;
@@ -47,7 +64,7 @@ function shadowReceiveAt(x,z,belowY,r){
 window.__shadowReceiveAt=(x,z,belowY,r)=>shadowReceiveAt(x,z,belowY,r);
 function insideSolid(x,y,z,m){for(const s of solids){if(x>s.min.x-m&&x<s.max.x+m&&y>s.min.y-m&&y<s.max.y+m&&z>s.min.z-m&&z<s.max.z+m)return true;}return false;}
 function addSolid(x,y,z,w,h,d,color,opts){const m=new THREE.Mesh(BOXG,lam(color));m.scale.set(w,h,d);m.position.set(x,y+h/2,z);if(opts&&opts.invisible)m.visible=false;scene.add(m);
-  const s={min:new THREE.Vector3(x-w/2,y,z-d/2),max:new THREE.Vector3(x+w/2,y+h,z+d/2),mesh:m,surf:(opts&&opts.surf)||'wood'};solids.push(s);return s;}
+  const s={min:new THREE.Vector3(x-w/2,y,z-d/2),max:new THREE.Vector3(x+w/2,y+h,z+d/2),mesh:m,surf:(opts&&opts.surf)||'wood',role:(opts&&opts.role)||null,color:color|0};solids.push(s);return s;}
 
 // ground with a hole for the pond
 function grassTex(){const cv=document.createElement('canvas');cv.width=cv.height=256;const g=cv.getContext('2d');g.fillStyle='#78c65a';g.fillRect(0,0,256,256);
@@ -270,12 +287,14 @@ function addSteamVent(x,y,z,r){r=r||1.2;const g=new THREE.Group();g.position.set
 // Lava is a hazard volume, not a walkable solid. Contact is handled by lavaContact in player.js.
 function addLava(x,y,z,w,h,d){
   const g=new THREE.Group();g.position.set(x,y,z);
+  // Hazard visual language: bright molten center, hot glow sheet, dark crust rim.
   const body=mesh(BOXG,new THREE.MeshBasicMaterial({color:0xff6a18}),0,h/2,0,w,h,d);g.add(body);
-  const glow=mesh(BOXG,new THREE.MeshBasicMaterial({color:0xff9a3c,transparent:true,opacity:0.55}),0,h+0.02,0,w*0.98,0.04,d*0.98);g.add(glow);
+  const core=mesh(BOXG,new THREE.MeshBasicMaterial({color:0xffe14a,transparent:true,opacity:0.55}),0,h*0.72,0,w*0.55,h*0.35,d*0.55);g.add(core);
+  const glow=mesh(BOXG,new THREE.MeshBasicMaterial({color:0xff9a3c,transparent:true,opacity:0.6}),0,h+0.02,0,w*0.98,0.04,d*0.98);g.add(glow);
   // Ember-red rim so the safe/hot boundary stays obvious.
   const edge=mesh(BOXG,new THREE.MeshBasicMaterial({color:0x8a2010}),0,h+0.01,0,w+0.25,0.03,d+0.25);
   scene.add(g);scene.add(edge);
-  lavas.push({g,edge,body,glow,x,y,z,w,h,d,min:new THREE.Vector3(x-w/2,y,z-d/2),max:new THREE.Vector3(x+w/2,y+h,z+d/2),pt:0,ph:rand(0,TAU)});
+  lavas.push({g,edge,body,core,glow,x,y,z,w,h,d,role:'lava',min:new THREE.Vector3(x-w/2,y,z-d/2),max:new THREE.Vector3(x+w/2,y+h,z+d/2),pt:0,ph:rand(0,TAU)});
 }
 // Ambient lava decoration only — collision state is always on (no timed hazard cycles).
 function updateLavas(dt){
@@ -288,6 +307,7 @@ function updateLavas(dt){
       if(Math.random()<0.3)spawnP(bx,lv.max.y+0.08,bz,rand(-1.2,1.2),rand(1.8,4.2),rand(-1.2,1.2),rand(0.04,0.08),0xffc04a,rand(0.25,0.45),0.45,-4,0.9);
     }
     if(lv.glow&&lv.glow.material)lv.glow.material.opacity=0.42+0.18*Math.sin(time*1.6+lv.ph);
+    if(lv.core&&lv.core.material)lv.core.material.opacity=0.42+0.2*Math.sin(time*2.1+lv.ph*1.3);
   }
 }
 const FIREGEO=new THREE.SphereGeometry(1,9,7);
