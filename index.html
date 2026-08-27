@@ -459,6 +459,44 @@ mandatoryLeaps:[{
   landing:{x:0,z:-215.5,edgeZ:-209.5,farZ:-221.5,minDepth:8},
   nearSafe:{x:0,y:17.4,z:-194},
   farSafe:{x:0,y:17.4,z:-215}
+},{
+  // Area 5 — The Climb (powered ascent along the caldera wall)
+  // Flat-height Sky Blast leaps; stairs between shelves provide the elevation.
+  id:'climbShelfA',
+  takeoff:{x:0,z:-386,ventReach:5},
+  landing:{x:0,z:-405.5,edgeZ:-399.5,farZ:-411.5,minDepth:8},
+  nearSafe:{x:0,y:24.4,z:-384},
+  farSafe:{x:0,y:24.4,z:-405}
+},{
+  id:'climbShelfB',
+  takeoff:{x:0,z:-422,ventReach:5},
+  landing:{x:0,z:-441.5,edgeZ:-435.5,farZ:-447.5,minDepth:8},
+  nearSafe:{x:0,y:28.4,z:-420},
+  farSafe:{x:0,y:28.4,z:-441}
+},{
+  id:'climbShelfC',
+  takeoff:{x:0,z:-460,ventReach:5},
+  landing:{x:0,z:-479.5,edgeZ:-473.5,farZ:-485.5,minDepth:8},
+  nearSafe:{x:0,y:32.4,z:-458},
+  farSafe:{x:0,y:32.4,z:-479}
+},{
+  id:'climbShelfD',
+  takeoff:{x:0,z:-496,ventReach:5},
+  landing:{x:0,z:-515.5,edgeZ:-509.5,farZ:-521.5,minDepth:8},
+  nearSafe:{x:0,y:36.4,z:-494},
+  farSafe:{x:0,y:36.4,z:-515}
+},{
+  id:'climbShelfE',
+  takeoff:{x:0,z:-532,ventReach:5},
+  landing:{x:0,z:-551.5,edgeZ:-545.5,farZ:-557.5,minDepth:8},
+  nearSafe:{x:0,y:40.4,z:-530},
+  farSafe:{x:0,y:40.4,z:-551}
+},{
+  id:'climbRimLeap',
+  takeoff:{x:0,z:-566,ventReach:5},
+  landing:{x:0,z:-585.5,edgeZ:-579.5,farZ:-591.5,minDepth:8},
+  nearSafe:{x:0,y:44.4,z:-564},
+  farSafe:{x:0,y:44.4,z:-585}
 }],
 route:{
   sideLava:{x:10,z:10},
@@ -483,17 +521,23 @@ route:{
   snoozle3:{x:3.2,z:-330},
   secretCurtain:{x:-7.0,y:20.0,z:-308},
   secretAlcove:{x:-12.2,z:-308},
-  climbExit:{x:0,y:22.0,z:-368},
-  endpoint:{x:0,y:22.0,z:-368}
+  // Hollow opens onto Climb base; Stage 5 soft-return at z:-368 is gone.
+  climbExit:{x:0,y:21.5,z:-368},
+  climbBase:{x:0,y:21.5,z:-378},
+  climbHalfway:{x:0,y:28.4,z:-441},
+  climbRim:{x:0,y:44.4,z:-585},
+  challengeBranch:{x:8.5,y:28.4,z:-441},
+  challengeReward:{x:11.0,y:29.0,z:-472},
+  endpoint:{x:0,y:44.4,z:-596}
 },
 fence:0x5a2e1a,
 fenceSolids:[
-  [0,0,30,36,2.2,0.7],[0,0,-380,36,2.2,0.7],
-  [-18,0,-170,0.7,2.2,420],[18,0,-170,0.7,2.2,420]
+  [0,0,30,36,2.2,0.7],[0,0,-605,36,2.2,0.7],
+  [-18,0,-287,0.7,2.2,640],[18,0,-287,0.7,2.2,640]
 ],
 pathTiles:[],
 hedges:[],
-checks:[[0,22],[0,-4,2.2],[0,-34,5.2],[0,-70,8.2],[0,-100,11.2],[0,-134,13.2],[0,-168,15.2],[0,-240,19.2],[0,-272,20.2],[0,-350,21.2]],
+checks:[[0,22],[0,-4,2.2],[0,-34,5.2],[0,-70,8.2],[0,-100,11.2],[0,-134,13.2],[0,-168,15.2],[0,-240,19.2],[0,-272,20.2],[0,-350,21.2],[0,-378,21.7],[0,-441,28.4]],
 tower:{tx:0,tz:-260},
 // Homes sit on the open approach plaza. Snoozle 3 follows a corridor path out of the Hollow
 // before the final zoom so it does not cut through cave walls (no shared wake special-case).
@@ -508,11 +552,12 @@ trees:[],
 steps:[
   ['volcanoLandmark',0,0,-290,1.35],
   ['driftSparks',22],
-  ['solid',0,28,-170,38,2,420,0xffc48a,{invisible:true}],
-  ['solid',0,6,30,36.5,28,0.7,0x5a2e1a,{invisible:true}],
-  ['solid',0,6,-380,36.5,28,0.7,0x5a2e1a,{invisible:true}],
-  ['solid',-18,6,-170,0.7,28,420,0x5a2e1a,{invisible:true}],
-  ['solid',18,6,-170,0.7,28,420,0x5a2e1a,{invisible:true}],
+  // World bounds — raised ceiling leaves Stage 7 Organ room above the rim; far face past Climb end.
+  ['solid',0,62,-287,38,2,640,0xffc48a,{invisible:true}],
+  ['solid',0,20,30,36.5,50,0.7,0x5a2e1a,{invisible:true}],
+  ['solid',0,20,-605,36.5,50,0.7,0x5a2e1a,{invisible:true}],
+  ['solid',-18,20,-287,0.7,50,640,0x5a2e1a,{invisible:true}],
+  ['solid',18,20,-287,0.7,50,640,0x5a2e1a,{invisible:true}],
 
   // ========== AREA 1 — The Warm Slopes ==========
   // Volcanic sand / dark warm earth — green is accent tufts only, not the floor.
@@ -717,7 +762,7 @@ steps:[
   ['crystalCluster',7.2,20.0,-338,0.55,false],
   ['crystalSparks',14,0,-328,9],
 
-  // Exit corridor — reads as upward/outward toward the future Climb.
+  // Exit corridor — opens onto the Climb / caldera reveal (Stage 5 soft-return removed).
   ['solid',0,20.5,-348,12,0.4,14,0x2a1e38,{surf:'stone'}],
   ['solid',0,20.7,-348,5,0.06,10,0x3a2e55,{surf:'stone'}],
   ['solid',-7.5,20.5,-348,3.5,6.0,16,0x1a1228,{surf:'stone'}],
@@ -725,15 +770,154 @@ steps:[
   ['solid',0,26.5,-348,18,1.0,16,0x1a1228,{surf:'stone'}],
   ['solid',0,21.5,-360,12,0.4,12,0x2e2438,{surf:'stone'}],
   ['solid',0,21.7,-360,5,0.06,8,0x4a3a60,{surf:'stone'}],
-  // Opening silhouette + far lava glow under the climb hint (decorative).
-  ['solid',-6,21.5,-366,4,0.4,6,0x2a2030,{surf:'stone'}],
-  ['solid',6,21.5,-366,4,0.4,6,0x2a2030,{surf:'stone'}],
-  ['lava',0,8.0,-372,10,0.4,8],
   ['crystalCluster',-4.5,21.5,-356,0.9,true],
   ['crystalCluster',4.8,21.5,-358,0.5,false],
-  // Stage 5 temporary endpoint — soft return, not a win. Stage 6 Climb begins past here.
-  ['protoEndpoint',0,21.5,-368,'climb'],
-  ['unfinishedFinish',0,-365,30]
+
+  // ========== AREA 5 — The Climb ==========
+  // Quiet geode behind → huge hot caldera ahead. Elevation via stairs; Sky Blast clears flat gaps.
+  // Floor height continues from the Hollow exit pad (y=21.5) so STEP can take the first stair.
+  ['solid',0,21.5,-372,16,0.4,16,0x2a2420,{surf:'stone'}],
+  ['solid',0,21.65,-372,6,0.06,10,0x4a3a32,{surf:'stone'}],
+  ['crystalCluster',-5.5,21.5,-366,0.45,false],
+  ['crystalCluster',5.2,21.5,-370,0.4,false],
+  ['solid',-10,21.5,-378,4,10,12,0x1a1614,{surf:'stone'}],
+  ['solid',10,21.5,-378,4,10,12,0x1a1614,{surf:'stone'}],
+  ['solid',-10,28.0,-378,0.35,0.2,8,0xff6a20,{surf:'stone'}],
+  ['solid',10,30.0,-378,0.35,0.2,8,0xff6a20,{surf:'stone'}],
+  ['basaltRock',-7,21.5,-374,1.3],['basaltRock',7,21.5,-376,1.1],
+  // Deep caldera lava under the Climb
+  ['lava',0,6.0,-400,28,0.55,50],
+  ['lava',-12,4.0,-450,10,0.55,100],
+  ['lava',12,4.0,-450,10,0.55,100],
+  ['lava',0,4.0,-500,26,0.55,120],
+  ['lava',0,4.0,-560,26,0.55,100],
+
+  // Base terrace + checkpoint, then stairs to first takeoff height
+  ['solid',0,21.5,-382,16,0.4,14,0x2e2a28,{surf:'stone'}],
+  ['solid',0,21.7,-382,5,0.06,8,0x5a3a28,{surf:'stone'}],
+  ['cinder',-4,-380,'small'],
+  ['basaltRock',6,21.5,-384,0.9],
+  ['solid',0,22.5,-384,14,0.4,6,0x2e2a28,{surf:'stone'}],
+  ['solid',0,23.5,-385,14,0.4,4,0x2e2a28,{surf:'stone'}],
+  ['solid',0,24.0,-386,14,0.4,10,0x3a3538,{surf:'stone'}],
+  ['steamVent',0,24.4,-386,1.4],
+  ['solid',0,24.4,-390.7,12,0.06,0.35,0x8a2010,{surf:'stone'}],
+
+  // Leap 1 — climbShelfA (flat 24.4)
+  ['solid',0,24.0,-405.5,14,0.4,12,0x3a3538,{surf:'stone'}],
+  ['solid',0,24.4,-399.65,12,0.06,0.35,0x8a2010,{surf:'stone'}],
+  ['lava',0,22.0,-395.0,16,0.55,8.0],
+  ['lava',0,-0.15,-395,28,0.55,24],
+  ['solid',-8,24.0,-405,3,5,8,0x1a1614,{surf:'stone'}],
+  ['solid',8,24.0,-405,3,5,8,0x1a1614,{surf:'stone'}],
+
+  // Stairs to Shelf B
+  ['solid',0,25.0,-414,12,0.4,6,0x2e2a28,{surf:'stone'}],
+  ['solid',0,26.0,-416,12,0.4,4,0x2e2a28,{surf:'stone'}],
+  ['solid',0,27.0,-418,12,0.4,4,0x2e2a28,{surf:'stone'}],
+  ['solid',0,28.0,-422,14,0.4,10,0x3a3538,{surf:'stone'}],
+  ['steamVent',0,28.4,-422,1.35],
+  ['solid',0,28.4,-426.7,12,0.06,0.35,0x8a2010,{surf:'stone'}],
+
+  // Leap 2 — climbShelfB into halfway rest (flat 28.4)
+  ['solid',0,28.0,-441.5,16,0.4,12,0x4a3a32,{surf:'stone'}],
+  ['solid',0,28.4,-435.65,14,0.06,0.35,0x8a2010,{surf:'stone'}],
+  ['lava',0,26.0,-431.0,16,0.55,8.0],
+  ['lava',0,-0.15,-431,28,0.55,24],
+  ['solid',0,28.0,-448,18,0.4,14,0x4a3a32,{surf:'stone'}],
+  ['solid',0,28.2,-448,6,0.06,8,0xffd24a,{surf:'stone'}],
+  ['basaltRock',-7,28.0,-444,1.2],['basaltRock',6,28.0,-450,1.0],
+  ['solid',-10,28.0,-448,3,6,10,0x1a1614,{surf:'stone'}],
+
+  // Optional hard challenge — east spur off halfway (main route stays center −Z)
+  ['solid',8.5,28.0,-441,7,0.4,8,0x3a3538,{surf:'stone'}],
+  ['steamVent',10.5,28.4,-443,1.2],
+  ['solid',11.0,28.5,-458,8,0.4,10,0x3a3538,{surf:'stone'}],
+  ['lava',10.5,26.0,-450,8,0.55,10],
+  ['lava',10.5,-0.15,-450,10,0.55,16],
+  ['steamVent',11.0,28.9,-460,1.15],
+  ['solid',11.0,28.5,-472,9,0.4,12,0x4a3a32,{surf:'stone'}],
+  ['lava',11.0,26.0,-466,8,0.55,8],
+  ['lava',11.0,-0.15,-466,10,0.55,14],
+  ['wisp',[
+    {x:9.5,y:29.6,z:-468},{x:11.5,y:29.8,z:-470},{x:10.0,y:29.6,z:-472}
+  ],{speed:1.55}],
+  ['wisp',[
+    {x:12.5,y:29.7,z:-470},{x:12.0,y:29.9,z:-474},{x:11.0,y:29.7,z:-476}
+  ],{speed:1.45}],
+  ['note',10.2,29.2,-470.5,false],
+  ['note',11.0,29.3,-472.0,false],
+  ['note',11.8,29.2,-473.5,false],
+  ['solid',6.0,28.0,-452,6,0.4,10,0x3a3538,{surf:'stone'}],
+  ['solid',3.0,28.0,-450,6,0.4,8,0x3a3538,{surf:'stone'}],
+
+  // Stairs to Shelf C
+  ['solid',0,29.0,-454,12,0.4,6,0x2e2a28,{surf:'stone'}],
+  ['solid',0,30.0,-456,12,0.4,4,0x2e2a28,{surf:'stone'}],
+  ['solid',0,31.0,-458,12,0.4,4,0x2e2a28,{surf:'stone'}],
+  ['solid',0,32.0,-460,14,0.4,8,0x3a3538,{surf:'stone'}],
+  ['steamVent',0,32.4,-460,1.35],
+  ['solid',0,32.4,-463.7,12,0.06,0.35,0x8a2010,{surf:'stone'}],
+
+  // Leap 3 — climbShelfC (flat 32.4)
+  ['solid',0,32.0,-479.5,14,0.4,12,0x3a3538,{surf:'stone'}],
+  ['solid',0,32.4,-473.65,12,0.06,0.35,0x8a2010,{surf:'stone'}],
+  ['lava',0,30.0,-469.0,16,0.55,8.0],
+  ['lava',0,-0.15,-469,28,0.55,24],
+  ['solid',-8,32.0,-479,3,5,8,0x1a1614,{surf:'stone'}],
+  ['solid',8,32.0,-479,3,5,8,0x1a1614,{surf:'stone'}],
+
+  // Stairs to Shelf D
+  ['solid',0,33.0,-488,12,0.4,6,0x2e2a28,{surf:'stone'}],
+  ['solid',0,34.0,-490,12,0.4,4,0x2e2a28,{surf:'stone'}],
+  ['solid',0,35.0,-492,12,0.4,4,0x2e2a28,{surf:'stone'}],
+  ['solid',0,36.0,-496,14,0.4,10,0x3a3538,{surf:'stone'}],
+  ['steamVent',0,36.4,-496,1.4],
+  ['solid',0,36.4,-500.7,12,0.06,0.35,0x8a2010,{surf:'stone'}],
+
+  // Leap 4 — climbShelfD (flat 36.4)
+  ['solid',0,36.0,-515.5,14,0.4,12,0x4a3a32,{surf:'stone'}],
+  ['solid',0,36.4,-509.65,12,0.06,0.35,0x8a2010,{surf:'stone'}],
+  ['lava',0,34.0,-505.0,16,0.55,8.0],
+  ['lava',0,-0.15,-505,28,0.55,24],
+
+  // Stairs to Shelf E
+  ['solid',0,37.0,-524,12,0.4,6,0x2e2a28,{surf:'stone'}],
+  ['solid',0,38.0,-526,12,0.4,4,0x2e2a28,{surf:'stone'}],
+  ['solid',0,39.0,-528,12,0.4,4,0x2e2a28,{surf:'stone'}],
+  ['solid',0,40.0,-532,14,0.4,10,0x3a3538,{surf:'stone'}],
+  ['steamVent',0,40.4,-532,1.35],
+  ['solid',0,40.4,-536.7,12,0.06,0.35,0x8a2010,{surf:'stone'}],
+
+  // Leap 5 — climbShelfE (flat 40.4)
+  ['solid',0,40.0,-551.5,14,0.4,12,0x3a3538,{surf:'stone'}],
+  ['solid',0,40.4,-545.65,12,0.06,0.35,0x8a2010,{surf:'stone'}],
+  ['lava',0,38.0,-541.0,16,0.55,8.0],
+  ['lava',0,-0.15,-541,28,0.55,24],
+
+  // Stairs to rim takeoff
+  ['solid',0,41.0,-558,12,0.4,6,0x2e2a28,{surf:'stone'}],
+  ['solid',0,42.0,-560,12,0.4,4,0x2e2a28,{surf:'stone'}],
+  ['solid',0,43.0,-562,12,0.4,4,0x2e2a28,{surf:'stone'}],
+  ['solid',0,44.0,-566,14,0.4,10,0x3a3538,{surf:'stone'}],
+  ['steamVent',0,44.4,-566,1.4],
+  ['solid',0,44.4,-570.7,12,0.06,0.35,0x8a2010,{surf:'stone'}],
+
+  // Leap 6 — climbRimLeap onto crater rim (flat 44.4)
+  ['solid',0,44.0,-585.5,16,0.4,12,0x4a3a32,{surf:'stone'}],
+  ['solid',0,44.4,-579.65,14,0.06,0.35,0x8a2010,{surf:'stone'}],
+  ['lava',0,42.0,-575.0,16,0.55,8.0],
+  ['lava',0,-0.15,-575,28,0.55,24],
+  // Broad crater-rim summit — room for future Snoozle 4; Stage 6 endpoint only
+  ['solid',0,44.0,-592,18,0.4,14,0x4a3a32,{surf:'stone'}],
+  ['solid',0,44.2,-592,7,0.06,8,0xffd24a,{surf:'stone'}],
+  ['solid',-8,44.0,-592,3,5,10,0x1a1614,{surf:'stone'}],
+  ['solid',8,44.0,-592,3,5,10,0x1a1614,{surf:'stone'}],
+  ['basaltRock',-5,44.0,-590,1.1],['basaltRock',5,44.0,-594,1.0],
+  ['lava',0,36.0,-600,12,0.4,8],
+  ['solid',0,46.0,-600,4,0.3,2,0x5a4030,{surf:'stone'}],
+  ['protoEndpoint',0,44.4,-596,'climb'],
+  ['unfinishedFinish',0,-592,70]
 ]
 };
 
@@ -3701,7 +3885,7 @@ window.__started=()=>started;
 // ---------- camera ----------
 const CAM=window.__CAM={yaw:0,pitch:0.42,dist:8.5,pos:new THREE.Vector3(0,5,19),look:new THREE.Vector3(0,1,10),shake:0,fovKick:0,lastManual:-9,boomDist:8.5,targetDist:8.5,effectiveDist:8.5,collisionPulled:false,mode:'outdoor'};
 // Stage 4.8A — temporary Level 3 landscape camera-distance diagnostic (not a shipping profile).
-const VERSION_BASE='v34 · Geode Hollow';
+const VERSION_BASE='v35 · The Climb';
 const CAMDIST_ALLOW={'8.5':8.5,'8.50':8.5,'6.8':6.8,'6.80':6.8,'6.07':6.07,'5':5,'5.0':5,'5.00':5,'3.93':3.93};
 const CAMDIST_STEPS=[8.5,6.8,6.07,5,3.93];
 function parseCamDistQuery(search){
