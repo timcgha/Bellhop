@@ -231,6 +231,7 @@ module.exports = function boot(opts = {}) {
     getPhys: () => window.__PHYS && window.__PHYS(),
     getSky: () => window.__SKY && window.__SKY(),
     getLava: () => window.__LAVA && window.__LAVA(),
+    getVoid: () => window.__VOID && window.__VOID(),
     getPlayer: () => window.__PLAYER && window.__PLAYER(),
     getShadow: () => window.__SHADOW,
     shadowReceiveAt: (x,z,belowY,r) => window.__shadowReceiveAt(x,z,belowY,r),

@@ -22,6 +22,10 @@ skyBlast:{
 anchorSettle:0.22,
 anchorClear:0.85,
 lavaRecovery:0.42,
+// Impossible-world floor: below every legitimate route Y, lava surface, and recovery arc.
+// Warm Slopes tops ≈0.4; lava basins ≈-0.15; default Peak voidFloor is -25.
+voidY:-4,
+voidFloor:-25,
 snoozleGoal:4,
 teachGaps:[{
   id:'teachFail',nearLipZ:-38,farEdgeZ:-47.5,failFloorY:1.6,failFloorZ:-42.5
@@ -105,14 +109,11 @@ route:{
   cinderTerrace:{x:-2,z:-24},
   skyCrates:[
     {x:9,z:-50,area:2,note:'teaching',y:5.9},
-    {x:5,z:-70,area:2,note:'preFirstLava',y:8.4},
-    {x:-5,z:-90,area:3,note:'afterFirstLava',y:8.4},
-    {x:4,z:-121,area:3,note:'betweenIslands',y:11.4},
-    {x:-5,z:-182,area:3,note:'postWideRiver',y:15.4},
-    {x:5,z:-194,area:3,note:'preGeyser',y:17.4}
+    {x:-5,z:-90,area:3,note:'postLeapRecovery',y:8.4}
   ],
   skyCrate:{x:9,z:-50},
   snoozle2:{x:-9,z:-78},
+  powerLossCinder:{x:5,z:-95},
   wispOpen:{x:6,z:-230},
   wispCorridor:{x:0,z:-248},
   geyser:{x:0,y:17.4,z:-216},
@@ -165,13 +166,16 @@ steps:[
 
   // ========== AREA 1 — The Warm Slopes ==========
   // Volcanic sand / dark warm earth — green is accent tufts only, not the floor.
-  ['solid',0,0,12,26,0.4,28,0x2a2218,{surf:'stone'}],
-  ['solid',0,0.4,18,8,0.06,6,0x3a2a22,{surf:'stone'}],
-  ['solid',0,0.42,8,5.5,0.05,18,0x4a3228,{surf:'stone'}],
-  ['solid',6,1.2,0,10,0.4,8,0x3a3530,{surf:'stone'}],
-  ['solid',-4,2.0,-8,12,0.4,8,0x4a3a32,{surf:'stone'}],
-  ['solid',-5,0,6,4.5,0.45,4.5,0xc45a28,{surf:'stone'}],
-  ['solid',-5,0.45,6,3.2,0.08,3.2,0xe07a3a,{surf:'stone'}],
+  // Safe ground must read as solid rock (never bright molten orange).
+  ['solid',0,0,12,26,0.4,28,0x2a2218,{surf:'stone',role:'safeRock'}],
+  ['solid',0,0.4,18,8,0.06,6,0x3a2a22,{surf:'stone',role:'safeRock'}],
+  ['solid',0,0.42,8,5.5,0.05,18,0x4a3228,{surf:'stone',role:'safeRock'}],
+  ['solid',6,1.2,0,10,0.4,8,0x3a3530,{surf:'stone',role:'safeRock'}],
+  ['solid',-4,2.0,-8,12,0.4,8,0x3a3228,{surf:'stone',role:'safeRock'}],
+  // Snoozle 1 pad — charcoal rock with a thin warm crack, not a lava pool lookalike.
+  ['solid',-5,0,6,4.5,0.45,4.5,0x2e2620,{surf:'stone',role:'safeRock'}],
+  ['solid',-5,0.45,6,3.2,0.06,0.12,0x8a2010,{surf:'stone',role:'safeCrack'}],
+  ['solid',-5,0.45,6,0.12,0.06,3.2,0x8a2010,{surf:'stone',role:'safeCrack'}],
   ['lava',10,-0.15,10,4.0,0.4,4.0],
   ['salamander',4,14,{}],
   ['salamander',-8,10,{path:[{x:-9,z:11},{x:-6,z:9},{x:-8,z:12}]}],
@@ -182,110 +186,112 @@ steps:[
   ['basaltRock',-10,0,14,1.2],['basaltRock',11,0,4,1.0],['basaltRock',-8,0,-2,1.4],
 
   // ========== AREA 2 — The Cinder Steps ==========
-  ['solid',0,3.5,-18,18,0.4,12,0x2e2a2c,{surf:'stone'}],
-  ['solid',0,4.0,-18,6,0.08,4,0x8a4a2a,{surf:'stone'}],
-  ['solid',-2,4.5,-26,16,0.4,12,0x3a322e,{surf:'stone'}],
+  ['solid',0,3.5,-18,18,0.4,12,0x2e2a2c,{surf:'stone',role:'safeRock'}],
+  ['solid',0,4.0,-18,6,0.08,4,0x3a322e,{surf:'stone',role:'safeRock'}],
+  ['solid',0,4.02,-18,4.5,0.04,0.1,0x8a2010,{surf:'stone',role:'safeCrack'}],
+  ['solid',-2,4.5,-26,16,0.4,12,0x3a322e,{surf:'stone',role:'safeRock'}],
   ['cinder',-2,-26,'mid'],
   ['basaltRock',6,4.5,-22,0.9],['basaltRock',-8,4.5,-28,1.1],
   ['peakTuft',5,-20,0.55],
   // Teach gap A (flat 5.9 tops, safe volcanic floor below)
-  ['solid',0,5.5,-34,16,0.4,8,0x3a3538,{surf:'stone'}],
-  ['solid',0,5.9,-37.7,14,0.06,0.35,0x8a2010,{surf:'stone'}],
-  ['solid',0,5.5,-52,16,0.4,9,0x3a3538,{surf:'stone'}],
-  ['solid',0,5.9,-47.7,14,0.06,0.35,0x8a2010,{surf:'stone'}],
-  ['solid',0,1.4,-42.5,18,0.4,12,0x2a2420,{surf:'stone'}],
-  ['solid',12,2.0,-42,6,0.4,16,0x3a322e,{surf:'stone'}],
-  ['solid',12,3.5,-48,6,0.4,8,0x3a322e,{surf:'stone'}],
-  ['solid',12,5.0,-52,6,0.4,6,0x3a3538,{surf:'stone'}],
-  ['solid',8,5.5,-50,8,0.4,6,0x3a3538,{surf:'stone'}],
+  ['solid',0,5.5,-34,16,0.4,8,0x3a3538,{surf:'stone',role:'safeRock'}],
+  ['solid',0,5.9,-37.7,14,0.06,0.35,0x8a2010,{surf:'stone',role:'safeCrack'}],
+  ['solid',0,5.5,-52,16,0.4,9,0x3a3538,{surf:'stone',role:'safeRock'}],
+  ['solid',0,5.9,-47.7,14,0.06,0.35,0x8a2010,{surf:'stone',role:'safeCrack'}],
+  ['solid',0,1.4,-42.5,18,0.4,12,0x2a2420,{surf:'stone',role:'safeRock'}],
+  ['solid',12,2.0,-42,6,0.4,16,0x3a322e,{surf:'stone',role:'safeRock'}],
+  ['solid',12,3.5,-48,6,0.4,8,0x3a322e,{surf:'stone',role:'safeRock'}],
+  ['solid',12,5.0,-52,6,0.4,6,0x3a3538,{surf:'stone',role:'safeRock'}],
+  ['solid',8,5.5,-50,8,0.4,6,0x3a3538,{surf:'stone',role:'safeRock'}],
   // Side ledge — clear of the overlapping teach-B pad above the center
   ['crate',9,5.9,-50,'sky'],
   // Teach gap B
-  ['solid',0,6.5,-54,16,0.4,8,0x3a3538,{surf:'stone'}],
-  ['solid',0,6.9,-57.7,14,0.06,0.35,0x8a2010,{surf:'stone'}],
-  ['solid',0,6.5,-72,16,0.4,9,0x3a3538,{surf:'stone'}],
-  ['solid',0,6.9,-67.7,14,0.06,0.35,0x8a2010,{surf:'stone'}],
-  ['solid',0,2.2,-62.5,18,0.4,12,0x2a2420,{surf:'stone'}],
-  ['solid',-12,3.5,-62,6,0.4,14,0x3a322e,{surf:'stone'}],
-  ['solid',-12,5.5,-68,6,0.4,8,0x3a3538,{surf:'stone'}],
-  // Snoozle 2 ledge
-  ['solid',0,7.5,-70,10,0.4,6,0x3a3538,{surf:'stone'}],
+  ['solid',0,6.5,-54,16,0.4,8,0x3a3538,{surf:'stone',role:'safeRock'}],
+  ['solid',0,6.9,-57.7,14,0.06,0.35,0x8a2010,{surf:'stone',role:'safeCrack'}],
+  ['solid',0,6.5,-72,16,0.4,9,0x3a3538,{surf:'stone',role:'safeRock'}],
+  ['solid',0,6.9,-67.7,14,0.06,0.35,0x8a2010,{surf:'stone',role:'safeCrack'}],
+  ['solid',0,2.2,-62.5,18,0.4,12,0x2a2420,{surf:'stone',role:'safeRock'}],
+  ['solid',-12,3.5,-62,6,0.4,14,0x3a322e,{surf:'stone',role:'safeRock'}],
+  ['solid',-12,5.5,-68,6,0.4,8,0x3a3538,{surf:'stone',role:'safeRock'}],
+  // Snoozle 2 ledge — dark basalt, thin crack (was bright orange false-lava).
+  ['solid',0,7.5,-70,10,0.4,6,0x3a3538,{surf:'stone',role:'safeRock'}],
   ['steamVent',0,7.9,-70,1.35],
-  ['solid',-9,8.0,-78,5.5,0.4,5.5,0xe07a3a,{surf:'stone'}],
-  ['solid',-9,2.5,-74,8,0.4,10,0x2a2420,{surf:'stone'}],
+  ['solid',-9,8.0,-78,5.5,0.4,5.5,0x2e2620,{surf:'stone',role:'safeRock'}],
+  ['solid',-9,8.4,-78,3.5,0.05,0.1,0x8a2010,{surf:'stone',role:'safeCrack'}],
+  ['solid',-9,2.5,-74,8,0.4,10,0x2a2420,{surf:'stone',role:'safeRock'}],
 
   // First mandatory lava leap — SAME height 8.4 both sides
-  ['solid',0,8.0,-72,16,0.4,10,0x3a3538,{surf:'stone'}],
-  ['solid',0,8.4,-76.7,14,0.06,0.35,0x8a2010,{surf:'stone'}],
+  ['solid',0,8.0,-72,16,0.4,10,0x3a3538,{surf:'stone',role:'safeRock'}],
+  ['solid',0,8.4,-76.7,14,0.06,0.35,0x8a2010,{surf:'stone',role:'safeCrack'}],
   ['steamVent',0,8.4,-72,1.4],
-  // On takeoff top — not buried under a higher pad
-  ['crate',5,8.4,-70,'sky'],
-  ['solid',0,8.0,-92.5,16,0.4,12,0x4a3a32,{surf:'stone'}],
-  ['solid',0,8.4,-86.65,14,0.06,0.35,0x8a2010,{surf:'stone'}],
-  ['solid',0,8.4,-90,5,0.08,2.2,0xffd24a,{surf:'stone'}],
+  ['solid',0,8.0,-92.5,16,0.4,12,0x3a3228,{surf:'stone',role:'safeRock'}],
+  ['solid',0,8.4,-86.65,14,0.06,0.35,0x8a2010,{surf:'stone',role:'safeCrack'}],
+  // Landing marker — muted stone + crack, not glossy gold false-lava.
+  ['solid',0,8.4,-90,5,0.08,2.2,0x3a322e,{surf:'stone',role:'safeRock'}],
+  ['solid',0,8.48,-90,3.5,0.04,0.1,0x8a2010,{surf:'stone',role:'safeCrack'}],
   ['lava',0,6.0,-81.75,16,0.55,9.0],
   // Basin under / beside first leap — miss the elevated route, hit lava
   ['lava',0,-0.15,-82,30,0.55,32],
   ['lava',-13,-0.15,-82,10,0.55,26],
   ['lava',13,-0.15,-82,10,0.55,26],
-  // Mid landing pad (clear of stair overlap at z≈-98)
+  // Fair mid Cinder on the broad landing — visible, avoidable; can remove Sky Blast.
+  ['cinder',5,-95,'mid'],
+  // Recovery mystery box after the power-loss chance (not next to a takeoff vent).
   ['crate',-5,8.4,-90,'sky'],
 
   // ========== AREA 3 — stairs up, then flat leaps ==========
   // Stair climb to islandA height
-  ['solid',0,9.0,-100,14,0.4,6,0x2e2a28,{surf:'stone'}],
-  ['solid',0,10.0,-102,14,0.4,4,0x2e2a28,{surf:'stone'}],
-  ['solid',0,11.0,-104,16,0.4,8,0x2e2a28,{surf:'stone'}],
+  ['solid',0,9.0,-100,14,0.4,6,0x2e2a28,{surf:'stone',role:'safeRock'}],
+  ['solid',0,10.0,-102,14,0.4,4,0x2e2a28,{surf:'stone',role:'safeRock'}],
+  ['solid',0,11.0,-104,16,0.4,8,0x2e2a28,{surf:'stone',role:'safeRock'}],
   ['steamVent',0,11.4,-104,1.35],
-  ['solid',0,11.4,-107.7,12,0.06,0.35,0x8a2010,{surf:'stone'}],
-  ['solid',0,11.0,-123.5,12,0.4,12,0x3a3538,{surf:'stone'}],
-  ['solid',0,11.4,-117.65,10,0.06,0.35,0x8a2010,{surf:'stone'}],
+  ['solid',0,11.4,-107.7,12,0.06,0.35,0x8a2010,{surf:'stone',role:'safeCrack'}],
+  ['solid',0,11.0,-123.5,12,0.4,12,0x3a3538,{surf:'stone',role:'safeRock'}],
+  ['solid',0,11.4,-117.65,10,0.06,0.35,0x8a2010,{surf:'stone',role:'safeCrack'}],
   ['lava',0,9.0,-112.75,16,0.55,9.0],
   ['lava',0,-0.15,-113,28,0.55,28],
   ['lava',-12,-0.15,-113,9,0.55,24],
   ['lava',12,-0.15,-113,9,0.55,24],
-  ['crate',4,11.4,-121,'sky'],
 
   // Stair to islandB
-  ['solid',0,12.0,-130,12,0.4,4,0x3a3538,{surf:'stone'}],
-  ['solid',0,13.0,-134,12,0.4,8,0x3a3538,{surf:'stone'}],
+  ['solid',0,12.0,-130,12,0.4,4,0x3a3538,{surf:'stone',role:'safeRock'}],
+  ['solid',0,13.0,-134,12,0.4,8,0x3a3538,{surf:'stone',role:'safeRock'}],
   ['steamVent',0,13.4,-134,1.3],
-  ['solid',0,13.4,-137.7,10,0.06,0.35,0x8a2010,{surf:'stone'}],
-  ['solid',0,13.0,-153.5,12,0.4,12,0x3a3538,{surf:'stone'}],
-  ['solid',0,13.4,-147.65,10,0.06,0.35,0x8a2010,{surf:'stone'}],
+  ['solid',0,13.4,-137.7,10,0.06,0.35,0x8a2010,{surf:'stone',role:'safeCrack'}],
+  ['solid',0,13.0,-153.5,12,0.4,12,0x3a3538,{surf:'stone',role:'safeRock'}],
+  ['solid',0,13.4,-147.65,10,0.06,0.35,0x8a2010,{surf:'stone',role:'safeCrack'}],
   ['lava',0,11.0,-142.75,16,0.55,9.0],
   ['lava',0,-0.15,-143,28,0.55,28],
   ['lava',-12,-0.15,-143,9,0.55,24],
   ['lava',12,-0.15,-143,9,0.55,24],
 
   // Stair to wideRiver
-  ['solid',0,14.0,-160,14,0.4,4,0x3a3538,{surf:'stone'}],
-  ['solid',0,15.0,-164,14,0.4,8,0x3a3538,{surf:'stone'}],
+  ['solid',0,14.0,-160,14,0.4,4,0x3a3538,{surf:'stone',role:'safeRock'}],
+  ['solid',0,15.0,-164,14,0.4,8,0x3a3538,{surf:'stone',role:'safeRock'}],
   ['steamVent',0,15.4,-164,1.4],
-  ['solid',0,15.4,-167.7,12,0.06,0.35,0x8a2010,{surf:'stone'}],
-  ['solid',0,15.0,-184.5,16,0.4,14,0x4a3a32,{surf:'stone'}],
-  ['solid',0,15.4,-177.65,14,0.06,0.35,0x8a2010,{surf:'stone'}],
-  ['solid',0,15.4,-182,5,0.08,2.2,0xffd24a,{surf:'stone'}],
+  ['solid',0,15.4,-167.7,12,0.06,0.35,0x8a2010,{surf:'stone',role:'safeCrack'}],
+  ['solid',0,15.0,-184.5,16,0.4,14,0x3a3228,{surf:'stone',role:'safeRock'}],
+  ['solid',0,15.4,-177.65,14,0.06,0.35,0x8a2010,{surf:'stone',role:'safeCrack'}],
+  ['solid',0,15.4,-182,5,0.08,2.2,0x3a322e,{surf:'stone',role:'safeRock'}],
+  ['solid',0,15.48,-182,3.5,0.04,0.1,0x8a2010,{surf:'stone',role:'safeCrack'}],
   ['lava',0,13.0,-172.75,18,0.6,10.0],
   ['lava',0,-0.15,-173,32,0.55,32],
   ['lava',-13,-0.15,-173,10,0.55,28],
   ['lava',13,-0.15,-173,10,0.55,28],
-  ['crate',-5,15.4,-182,'sky'],
 
   // Stair to geyserApproach
-  ['solid',0,16.0,-192,14,0.4,4,0x3a3538,{surf:'stone'}],
-  ['solid',0,17.0,-196,14,0.4,8,0x3a3538,{surf:'stone'}],
+  ['solid',0,16.0,-192,14,0.4,4,0x3a3538,{surf:'stone',role:'safeRock'}],
+  ['solid',0,17.0,-196,14,0.4,8,0x3a3538,{surf:'stone',role:'safeRock'}],
   ['steamVent',0,17.4,-196,1.35],
-  ['solid',0,17.4,-199.7,12,0.06,0.35,0x8a2010,{surf:'stone'}],
-  ['solid',0,17.0,-215.5,14,0.4,12,0x4a3a32,{surf:'stone'}],
-  ['solid',0,17.4,-209.65,12,0.06,0.35,0x8a2010,{surf:'stone'}],
+  ['solid',0,17.4,-199.7,12,0.06,0.35,0x8a2010,{surf:'stone',role:'safeCrack'}],
+  ['solid',0,17.0,-215.5,14,0.4,12,0x3a3228,{surf:'stone',role:'safeRock'}],
+  ['solid',0,17.4,-209.65,12,0.06,0.35,0x8a2010,{surf:'stone',role:'safeCrack'}],
   ['lava',0,15.0,-204.75,16,0.55,9.0],
   ['lava',0,-0.15,-205,30,0.55,30],
   ['lava',-12,-0.15,-205,10,0.55,26],
   ['lava',12,-0.15,-205,10,0.55,26],
-  ['crate',5,17.4,-194,'sky'],
   ['geyser',0,17.4,-216,1.2],
-  ['solid',0,21.0,-220,12,0.4,8,0x3a3538,{surf:'stone'}],
+  ['solid',0,21.0,-220,12,0.4,8,0x3a3538,{surf:'stone',role:'safeRock'}],
   // Low basin under geyser / approach / later elevated route
   ['lava',-10,-0.15,-218,12,0.55,18],
   ['lava',10,-0.15,-218,12,0.55,18],
@@ -294,8 +300,8 @@ steps:[
   ['lava',12,-0.15,-248,10,0.55,28],
 
   // Open Wisp terrace
-  ['solid',0,19.0,-228,16,0.4,6,0x2e2a28,{surf:'stone'}],
-  ['solid',0,19.5,-234,18,0.4,14,0x2e2a28,{surf:'stone'}],
+  ['solid',0,19.0,-228,16,0.4,6,0x2e2a28,{surf:'stone',role:'safeRock'}],
+  ['solid',0,19.5,-234,18,0.4,14,0x2e2a28,{surf:'stone',role:'safeRock'}],
   ['wisp',[
     {x:6,y:20.4,z:-230},{x:8,y:20.6,z:-234},{x:6,y:20.4,z:-238},{x:4,y:20.5,z:-234}
   ],{speed:1.9}],
@@ -306,25 +312,27 @@ steps:[
   ['salamander',4,-236,{}],
   ['cinder',-6,-232,'small'],
   // Forced Wisp corridor
-  ['solid',-5,19.5,-248,6,3.2,0.7,0x2a2624,{surf:'stone'}],
-  ['solid',5,19.5,-248,6,3.2,0.7,0x2a2624,{surf:'stone'}],
-  ['solid',0,19.5,-256,10,0.4,16,0x2e2a28,{surf:'stone'}],
+  ['solid',-5,19.5,-248,6,3.2,0.7,0x2a2624,{surf:'stone',role:'safeRock'}],
+  ['solid',5,19.5,-248,6,3.2,0.7,0x2a2624,{surf:'stone',role:'safeRock'}],
+  ['solid',0,19.5,-256,10,0.4,16,0x2e2a28,{surf:'stone',role:'safeRock'}],
   ['wisp',[
     {x:0,y:20.3,z:-246},{x:0,y:20.5,z:-250},{x:0,y:20.3,z:-254}
   ],{speed:1.6}],
-  ['solid',0,20.0,-262,14,0.4,10,0x2a2624,{surf:'stone'}],
+  // Approach pad extended through the cave mouth (was a 2u floor gap at z≈-268).
+  ['solid',0,20.0,-262,14,0.4,14,0x2a2624,{surf:'stone',role:'safeRock'}],
   ['basaltRock',-6,20.0,-258,1.2],['basaltRock',6,20.0,-260,1.0],
   ['salamander',5,-260,{}],
 
   // ========== AREA 4 — The Geode Hollow ==========
   // Open mouth (Stage 4 blocker removed). Cool register begins here.
   ['geodeMouth',0,20.0,-268],
-  ['solid',0,20.0,-278,12,0.4,18,0x2a1e38,{surf:'stone'}],
-  ['solid',0,20.15,-278,6,0.06,14,0x3a2e55,{surf:'stone'}],
+  // Hollow floor pulled forward so it overlaps the mouth sill / approach pad.
+  ['solid',0,20.0,-276,12,0.4,22,0x2a1e38,{surf:'stone',role:'safeRock'}],
+  ['solid',0,20.15,-278,6,0.06,14,0x3a2e55,{surf:'stone',role:'safeRock'}],
   // Entrance corridor walls / ceiling
-  ['solid',-8.5,20.0,-278,3.5,6.5,16,0x1a1228,{surf:'stone'}],
-  ['solid',8.5,20.0,-278,3.5,6.5,16,0x1a1228,{surf:'stone'}],
-  ['solid',0,26.2,-278,20,1.2,18,0x1a1228,{surf:'stone'}],
+  ['solid',-8.5,20.0,-278,3.5,6.5,16,0x1a1228,{surf:'stone',role:'safeRock'}],
+  ['solid',8.5,20.0,-278,3.5,6.5,16,0x1a1228,{surf:'stone',role:'safeRock'}],
+  ['solid',0,26.2,-278,20,1.2,18,0x1a1228,{surf:'stone',role:'safeRock'}],
   ['crystalCluster',-5.5,20.0,-274,1.1,true],
   ['crystalCluster',5.8,20.0,-280,0.95,true],
   ['crystalCluster',-4.2,20.0,-288,0.55,false],
@@ -332,48 +340,49 @@ steps:[
   ['crystalSparks',10,0,-290,7],
 
   // Mid path — east wall continuous; west wall gapped for the steam-curtain secret
-  ['solid',0,20.0,-300,14,0.4,20,0x2a1e38,{surf:'stone'}],
-  ['solid',0,20.15,-300,5.5,0.06,16,0x4a3a78,{surf:'stone'}],
-  ['solid',8.5,20.0,-300,3.5,6.5,20,0x1a1228,{surf:'stone'}],
+  // Floor overlaps entrance and chamber (no under-world seams).
+  ['solid',0,20.0,-296,14,0.4,28,0x2a1e38,{surf:'stone',role:'safeRock'}],
+  ['solid',0,20.15,-300,5.5,0.06,16,0x4a3a78,{surf:'stone',role:'safeRock'}],
+  ['solid',8.5,20.0,-300,3.5,6.5,20,0x1a1228,{surf:'stone',role:'safeRock'}],
   // West wall split: gap around z=-308 for the side steam curtain
-  ['solid',-8.5,20.0,-294,3.5,6.5,10,0x1a1228,{surf:'stone'}],
-  ['solid',-8.5,20.0,-322,3.5,6.5,12,0x1a1228,{surf:'stone'}],
-  ['solid',0,26.4,-304,22,1.2,28,0x1a1228,{surf:'stone'}],
+  ['solid',-8.5,20.0,-294,3.5,6.5,10,0x1a1228,{surf:'stone',role:'safeRock'}],
+  ['solid',-8.5,20.0,-322,3.5,6.5,12,0x1a1228,{surf:'stone',role:'safeRock'}],
+  ['solid',0,26.4,-304,22,1.2,28,0x1a1228,{surf:'stone',role:'safeRock'}],
   ['crystalCluster',6.2,20.0,-302,1.2,true],
   ['crystalCluster',-3.5,20.0,-318,0.7,false],
 
   // Side secret — steam curtain fills the west-wall gap (optional; main route stays center).
   ['steamCurtain',-7.0,20.0,-308,5.0,3.8,'x'],
-  ['solid',-12.2,20.0,-308,6.0,0.4,8,0x2a1e38,{surf:'stone'}],
-  ['solid',-15.0,20.0,-308,1.4,4.5,8,0x1a1228,{surf:'stone'}],
-  ['solid',-12.2,20.0,-312.2,6.0,4.5,1.4,0x1a1228,{surf:'stone'}],
-  ['solid',-12.2,20.0,-303.8,6.0,4.5,1.4,0x1a1228,{surf:'stone'}],
-  ['solid',-12.2,24.2,-308,6.0,1.0,8,0x1a1228,{surf:'stone'}],
+  ['solid',-12.2,20.0,-308,6.0,0.4,8,0x2a1e38,{surf:'stone',role:'safeRock'}],
+  ['solid',-15.0,20.0,-308,1.4,4.5,8,0x1a1228,{surf:'stone',role:'safeRock'}],
+  ['solid',-12.2,20.0,-312.2,6.0,4.5,1.4,0x1a1228,{surf:'stone',role:'safeRock'}],
+  ['solid',-12.2,20.0,-303.8,6.0,4.5,1.4,0x1a1228,{surf:'stone',role:'safeRock'}],
+  ['solid',-12.2,24.2,-308,6.0,1.0,8,0x1a1228,{surf:'stone',role:'safeRock'}],
   // Secret notes exist at build time (visible, blocked by curtain until gust).
   ['note',-11.8,21.1,-306.5,false],
   ['note',-12.6,21.3,-309.2,false],
   ['crystalCluster',-13.2,20.0,-308,0.85,true],
 
   // Main chamber — Snoozle 3 in a cracked-open geode offset east so the center exit stays clear.
-  ['solid',0,20.0,-328,16,0.4,22,0x2a1e38,{surf:'stone'}],
-  ['solid',0,20.18,-328,7,0.06,14,0x5a48a0,{surf:'stone'}],
-  ['solid',-10.5,20.0,-328,4.0,6.5,22,0x1a1228,{surf:'stone'}],
-  ['solid',10.5,20.0,-328,4.0,6.5,22,0x1a1228,{surf:'stone'}],
-  ['solid',0,26.6,-328,24,1.2,24,0x1a1228,{surf:'stone'}],
+  ['solid',0,20.0,-326,16,0.4,32,0x2a1e38,{surf:'stone',role:'safeRock'}],
+  ['solid',0,20.18,-328,7,0.06,14,0x5a48a0,{surf:'stone',role:'safeRock'}],
+  ['solid',-10.5,20.0,-328,4.0,6.5,22,0x1a1228,{surf:'stone',role:'safeRock'}],
+  ['solid',10.5,20.0,-328,4.0,6.5,22,0x1a1228,{surf:'stone',role:'safeRock'}],
+  ['solid',0,26.6,-328,24,1.2,24,0x1a1228,{surf:'stone',role:'safeRock'}],
   ['crackedGeode',3.2,20.0,-330,1.55],
   ['crystalCluster',-6.5,20.0,-334,1.15,true],
   ['crystalCluster',-2.5,20.0,-322,0.55,false],
   ['crystalCluster',7.2,20.0,-338,0.55,false],
   ['crystalSparks',14,0,-328,9],
 
-  // Exit corridor — opens onto the Climb / caldera reveal (Stage 5 soft-return removed).
-  ['solid',0,20.5,-348,12,0.4,14,0x2a1e38,{surf:'stone'}],
-  ['solid',0,20.7,-348,5,0.06,10,0x3a2e55,{surf:'stone'}],
-  ['solid',-7.5,20.5,-348,3.5,6.0,16,0x1a1228,{surf:'stone'}],
-  ['solid',7.5,20.5,-348,3.5,6.0,16,0x1a1228,{surf:'stone'}],
-  ['solid',0,26.5,-348,18,1.0,16,0x1a1228,{surf:'stone'}],
-  ['solid',0,21.5,-360,12,0.4,12,0x2e2438,{surf:'stone'}],
-  ['solid',0,21.7,-360,5,0.06,8,0x4a3a60,{surf:'stone'}],
+  // Exit corridor — same floor height as chamber so STEP is not required at the lip.
+  ['solid',0,20.0,-350,12,0.4,20,0x2a1e38,{surf:'stone',role:'safeRock'}],
+  ['solid',0,20.2,-348,5,0.06,10,0x3a2e55,{surf:'stone',role:'safeRock'}],
+  ['solid',-7.5,20.0,-348,3.5,6.0,16,0x1a1228,{surf:'stone',role:'safeRock'}],
+  ['solid',7.5,20.0,-348,3.5,6.0,16,0x1a1228,{surf:'stone',role:'safeRock'}],
+  ['solid',0,26.5,-348,18,1.0,16,0x1a1228,{surf:'stone',role:'safeRock'}],
+  ['solid',0,21.5,-360,12,0.4,14,0x2e2438,{surf:'stone',role:'safeRock'}],
+  ['solid',0,21.7,-360,5,0.06,8,0x4a3a60,{surf:'stone',role:'safeRock'}],
   ['crystalCluster',-4.5,21.5,-356,0.9,true],
   ['crystalCluster',4.8,21.5,-358,0.5,false],
 
