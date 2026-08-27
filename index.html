@@ -555,6 +555,9 @@ snoozles:[[-5,0.55,6,0,false],[-9,8.55,-78,1,false],[3.2,20.55,-330,2,false],[-5
 trees:[],
 steps:[
   ['volcanoLandmark',0,0,-290,1.35],
+  // Late-route volcano silhouette visible from Climb / Crater approach.
+  ['volcanoLandmark',-14,28,-560,0.85],
+  ['volcanoLandmark',12,26,-600,0.7],
   ['driftSparks',22],
   // World bounds — ceiling clears Organ pipes; far face past Crater; sides cover full route.
   ['solid',0,72,-320,38,2,700,0xffc48a,{invisible:true}],
@@ -728,10 +731,10 @@ steps:[
   // Hollow floor pulled forward so it overlaps the mouth sill / approach pad.
   ['solid',0,20.0,-276,12,0.4,22,0x2a1e38,{surf:'stone',role:'safeRock'}],
   ['solid',0,20.15,-278,6,0.06,14,0x3a2e55,{surf:'stone',role:'safeRock'}],
-  // Entrance corridor walls / ceiling
-  ['solid',-8.5,20.0,-278,3.5,6.5,16,0x1a1228,{surf:'stone',role:'safeRock'}],
-  ['solid',8.5,20.0,-278,3.5,6.5,16,0x1a1228,{surf:'stone',role:'safeRock'}],
-  ['solid',0,26.2,-278,20,1.2,18,0x1a1228,{surf:'stone',role:'safeRock'}],
+  // Entrance corridor walls / ceiling — fade with the mouth shell so the camera stays clear.
+  ['solid',-8.5,20.0,-278,3.5,6.5,16,0x1a1228,{surf:'stone',role:'safeRock',geodeShell:true}],
+  ['solid',8.5,20.0,-278,3.5,6.5,16,0x1a1228,{surf:'stone',role:'safeRock',geodeShell:true}],
+  ['solid',0,26.2,-278,20,1.2,18,0x1a1228,{surf:'stone',role:'safeRock',geodeShell:true}],
   ['crystalCluster',-5.5,20.0,-274,1.1,true],
   ['crystalCluster',5.8,20.0,-280,0.95,true],
   ['crystalCluster',-4.2,20.0,-288,0.55,false],
@@ -928,10 +931,14 @@ steps:[
   ['solid',-5,44.0,-590,4.2,0.45,4.2,0xc45a28,{surf:'stone'}],
   ['solid',-5,44.45,-590,3.0,0.08,3.0,0xe07a3a,{surf:'stone'}],
   ['basaltRock',-9,44.0,-588,1.1],['basaltRock',6,44.0,-594,1.0],
-  // Caldera walls + distant molten glow (deep decorative lava — not on the victory walk).
-  ['solid',-14,44.0,-620,4,8,40,0x1a1614,{surf:'stone'}],
-  ['solid',14,44.0,-620,4,8,40,0x1a1614,{surf:'stone'}],
+  // Warm crater bowl walls (volcanic rock + glow, not plain black corridor slabs).
+  ['solid',-14,44.0,-620,4,10,40,0x3a2a22,{surf:'stone'}],
+  ['solid',14,44.0,-620,4,10,40,0x3a2a22,{surf:'stone'}],
+  ['solid',-13.2,46.0,-620,0.35,0.2,30,0xff6a20,{surf:'stone'}],
+  ['solid',13.2,48.0,-620,0.35,0.2,30,0xff6a20,{surf:'stone'}],
+  ['solid',0,42.0,-655,28,8,8,0x2a1e18,{surf:'stone'}],
   ['lava',0,28.0,-640,22,0.5,28],
+  ['lava',0,36.0,-652,14,0.45,10],
   // Short forgiving victory walk from Snoozle 4 to the keyboard.
   ['solid',0,44.0,-608,14,0.4,12,0x3a3538,{surf:'stone'}],
   ['solid',0,44.0,-620,14,0.4,10,0x4a3a32,{surf:'stone'}],
@@ -1320,7 +1327,9 @@ function shadowReceiveAt(x,z,belowY,r){
 window.__shadowReceiveAt=(x,z,belowY,r)=>shadowReceiveAt(x,z,belowY,r);
 function insideSolid(x,y,z,m){for(const s of solids){if(x>s.min.x-m&&x<s.max.x+m&&y>s.min.y-m&&y<s.max.y+m&&z>s.min.z-m&&z<s.max.z+m)return true;}return false;}
 function addSolid(x,y,z,w,h,d,color,opts){const m=new THREE.Mesh(BOXG,lam(color));m.scale.set(w,h,d);m.position.set(x,y+h/2,z);if(opts&&opts.invisible)m.visible=false;scene.add(m);
-  const s={min:new THREE.Vector3(x-w/2,y,z-d/2),max:new THREE.Vector3(x+w/2,y+h,z+d/2),mesh:m,surf:(opts&&opts.surf)||'wood',role:(opts&&opts.role)||null,color:color|0};solids.push(s);return s;}
+  // Peak Geode mouth corridor walls may opt into shell fade (collision stays; readability only).
+  if(opts&&opts.geodeShell&&typeof registerGeodeShellMesh==='function')registerGeodeShellMesh(m);
+  const s={min:new THREE.Vector3(x-w/2,y,z-d/2),max:new THREE.Vector3(x+w/2,y+h,z+d/2),mesh:m,surf:(opts&&opts.surf)||'wood',role:(opts&&opts.role)||null,color:color|0,geodeShell:!!(opts&&opts.geodeShell)};solids.push(s);return s;}
 
 // ground with a hole for the pond
 function grassTex(){const cv=document.createElement('canvas');cv.width=cv.height=256;const g=cv.getContext('2d');g.fillStyle='#78c65a';g.fillRect(0,0,256,256);
@@ -2627,13 +2636,26 @@ function updateGeysers(dt){
 function updatePeak(dt){
   updateCinders(dt);updateEmbers(dt);updateWisps(dt);updateSalamanders(dt);updateGeysers(dt);
   updateDriftSparks(dt);updateProtoEndpoints(dt);
-  updateSteamCurtains(dt);updateCrystalSparks(dt);updateGeodeAmbience(dt);
+  updateSteamCurtains(dt);updateCrystalSparks(dt);updateGeodeAmbience(dt);updateGeodeShellFade(dt);
   // Steam Organ finish update is owned by FINISH.update — do not double-drive here.
 }
 
 // ---- Stage 4 presentation + temporary endpoint + Stage 5 Geode Hollow ----
 const protoEndpoints=[],driftSparks=[],steamCurtains=[],crystalSparks=[];
 let geodeAmbT=0,geodeInside=false;
+// Entrance shell fade — same idea as Wreck hull: keep collision, clear the camera.
+const GEODE_SHELL={meshes:[],fade:1,inside:false};
+let crackedGeodeChamber=null;
+function registerGeodeShellMesh(m){
+  if(!m||!m.material)return m;
+  if(typeof m.material.clone==='function')m.material=m.material.clone();
+  m.material.transparent=true;
+  if(m.material.opacity==null)m.material.opacity=1;
+  m.userData=m.userData||{};
+  if(m.userData.shellBaseOp==null)m.userData.shellBaseOp=m.material.opacity;
+  GEODE_SHELL.meshes.push(m);
+  return m;
+}
 function clearPeakWorld(){
   const rem=m=>{
     if(!m)return;
@@ -2653,17 +2675,28 @@ function clearPeakWorld(){
   for(const s of crystalSparks)rem(s.m);crystalSparks.length=0;
   for(const f of organFireworks){if(f.m)rem(f.m);}organFireworks.length=0;
   if(ORGAN&&ORGAN.g)rem(ORGAN.g);ORGAN=null;
+  GEODE_SHELL.meshes.length=0;GEODE_SHELL.fade=1;GEODE_SHELL.inside=false;
+  crackedGeodeChamber=null;
   geodeAmbT=0;geodeInside=false;
 }
 function addVolcanoLandmark(x,y,z,scale){
+  // Clear volcano silhouette: cone mountain, open crater bowl, molten glow, smoke.
   scale=scale||1;
   const g=new THREE.Group();g.position.set(x,y,z);
-  g.add(mesh(CONE,lam(0x4a3530),0,8*scale,0,14*scale,18*scale,14*scale));
-  g.add(mesh(CONE,lam(0x6a3a2a),0,14*scale,0,7*scale,10*scale,7*scale));
-  g.add(mesh(CYL,new THREE.MeshBasicMaterial({color:0xff6a18,transparent:true,opacity:0.55}),0,20*scale,0,2.2*scale,4*scale,2.2*scale));
-  // Soft smoke puffs (decorative only)
-  for(let i=0;i<3;i++)g.add(mesh(SPH,new THREE.MeshBasicMaterial({color:0xffe0c0,transparent:true,opacity:0.35}),rand(-1.5,1.5)*scale,(22+i*2.2)*scale,rand(-1.5,1.5)*scale,(2.4-i*0.3)*scale));
+  g.add(mesh(CONE,lam(0x3a2a24),0,7*scale,0,16*scale,16*scale,16*scale));
+  g.add(mesh(CONE,lam(0x5a3a2e),0,13*scale,0,9*scale,12*scale,9*scale));
+  g.add(mesh(CONE,lam(0x6a4230),0,17*scale,0,5.2*scale,7*scale,5.2*scale));
+  // Crater rim lip (readable bowl, not a sealed tip)
+  g.add(mesh(CYL,lam(0x2a1e18),0,19.2*scale,0,3.6*scale,0.7*scale,3.6*scale));
+  g.add(mesh(CYL,lam(0x4a2a20),0,19.0*scale,0,2.6*scale,0.5*scale,2.6*scale));
+  // Molten throat + glow column
+  g.add(mesh(CYL,new THREE.MeshBasicMaterial({color:0xff4a12,transparent:true,opacity:0.7}),0,18.2*scale,0,1.6*scale,1.2*scale,1.6*scale));
+  g.add(mesh(CYL,new THREE.MeshBasicMaterial({color:0xff6a18,transparent:true,opacity:0.55}),0,21*scale,0,1.8*scale,5*scale,1.8*scale));
+  g.add(mesh(SPH,new THREE.MeshBasicMaterial({color:0xffe0a0,transparent:true,opacity:0.4}),0,20.5*scale,0,2.2*scale));
+  for(let i=0;i<4;i++)g.add(mesh(SPH,new THREE.MeshBasicMaterial({color:0xffe0c0,transparent:true,opacity:0.32}),rand(-1.8,1.8)*scale,(22+i*2.4)*scale,rand(-1.8,1.8)*scale,(2.6-i*0.35)*scale));
+  g.userData={kind:'volcanoLandmark',scale};
   scene.add(g);levelDecor.push(g);
+  return g;
 }
 function addPeakTuft(x,z,s){
   s=s||1;const g=new THREE.Group();g.position.set(x,groundHeightAt(x,z),z);
@@ -2767,73 +2800,88 @@ function addCrystalCluster(x,y,z,scale,blocking){
 function addGeodeMouth(x,y,z){
   // Natural volcanic cave mouth — irregular basalt, not a rectangular door/box.
   // Cool light spills from inside; crystals begin at the rim. Floor solid matches the opening.
+  // Decorative shell meshes fade when Pling enters (Wreck-style readability).
   const g=new THREE.Group();g.position.set(x,y,z);
   const basalt=lam(0x2a221c),dark=lam(0x1a1410),rim=lam(0x3a2e28),deep=lam(GEODE_DEEP);
-  // Floor sill through the mouth (visual + matched by collision below).
+  const shellAdd=(m)=>{registerGeodeShellMesh(m);g.add(m);return m;};
+  // Floor sill through the mouth (visual + matched by collision below). Keep opaque — not an occluder.
   g.add(mesh(BOXG,basalt,0,0.2,0,8.4,0.4,3.6));
-  g.add(mesh(BOXG,lam(0x2a1e38),0,0.42, -0.4,5.2,0.08,2.4));
+  g.add(mesh(BOXG,lam(0x2a1e38),0,0.42,-0.4,5.2,0.08,2.4));
   // Left basalt mass — stacked uneven chunks, not a flat pillar.
-  g.add(mesh(BOXG,basalt,-4.6,1.4,0.2,2.4,2.8,3.0));
-  g.add(mesh(BOXG,dark,-5.2,2.8,-0.3,2.0,2.4,2.4));
-  g.add(mesh(BOXG,rim,-3.6,3.6,0.35,1.6,1.8,2.0));
-  g.add(mesh(BOXG,basalt,-4.0,4.6,-0.2,2.2,1.2,2.2));
+  shellAdd(mesh(BOXG,basalt,-4.6,1.4,0.2,2.4,2.8,3.0));
+  shellAdd(mesh(BOXG,dark,-5.2,2.8,-0.3,2.0,2.4,2.4));
+  shellAdd(mesh(BOXG,rim,-3.6,3.6,0.35,1.6,1.8,2.0));
+  shellAdd(mesh(BOXG,basalt,-4.0,4.6,-0.2,2.2,1.2,2.2));
   // Right basalt mass — deliberately asymmetric silhouette.
-  g.add(mesh(BOXG,basalt,4.8,1.2,0.15,2.6,2.4,2.8));
-  g.add(mesh(BOXG,dark,5.1,2.9,0.4,2.1,2.6,2.2));
-  g.add(mesh(BOXG,rim,3.7,3.4,-0.25,1.5,2.0,2.1));
-  g.add(mesh(BOXG,basalt,4.2,4.8,0.1,2.0,1.4,2.0));
+  shellAdd(mesh(BOXG,basalt,4.8,1.2,0.15,2.6,2.4,2.8));
+  shellAdd(mesh(BOXG,dark,5.1,2.9,0.4,2.1,2.6,2.2));
+  shellAdd(mesh(BOXG,rim,3.7,3.4,-0.25,1.5,2.0,2.1));
+  shellAdd(mesh(BOXG,basalt,4.2,4.8,0.1,2.0,1.4,2.0));
   // Broken lintel / irregular arch crown (jagged top, not a flat beam).
-  g.add(mesh(BOXG,dark,-1.6,5.1,0,2.4,1.1,2.4));
-  g.add(mesh(BOXG,basalt,1.4,5.35,0.15,2.8,1.4,2.2));
-  g.add(mesh(BOXG,rim,0.2,5.7,-0.35,3.6,0.9,1.8));
-  g.add(mesh(BOXG,dark,-2.8,4.9,0.4,1.2,0.8,1.6));
+  shellAdd(mesh(BOXG,dark,-1.6,5.1,0,2.4,1.1,2.4));
+  shellAdd(mesh(BOXG,basalt,1.4,5.35,0.15,2.8,1.4,2.2));
+  shellAdd(mesh(BOXG,rim,0.2,5.7,-0.35,3.6,0.9,1.8));
+  shellAdd(mesh(BOXG,dark,-2.8,4.9,0.4,1.2,0.8,1.6));
   // Inner cave shadow — open passage, not a door fill.
-  g.add(mesh(BOXG,deep,0,2.4,-0.9,5.0,4.2,0.5));
-  // Cool wash spilling out of the Hollow.
-  g.add(mesh(BOXG,new THREE.MeshBasicMaterial({color:0xa090ff,transparent:true,opacity:0.22}),0,2.3,-0.35,4.4,3.4,0.12));
-  g.add(mesh(BOXG,new THREE.MeshBasicMaterial({color:0x88ccff,transparent:true,opacity:0.12}),0,2.0,0.55,3.6,2.8,0.08));
+  shellAdd(mesh(BOXG,deep,0,2.4,-0.9,5.0,4.2,0.5));
+  // Cool wash spilling out of the Hollow (already translucent; still tracks fade).
+  shellAdd(mesh(BOXG,new THREE.MeshBasicMaterial({color:0xa090ff,transparent:true,opacity:0.22}),0,2.3,-0.35,4.4,3.4,0.12));
+  shellAdd(mesh(BOXG,new THREE.MeshBasicMaterial({color:0x88ccff,transparent:true,opacity:0.12}),0,2.0,0.55,3.6,2.8,0.08));
   // Crystal growth beginning at the mouth.
-  addCrystalShard(g,-3.4,3.2,0.55,0.32,1.2,0.32,GEODE_CRYSTAL2,0xffffff);
-  addCrystalShard(g,3.2,3.5,0.45,0.28,1.15,0.28,GEODE_CRYSTAL,0xc8b0ff);
-  addCrystalShard(g,-1.0,4.9,0.35,0.2,0.85,0.2,GEODE_PALE,0xffffff);
-  addCrystalShard(g,1.6,5.1,0.2,0.18,0.75,0.18,GEODE_CRYSTAL2,0xffffff);
-  addCrystalShard(g,-2.2,2.2,0.7,0.16,0.7,0.16,GEODE_CRYSTAL,0xc8b0ff);
+  const c1=addCrystalShard(g,-3.4,3.2,0.55,0.32,1.2,0.32,GEODE_CRYSTAL2,0xffffff);registerGeodeShellMesh(c1);
+  const c2=addCrystalShard(g,3.2,3.5,0.45,0.28,1.15,0.28,GEODE_CRYSTAL,0xc8b0ff);registerGeodeShellMesh(c2);
+  const c3=addCrystalShard(g,-1.0,4.9,0.35,0.2,0.85,0.2,GEODE_PALE,0xffffff);registerGeodeShellMesh(c3);
+  const c4=addCrystalShard(g,1.6,5.1,0.2,0.18,0.75,0.18,GEODE_CRYSTAL2,0xffffff);registerGeodeShellMesh(c4);
+  const c5=addCrystalShard(g,-2.2,2.2,0.7,0.16,0.7,0.16,GEODE_CRYSTAL,0xc8b0ff);registerGeodeShellMesh(c5);
   // Thin steam leaking from cracks.
   for(let i=0;i<4;i++){
-    g.add(mesh(SPH,new THREE.MeshBasicMaterial({color:0xe8f0ff,transparent:true,opacity:0.28}),
+    shellAdd(mesh(SPH,new THREE.MeshBasicMaterial({color:0xe8f0ff,transparent:true,opacity:0.28}),
       rand(-3.5,3.5),1.2+i*0.7,0.6+rand(-0.2,0.2),0.22+i*0.04));
   }
+  g.userData={kind:'geodeMouth',shell:true};
   scene.add(g);levelDecor.push(g);
   // Collision: floor sill through the mouth + irregular side masses + crown.
-  // Opening stays open on the centerline (~|x|<3.2).
+  // Opening stays open on the centerline (~|x|<3.2). Invisible — fade is visual-only.
   addSolid(x,y,z,8.6,0.4,3.8,0x2a221c,{surf:'stone',invisible:true,role:'safeRock'});
   addSolid(x-4.6,y,z,2.6,5.2,3.2,0x2a221c,{surf:'stone',invisible:true,role:'safeRock'});
   addSolid(x+4.7,y,z,2.7,5.2,3.0,0x2a221c,{surf:'stone',invisible:true,role:'safeRock'});
   addSolid(x,y+4.7,z,8.0,1.5,2.6,0x1a1410,{surf:'stone',invisible:true,role:'safeRock'});
+  return g;
 }
 function addCrackedGeode(x,y,z,scale){
-  // Large broken crystal shell open toward +Z (player approach). Snoozle sits inside.
+  // Open cracked-geode chamber on the main route. Mouth faces +Z (approach).
+  // Interior must read clearly — Snoozle 3 is not a secret/gotcha.
   scale=scale||1.6;
   const g=new THREE.Group();g.position.set(x,y,z);
-  const shell=pho(0x5a48a0,35,0xb8a0ff),inner=pho(0x88ccff,55,0xffffff),rim=lam(GEODE_DEEP);
-  // Back half + side lobes; front (+Z) stays open.
-  g.add(mesh(SPH,shell,0,1.1*scale,-0.55*scale,1.55*scale,1.35*scale,1.1*scale));
-  g.add(mesh(SPH,inner,0,1.05*scale,-0.35*scale,1.15*scale,1.0*scale,0.85*scale));
-  g.add(mesh(BOXG,rim,-1.35*scale,1.2*scale,0.15*scale,0.55*scale,2.0*scale,1.6*scale));
-  g.add(mesh(BOXG,rim,1.35*scale,1.2*scale,0.15*scale,0.55*scale,2.0*scale,1.6*scale));
-  g.add(mesh(BOXG,rim,0,2.15*scale,-0.1*scale,2.4*scale,0.45*scale,1.5*scale));
-  g.add(mesh(BOXG,rim,0,0.15*scale,-0.1*scale,2.2*scale,0.35*scale,1.4*scale));
-  addCrystalShard(g,-0.9*scale,2.0*scale,-0.7*scale,0.28*scale,1.1*scale,0.28*scale,GEODE_CRYSTAL,0xc8b0ff);
-  addCrystalShard(g,0.85*scale,1.9*scale,-0.65*scale,0.24*scale,1.0*scale,0.24*scale,GEODE_CRYSTAL2,0xffffff);
-  addCrystalShard(g,0.1*scale,2.35*scale,-0.9*scale,0.2*scale,0.85*scale,0.2*scale,GEODE_PALE,0xffffff);
-  // Floor cushion inside the shell
-  g.add(mesh(BOXG,lam(0x3a2e55),0,0.28*scale,0.35*scale,1.6*scale,0.2*scale,1.2*scale));
+  const shell=pho(0x5a48a0,35,0xb8a0ff),inner=pho(0x88ccff,55,0xffffff),rim=lam(GEODE_DEEP),pad=lam(0x3a2e55);
+  // Floor cushion — raised, lit pad so the sleeper sits in a readable nest.
+  g.add(mesh(BOXG,pad,0,0.22*scale,0.35*scale,1.9*scale,0.28*scale,1.7*scale));
+  g.add(mesh(BOXG,pho(0x6a58c0,40,0xc8b0ff),0,0.38*scale,0.4*scale,1.45*scale,0.08*scale,1.25*scale));
+  // Back bowl (−Z) and side petals — leave a wide open mouth toward +Z.
+  g.add(mesh(BOXG,shell,0,1.25*scale,-1.05*scale,2.5*scale,2.5*scale,0.5*scale));
+  g.add(mesh(BOXG,inner,0,1.2*scale,-0.75*scale,2.05*scale,2.05*scale,0.22*scale));
+  g.add(mesh(BOXG,rim,-1.6*scale,1.15*scale,0.05*scale,0.42*scale,2.3*scale,1.9*scale));
+  g.add(mesh(BOXG,rim,1.6*scale,1.15*scale,0.05*scale,0.42*scale,2.3*scale,1.9*scale));
+  // Incomplete canopy — gap in the front so the camera sees straight into the chamber.
+  g.add(mesh(BOXG,shell,-0.85*scale,2.4*scale,-0.25*scale,1.1*scale,0.38*scale,1.7*scale));
+  g.add(mesh(BOXG,shell,0.85*scale,2.45*scale,-0.2*scale,1.1*scale,0.38*scale,1.6*scale));
+  // Crystal teeth framing the open mouth (+Z) — read as "cracked open," not sealed.
+  addCrystalShard(g,-1.15*scale,1.85*scale,0.95*scale,0.3*scale,1.15*scale,0.3*scale,GEODE_CRYSTAL,0xc8b0ff);
+  addCrystalShard(g,1.15*scale,1.75*scale,1.0*scale,0.26*scale,1.05*scale,0.26*scale,GEODE_CRYSTAL2,0xffffff);
+  addCrystalShard(g,-0.35*scale,2.35*scale,0.55*scale,0.2*scale,0.9*scale,0.2*scale,GEODE_PALE,0xffffff);
+  addCrystalShard(g,0.4*scale,2.4*scale,0.5*scale,0.18*scale,0.85*scale,0.18*scale,GEODE_CRYSTAL2,0xffffff);
+  addCrystalShard(g,0.05*scale,2.0*scale,-0.95*scale,0.22*scale,1.0*scale,0.22*scale,GEODE_CRYSTAL,0xc8b0ff);
+  // Interior wash — soft glow so Snoozle reads against the back wall from the approach.
+  g.add(mesh(BOXG,new THREE.MeshBasicMaterial({color:0xc8b0ff,transparent:true,opacity:0.38}),0,1.15*scale,0.25*scale,1.7*scale,1.9*scale,0.1*scale));
+  g.add(mesh(SPH,new THREE.MeshBasicMaterial({color:0xe8f4ff,transparent:true,opacity:0.28}),0,1.05*scale,-0.15*scale,0.95*scale));
+  g.userData={kind:'crackedGeode',openFacing:'+z',chamber:true,mainRoute:true};
   scene.add(g);levelDecor.push(g);
-  // Collision for the closed back / sides — leave the +Z mouth open for approach.
-  addSolid(x,y,z-0.7*scale,2.8*scale,2.4*scale,0.9*scale,GEODE_ROCK,{surf:'stone',invisible:true});
-  addSolid(x-1.45*scale,y,z+0.05*scale,0.55*scale,2.2*scale,1.5*scale,GEODE_ROCK,{surf:'stone',invisible:true});
-  addSolid(x+1.45*scale,y,z+0.05*scale,0.55*scale,2.2*scale,1.5*scale,GEODE_ROCK,{surf:'stone',invisible:true});
-  addSolid(x,y+2.0*scale,z-0.15*scale,2.5*scale,0.45*scale,1.5*scale,GEODE_ROCK,{surf:'stone',invisible:true});
+  // Collision for the closed back / sides — leave the +Z mouth open for approach and wake.
+  addSolid(x,y,z-0.85*scale,2.7*scale,2.5*scale,0.7*scale,GEODE_ROCK,{surf:'stone',invisible:true});
+  addSolid(x-1.55*scale,y,z+0.05*scale,0.5*scale,2.3*scale,1.7*scale,GEODE_ROCK,{surf:'stone',invisible:true});
+  addSolid(x+1.55*scale,y,z+0.05*scale,0.5*scale,2.3*scale,1.7*scale,GEODE_ROCK,{surf:'stone',invisible:true});
+  addSolid(x,y+2.15*scale,z-0.25*scale,2.4*scale,0.4*scale,1.5*scale,GEODE_ROCK,{surf:'stone',invisible:true});
+  crackedGeodeChamber={g,x,y,z,scale,openFacing:'+z',mainRoute:true,mouthHalfW:1.2*scale};
   return g;
 }
 function addSteamCurtain(x,y,z,w,h,axis){
@@ -2925,6 +2973,28 @@ function inGeodeHollow(){
   if(!z)return false;
   return P.pos.z<=z.zEnter&&P.pos.z>=z.zExit&&Math.abs(P.pos.x)<(z.halfW||12);
 }
+function nearGeodeEntrance(){
+  // Fade early — a few units before zEnter — so the mouth clears as Pling steps through.
+  const z=CURRENT_LEVEL&&CURRENT_LEVEL.route&&CURRENT_LEVEL.route.geodeHollow;
+  if(!z)return false;
+  const early=z.zEnter+6;
+  return P.pos.z<=early&&P.pos.z>=z.zExit&&Math.abs(P.pos.x)<(z.halfW||12)+2;
+}
+function updateGeodeShellFade(dt){
+  if(!GEODE_SHELL.meshes.length)return;
+  const inside=nearGeodeEntrance();
+  const target=inside?0.2:1;
+  GEODE_SHELL.fade=damp(GEODE_SHELL.fade,target,7,dt||0.016);
+  const op=GEODE_SHELL.fade;
+  for(const m of GEODE_SHELL.meshes){
+    if(!m.material)continue;
+    const b=m.userData&&m.userData.shellBaseOp!=null?m.userData.shellBaseOp:1;
+    m.material.opacity=b*op;
+    m.material.transparent=op<0.99||b<0.99;
+    m.material.depthWrite=op>0.85&&b>0.85;
+  }
+  GEODE_SHELL.inside=inside;
+}
 function updateGeodeAmbience(dt){
   const inside=inGeodeHollow();
   if(inside!==geodeInside){
@@ -2973,28 +3043,39 @@ function stageOrganWinPose(){
   if(!ORGAN)return;
   const kx=ORGAN.trigger.x,kz=ORGAN.trigger.z,ky=ORGAN.deckY+0.4;
   P.pos.set(kx,ky,kz);P.vel.set(0,0,0);P.yaw=Math.PI;P.grounded=true;P.puff=true;P.puffAir=0;endHover();
-  // Camera from the rim side (+Z), looking toward Organ (−Z). Pling stays in front of pipes.
-  CAM.look.set(kx,ky+1.6,kz-1.5);
-  CAM.pos.set(kx+0.4,ky+4.2,kz+13.5);
-  CAM.yaw=0.02;CAM.pitch=0.22;CAM.boomDist=14;CAM.targetDist=14;CAM.mode='finish';
-  CAM.fovKick=Math.max(CAM.fovKick,8);CAM.shake=Math.max(CAM.shake,0.3);
+  // Pull back and lift so Pling, Organ, crater walls, and sky eruption all read.
+  CAM.look.set(kx,ky+3.2,kz-4.5);
+  CAM.pos.set(kx+0.6,ky+7.5,kz+18.5);
+  CAM.yaw=0.02;CAM.pitch=0.34;CAM.boomDist=18;CAM.targetDist=18;CAM.mode='finish';
+  CAM.fovKick=Math.max(CAM.fovKick,10);CAM.shake=Math.max(CAM.shake,0.38);
   CAM.lastManual=time+99;
 }
 function spawnOrganFireworkBurst(){
   if(!ORGAN)return;
-  // Behind / beside / above the celebration — never a bright flash over Pling.
-  const baseZ=ORGAN.cz-2,baseY=ORGAN.deckY+10;
-  for(let n=0;n<3;n++){
-    const ox=ORGAN.cx+rand(-10,10),oy=baseY+rand(0,6),oz=baseZ+rand(-8,2);
-    const col=Math.random()<0.34?0xff6a18:(Math.random()<0.5?0xffe36b:0xff9a3c);
-    for(let i=0;i<14;i++){
-      const a=rand(0,TAU),sp=rand(2,7);
-      const m=mesh(SPH,new THREE.MeshBasicMaterial({color:col,transparent:true,opacity:0.95}),0,0,0,0.12);
-      m.position.set(ox,oy,oz);scene.add(m);
-      organFireworks.push({m,vx:Math.cos(a)*sp,vy:rand(2,8),vz:Math.sin(a)*sp*0.5,life:rand(0.7,1.4),grav:-9,kind:'fw'});
+  // Lava-fireworks: tall eruptions from the crater throat behind the Organ, plus sky bursts.
+  const throatZ=ORGAN.cz-6,throatY=ORGAN.deckY+2;
+  for(let n=0;n<4;n++){
+    const ox=ORGAN.cx+rand(-5,5),oy=throatY,oz=throatZ+rand(-3,1);
+    const col=Math.random()<0.4?0xff4a12:(Math.random()<0.5?0xff6a18:0xffe36b);
+    // Vertical lava jet (the "mountain erupts" read)
+    for(let i=0;i<10;i++){
+      const m=mesh(SPH,new THREE.MeshBasicMaterial({color:col,transparent:true,opacity:0.95}),0,0,0,0.14+rand(0,0.08));
+      m.position.set(ox+rand(-0.4,0.4),oy,oz+rand(-0.4,0.4));scene.add(m);
+      organFireworks.push({m,vx:rand(-1.2,1.2),vy:rand(14,24),vz:rand(-1.2,1.2),life:rand(0.9,1.6),grav:-11,kind:'erupt'});
     }
-    spawnRing(ox,oy,oz,col,0.35,6,0.55);
+    // Sky burst above the jet
+    const bx=ox+rand(-2,2),by=oy+rand(10,16),bz=oz+rand(-2,2);
+    for(let i=0;i<12;i++){
+      const a=rand(0,TAU),sp=rand(2.5,8);
+      const m=mesh(SPH,new THREE.MeshBasicMaterial({color:col,transparent:true,opacity:0.95}),0,0,0,0.12);
+      m.position.set(bx,by,bz);scene.add(m);
+      organFireworks.push({m,vx:Math.cos(a)*sp,vy:rand(3,10),vz:Math.sin(a)*sp*0.55,life:rand(0.7,1.4),grav:-9,kind:'fw'});
+    }
+    spawnRing(ox,oy+2,oz,col,0.4,7,0.65);
+    spawnRing(bx,by,bz,col,0.35,6,0.55);
   }
+  ORGAN.eruptionActive=true;
+  ORGAN.eruptionBurst=(ORGAN.eruptionBurst||0)+1;
 }
 function updateOrganFireworks(dt){
   for(let i=organFireworks.length-1;i>=0;i--){
@@ -3020,15 +3101,27 @@ function setOrganVisualState(lit,playing){
   }
   if(ORGAN.keyGlow)ORGAN.keyGlow.material.opacity=lit?(0.22+Math.sin(time*1.6)*0.1):(0.04);
   if(ORGAN.keyGlow)ORGAN.keyGlow.visible=!!lit;
+  // Persistent eruption plume during win celebration.
+  if(ORGAN.eruptPlume){
+    const on=!!playing;
+    ORGAN.eruptPlume.visible=on;
+    if(on)ORGAN.eruptPlume.material.opacity=0.45+0.25*Math.sin(time*5);
+  }
+  if(ORGAN.eruptColumn){
+    const on=!!playing;
+    ORGAN.eruptColumn.visible=on;
+    if(on)ORGAN.eruptColumn.material.opacity=0.55+0.2*Math.sin(time*4.2);
+  }
 }
 function organCamHold(dt){
   if(!ORGAN)return;
   const kx=ORGAN.trigger.x,kz=ORGAN.trigger.z,ky=ORGAN.deckY+0.4;
-  const lookX=kx,lookY=ky+1.7,lookZ=kz-2.0;
-  const posX=kx+0.35,posY=ky+4.4,posZ=kz+14.2;
+  // Frame Pling + keyboard + Organ pipes + sky lava-fireworks above the crater throat.
+  const lookX=kx,lookY=ky+3.6,lookZ=kz-5.0;
+  const posX=kx+0.5,posY=ky+8.0,posZ=kz+19.5;
   CAM.look.x=damp(CAM.look.x,lookX,8,dt);CAM.look.y=damp(CAM.look.y,lookY,8,dt);CAM.look.z=damp(CAM.look.z,lookZ,8,dt);
   CAM.pos.x=damp(CAM.pos.x,posX,7,dt);CAM.pos.y=damp(CAM.pos.y,posY,7,dt);CAM.pos.z=damp(CAM.pos.z,posZ,7,dt);
-  CAM.yaw=0.02;CAM.pitch=0.22;CAM.boomDist=14;CAM.targetDist=14;CAM.mode='finish';
+  CAM.yaw=0.02;CAM.pitch=0.34;CAM.boomDist=18;CAM.targetDist=18;CAM.mode='finish';
   CAM.effectiveDist=Math.hypot(CAM.pos.x-CAM.look.x,CAM.pos.y-CAM.look.y,CAM.pos.z-CAM.look.z);
   CAM.collisionPulled=false;
 }
@@ -3039,7 +3132,7 @@ function updateSteamOrgan(dt,winT){
   updateOrganFireworks(dt);
   if(winT>=0){
     ORGAN.fwT=(ORGAN.fwT||0)-dt;
-    if(ORGAN.fwT<=0&&winT<14){ORGAN.fwT=0.55;spawnOrganFireworkBurst();}
+    if(ORGAN.fwT<=0&&winT<14){ORGAN.fwT=0.45;spawnOrganFireworkBurst();}
     return;
   }
   if(ORGAN.active&&!won&&playerInOrganKeyboard()){
@@ -3051,7 +3144,7 @@ function buildSteamOrgan(cx,deckY,cz){
   deckY=deckY!=null?deckY:44.4;cz=cz!=null?cz:-640;
   const g=new THREE.Group();g.position.set(cx,0,cz);
   const brassDark=lam(0x5a4030),brass=lam(0xb08a4a),brassLite=pho(0xd4a85a,40,0xffe0a0);
-  const rock=lam(0x3a3538),rockDeep=lam(0x2a2218);
+  const rock=lam(0x3a3538),rockDeep=lam(0x2a2218),rockWarm=lam(0x4a3228);
   // Monumental pipe bank rising from volcanic rock.
   const pipes=[
     {x:-6.2,z:-2.0,h:12.5,r:0.55},
@@ -3062,7 +3155,7 @@ function buildSteamOrgan(cx,deckY,cz){
     {x:7.6,z:-3.8,h:13.6,r:0.42},
     {x:-7.8,z:-4.5,h:10.5,r:0.4}
   ];
-  ORGAN={cx,cz,deckY,active:false,playing:false,activateT:0,pipeLights:[],valves:[],steamPuffs:[],homes:[],fwT:0,g};
+  ORGAN={cx,cz,deckY,active:false,playing:false,activateT:0,pipeLights:[],valves:[],steamPuffs:[],homes:[],fwT:0,eruptionActive:false,eruptionBurst:0,g};
   for(const p of pipes){
     const body=mesh(CYL,brassDark,p.x,deckY+p.h*0.5,p.z,p.r,p.h,p.r);g.add(body);
     const rim=mesh(CYL,brass,p.x,deckY+p.h+0.08,p.z,p.r*1.15,0.16,p.r*1.15);g.add(rim);
@@ -3072,6 +3165,20 @@ function buildSteamOrgan(cx,deckY,cz){
   // Rock plinth under pipes
   g.add(mesh(BOXG,rock,0,deckY-0.2,-3.2,18,1.2,8));
   g.add(mesh(BOXG,rockDeep,0,deckY+1.2,-4.5,14,3.5,4));
+  // Crater volcano bowl behind the Organ — mountain climax silhouette, not a flat black corridor.
+  g.add(mesh(CONE,rockWarm,0,deckY+6,-14,22,18,22));
+  g.add(mesh(CONE,rockDeep,0,deckY+12,-16,12,14,12));
+  g.add(mesh(CYL,lam(0x2a1a14),0,deckY+16.5,-16,5.5,1.2,5.5));
+  g.add(mesh(CYL,new THREE.MeshBasicMaterial({color:0xff4a12,transparent:true,opacity:0.55}),0,deckY+15.5,-16,3.2,1.0,3.2));
+  // Persistent eruption plume (hidden until win)
+  const eruptCol=mesh(CYL,new THREE.MeshBasicMaterial({color:0xff6a18,transparent:true,opacity:0.55,depthWrite:false}),0,deckY+24,-16,2.2,14,2.2);
+  eruptCol.visible=false;g.add(eruptCol);ORGAN.eruptColumn=eruptCol;
+  const eruptPlume=mesh(SPH,new THREE.MeshBasicMaterial({color:0xffe0a0,transparent:true,opacity:0.4,depthWrite:false}),0,deckY+32,-16,4.5);
+  eruptPlume.visible=false;g.add(eruptPlume);ORGAN.eruptPlume=eruptPlume;
+  // Warm crater lip walls flanking the celebration
+  g.add(mesh(BOXG,rockWarm,-12,deckY+3,-8,5,8,18));
+  g.add(mesh(BOXG,rockWarm,12,deckY+3,-8,5,8,18));
+  g.add(mesh(BOXG,new THREE.MeshBasicMaterial({color:0xff6a18,transparent:true,opacity:0.28}),0,deckY+0.3,-10,16,0.08,10));
   // Valves along the bank
   for(let i=0;i<6;i++){
     const vx=-7+i*2.6,vz=-1.2;
@@ -3121,11 +3228,12 @@ function buildSteamOrgan(cx,deckY,cz){
     onAllAwake(){activateSteamOrgan();},
     onWin(){
       ORGAN.playing=true;
+      ORGAN.eruptionActive=true;
       // Organ layer joins only at keyboard win — keeps climax/finish distinct.
       AU.layers=Math.max(AU.layers,5);
       stageOrganWinPose();
       spawnOrganFireworkBurst();
-      ORGAN.fwT=0.35;
+      ORGAN.fwT=0.25;
     },
     camHold(dt){organCamHold(dt);},
     update(dt,t){updateSteamOrgan(dt,t);}
@@ -4195,13 +4303,13 @@ updatePickerUI();
 // ===== src/game.js =====
 let time=0,rescued=0,gotNotes=0;
 let started=false;
-window.__W={solids,gloops,goos,hearts,crates,powers,fires,checks,snoozles,notes,dust,puddles,sharks,fish,spikefish,clams,bubbleShots,kelps,steamVents,lavas,cinders,embers,wisps,salamanders,geysers,scorches,protoEndpoints,steamCurtains,crystalSparks,celebrationParticles:PART,get underwaterGroup(){return underwaterGroup;},get won(){return won;},get WM(){return WM;},get RAINBOW(){return RAINBOW;},get FINISH(){return FINISH;},get sfx(){return SFX;},get wreck(){return WRECK;},get conch(){return CONCH;},get organ(){return ORGAN;},get organFireworks(){return organFireworks;}};
+window.__W={solids,gloops,goos,hearts,crates,powers,fires,checks,snoozles,notes,dust,puddles,sharks,fish,spikefish,clams,bubbleShots,kelps,steamVents,lavas,cinders,embers,wisps,salamanders,geysers,scorches,protoEndpoints,steamCurtains,crystalSparks,celebrationParticles:PART,get underwaterGroup(){return underwaterGroup;},get won(){return won;},get WM(){return WM;},get RAINBOW(){return RAINBOW;},get FINISH(){return FINISH;},get sfx(){return SFX;},get wreck(){return WRECK;},get conch(){return CONCH;},get organ(){return ORGAN;},get organFireworks(){return organFireworks;},get geodeShell(){return GEODE_SHELL;},get crackedGeode(){return crackedGeodeChamber;}};
 window.__started=()=>started;
 
 // ---------- camera ----------
 const CAM=window.__CAM={yaw:0,pitch:0.42,dist:8.5,pos:new THREE.Vector3(0,5,19),look:new THREE.Vector3(0,1,10),shake:0,fovKick:0,lastManual:-9,boomDist:8.5,targetDist:8.5,effectiveDist:8.5,collisionPulled:false,mode:'outdoor'};
 // Stage 4.8A — temporary Level 3 landscape camera-distance diagnostic (not a shipping profile).
-const VERSION_BASE='v37 · Peak playtest fixes';
+const VERSION_BASE='v38 · Peak playtest readability';
 const CAMDIST_ALLOW={'8.5':8.5,'8.50':8.5,'6.8':6.8,'6.80':6.8,'6.07':6.07,'5':5,'5.0':5,'5.00':5,'3.93':3.93};
 const CAMDIST_STEPS=[8.5,6.8,6.07,5,3.93];
 function parseCamDistQuery(search){
