@@ -19,8 +19,10 @@ ok(!L.steps.some(s=>s[0]==='gloop'),'prototype gloop fixture not in production s
 const R=L.route;
 const teachA=L.teachGaps[0],teachB=L.teachGaps[1];
 const leaps=L.mandatoryLeaps;
-ok(Array.isArray(leaps)&&leaps.length===5,'five production mandatory leaps in Areas 1–3');
-ok(leaps[0].id==='firstLavaLeap','first mandatory lava leap is after teaching');
+const lavaLeaps=leaps.filter(l=>!/^climb\d/.test(l.id));
+ok(Array.isArray(leaps)&&lavaLeaps.length===5,'five production mandatory leaps in Areas 1–3');
+ok(leaps.filter(l=>/^climb\d/.test(l.id)).length===6,'Climb adds six mandatory leaps');
+ok(lavaLeaps[0].id==='firstLavaLeap','first mandatory lava leap is after teaching');
 
 function release(){
   for(const c of ['KeyW','KeyA','KeyS','KeyD','Space','ShiftLeft','KeyJ']){
@@ -200,9 +202,9 @@ ok(inv.length===0,'all production mandatory leaps pass vent/anchor/depth invaria
 
 // ---- Area 3 route traversable end to end (live leaps) ----
 let area3Ok=true;
-for(let i=1;i<leaps.length;i++){
-  const r=clearMandatory(leaps[i]);
-  if(!r.landed||r.lava){area3Ok=false;ok(false,'Area 3 leap '+leaps[i].id+' failed (z='+r.z.toFixed(2)+', lava='+r.lava+')');}
+for(let i=1;i<lavaLeaps.length;i++){
+  const r=clearMandatory(lavaLeaps[i]);
+  if(!r.landed||r.lava){area3Ok=false;ok(false,'Area 3 leap '+lavaLeaps[i].id+' failed (z='+r.z.toFixed(2)+', lava='+r.lava+')');}
 }
 ok(area3Ok,'Area 3 route is traversable end to end with live Sky Blast leaps');
 
@@ -242,10 +244,11 @@ ok(noteSal.note.hidden===false&&W.notes.length===notes0,'note salamanders / held
 H.test.loadLevel(2);
 ok(W.protoEndpoints&&W.protoEndpoints.length===1,'temporary proto endpoint exists');
 const ep=W.protoEndpoints[0];
-ok(Math.abs(ep.z-R.endpoint.z)<2,'endpoint sits at Geode Hollow exit (Climb placeholder)');
-ok(ep.z<-350,'Stage 5 endpoint is past the Hollow, not the old mouth blocker');
+ok(Math.abs(ep.z-R.endpoint.z)<2,'endpoint sits at Climb crater rim');
+ok(ep.z<-550,'Stage 6 endpoint is at the rim, past the Hollow');
 ok(!L.steps.some(s=>s[0]==='protoEndpoint'&&s[3]>-270),'old Stage 4 mouth blocker endpoint removed');
-// Stand on the approach pad in front of the blocked climb hint
+ok(!L.steps.some(s=>s[0]==='protoEndpoint'&&Math.abs(s[3]-(-368))<1),'old Stage 5 Hollow-exit endpoint removed');
+// Stand on the approach pad in front of the rim threshold
 settle(ep.x,ep.y,ep.z+3.2);
 P.pos.set(ep.x,ep.y+0.2,ep.z+2.6);P.vel.set(0,0,-1);P.grounded=true;
 for(let i=0;i<30;i++)frames(1);
