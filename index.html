@@ -58,7 +58,7 @@ body.touch .tbtn{display:flex}
 <div id="hint"></div>
 <div id="start"><div class="card">
 <h1>BELLHOP</h1>
-<div class="sub" id="ver">v32 · Player shadow</div>
+<div class="sub" id="ver">v34 · Geode Hollow</div>
 <div class="level-pick">
 <div class="lvl-card sel" id="lvl0"><canvas class="lvl-art" id="art0" width="160" height="100"></canvas><span class="lvl-label">Meadow</span></div>
 <div class="lvl-card" id="lvl1"><canvas class="lvl-art" id="art1" width="160" height="100"></canvas><span class="lvl-label">The Deep</span></div>
@@ -399,7 +399,7 @@ steps:[
 // ===== levels/level3.js =====
 const LEVEL3={
 id:'level3',
-music:'meadow',
+music:'peak',
 peakAtmosphere:true,
 // Warm Slopes start — production boot, not the Stage 1–3 prototype arena.
 spawn:{x:0,y:0.4,z:24},
@@ -459,6 +459,44 @@ mandatoryLeaps:[{
   landing:{x:0,z:-215.5,edgeZ:-209.5,farZ:-221.5,minDepth:8},
   nearSafe:{x:0,y:17.4,z:-194},
   farSafe:{x:0,y:17.4,z:-215}
+},{
+  // Area 5 — The Climb (powered ascent along the caldera wall)
+  // Flat-height Sky Blast leaps; stairs between shelves provide the elevation.
+  id:'climbShelfA',
+  takeoff:{x:0,z:-386,ventReach:5},
+  landing:{x:0,z:-405.5,edgeZ:-399.5,farZ:-411.5,minDepth:8},
+  nearSafe:{x:0,y:24.4,z:-384},
+  farSafe:{x:0,y:24.4,z:-405}
+},{
+  id:'climbShelfB',
+  takeoff:{x:0,z:-422,ventReach:5},
+  landing:{x:0,z:-441.5,edgeZ:-435.5,farZ:-447.5,minDepth:8},
+  nearSafe:{x:0,y:28.4,z:-420},
+  farSafe:{x:0,y:28.4,z:-441}
+},{
+  id:'climbShelfC',
+  takeoff:{x:0,z:-460,ventReach:5},
+  landing:{x:0,z:-479.5,edgeZ:-473.5,farZ:-485.5,minDepth:8},
+  nearSafe:{x:0,y:32.4,z:-458},
+  farSafe:{x:0,y:32.4,z:-479}
+},{
+  id:'climbShelfD',
+  takeoff:{x:0,z:-496,ventReach:5},
+  landing:{x:0,z:-515.5,edgeZ:-509.5,farZ:-521.5,minDepth:8},
+  nearSafe:{x:0,y:36.4,z:-494},
+  farSafe:{x:0,y:36.4,z:-515}
+},{
+  id:'climbShelfE',
+  takeoff:{x:0,z:-532,ventReach:5},
+  landing:{x:0,z:-551.5,edgeZ:-545.5,farZ:-557.5,minDepth:8},
+  nearSafe:{x:0,y:40.4,z:-530},
+  farSafe:{x:0,y:40.4,z:-551}
+},{
+  id:'climbRimLeap',
+  takeoff:{x:0,z:-566,ventReach:5},
+  landing:{x:0,z:-585.5,edgeZ:-579.5,farZ:-591.5,minDepth:8},
+  nearSafe:{x:0,y:44.4,z:-564},
+  farSafe:{x:0,y:44.4,z:-585}
 }],
 route:{
   sideLava:{x:10,z:10},
@@ -477,28 +515,52 @@ route:{
   wispOpen:{x:6,z:-230},
   wispCorridor:{x:0,z:-248},
   geyser:{x:0,y:17.4,z:-216},
-  endpoint:{x:0,y:20.4,z:-265}
+  // Stage 4 temporary endpoint was at z:-265 (blocked mouth). Stage 5 opens that mouth.
+  caveMouth:{x:0,y:20.0,z:-268},
+  geodeHollow:{zEnter:-266,zExit:-372,halfW:14},
+  snoozle3:{x:3.2,z:-330},
+  secretCurtain:{x:-7.0,y:20.0,z:-308},
+  secretAlcove:{x:-12.2,z:-308},
+  // Hollow opens onto Climb base; Stage 5 soft-return at z:-368 is gone.
+  climbExit:{x:0,y:21.5,z:-368},
+  climbBase:{x:0,y:21.5,z:-378},
+  climbHalfway:{x:0,y:28.4,z:-441},
+  climbRim:{x:0,y:44.4,z:-585},
+  challengeBranch:{x:8.5,y:28.4,z:-441},
+  challengeReward:{x:11.0,y:29.0,z:-472},
+  snoozle4:{x:-5,y:44.55,z:-590},
+  craterRim:{x:0,y:44.4,z:-592},
+  organ:{x:0,y:44.4,z:-640},
+  keyboard:{x:0,y:44.4,z:-631.5}
 },
 fence:0x5a2e1a,
 fenceSolids:[
-  [0,0,30,36,2.2,0.7],[0,0,-278,36,2.2,0.7],
-  [-18,0,-124,0.7,2.2,312],[18,0,-124,0.7,2.2,312]
+  [0,0,30,36,2.2,0.7],[0,0,-670,36,2.2,0.7],
+  [-18,0,-320,0.7,2.2,700],[18,0,-320,0.7,2.2,700]
 ],
 pathTiles:[],
 hedges:[],
-checks:[[0,22],[0,-4,2.2],[0,-34,5.2],[0,-70,8.2],[0,-100,11.2],[0,-134,13.2],[0,-168,15.2],[0,-240,19.2]],
-tower:{tx:0,tz:-260},
-snoozleHomes:[[-3,-258],[3,-258],[-2,-266],[2,-266]],
-snoozles:[[-5,0.55,6,0,false],[-9,8.55,-78,1,false]],
+checks:[[0,22],[0,-4,2.2],[0,-34,5.2],[0,-70,8.2],[0,-100,11.2],[0,-134,13.2],[0,-168,15.2],[0,-240,19.2],[0,-272,20.2],[0,-350,21.2],[0,-378,21.7],[0,-441,28.4],[0,-585,44.4]],
+tower:{tx:0,tz:-640},
+// Four pipe-top homes on the Great Steam Organ. Paths stay outside mountain solids.
+// Format: [x, z, pathWaypoints?, homeY]
+snoozleHomes:[
+  [-6.2,-642,[[-8,10,-40],[-14,18,-140],[-14,26,-280],[-14,36,-420],[-12,46,-540],[-10,52,-600],[-8,54,-620]],57.1],
+  [5.4,-641.6,[[-12,14,-150],[-14,22,-260],[-14,34,-400],[-12,44,-520],[-8,52,-580],[2,54,-610]],56.4],
+  [-3.4,-643.5,[[3.2,23.5,-318],[0,22.8,-300],[0,22.0,-280],[0,22.5,-268],[0,24.5,-252],[-14,28,-252],[-16,34,-320],[-16,42,-420],[-16,50,-520],[-12,54,-590],[-8,56,-620]],60.1],
+  [2.2,-643.2,[[-3,48,-610],[0,52,-625]],58.6]
+],
+snoozles:[[-5,0.55,6,0,false],[-9,8.55,-78,1,false],[3.2,20.55,-330,2,false],[-5,44.55,-590,3,false]],
 trees:[],
 steps:[
   ['volcanoLandmark',0,0,-290,1.35],
   ['driftSparks',22],
-  ['solid',0,28,-124,38,2,312,0xffc48a,{invisible:true}],
-  ['solid',0,6,30,36.5,28,0.7,0x5a2e1a,{invisible:true}],
-  ['solid',0,6,-278,36.5,28,0.7,0x5a2e1a,{invisible:true}],
-  ['solid',-18,6,-124,0.7,28,312,0x5a2e1a,{invisible:true}],
-  ['solid',18,6,-124,0.7,28,312,0x5a2e1a,{invisible:true}],
+  // World bounds — ceiling clears Organ pipes; far face past Crater; sides cover full route.
+  ['solid',0,72,-320,38,2,700,0xffc48a,{invisible:true}],
+  ['solid',0,20,30,36.5,50,0.7,0x5a2e1a,{invisible:true}],
+  ['solid',0,20,-670,36.5,50,0.7,0x5a2e1a,{invisible:true}],
+  ['solid',-18,20,-320,0.7,50,700,0x5a2e1a,{invisible:true}],
+  ['solid',18,20,-320,0.7,50,700,0x5a2e1a,{invisible:true}],
 
   // ========== AREA 1 — The Warm Slopes ==========
   // Volcanic sand / dark warm earth — green is accent tufts only, not the floor.
@@ -651,8 +713,223 @@ steps:[
   ],{speed:1.6}],
   ['solid',0,20.0,-262,14,0.4,10,0x2a2624,{surf:'stone'}],
   ['basaltRock',-6,20.0,-258,1.2],['basaltRock',6,20.0,-260,1.0],
-  ['protoEndpoint',0,20.0,-265],
-  ['unfinishedFinish',0,-262,28]
+  ['salamander',5,-260,{}],
+
+  // ========== AREA 4 — The Geode Hollow ==========
+  // Open mouth (Stage 4 blocker removed). Cool register begins here.
+  ['geodeMouth',0,20.0,-268],
+  ['solid',0,20.0,-278,12,0.4,18,0x2a1e38,{surf:'stone'}],
+  ['solid',0,20.15,-278,6,0.06,14,0x3a2e55,{surf:'stone'}],
+  // Entrance corridor walls / ceiling
+  ['solid',-8.5,20.0,-278,3.5,6.5,16,0x1a1228,{surf:'stone'}],
+  ['solid',8.5,20.0,-278,3.5,6.5,16,0x1a1228,{surf:'stone'}],
+  ['solid',0,26.2,-278,20,1.2,18,0x1a1228,{surf:'stone'}],
+  ['crystalCluster',-5.5,20.0,-274,1.1,true],
+  ['crystalCluster',5.8,20.0,-280,0.95,true],
+  ['crystalCluster',-4.2,20.0,-288,0.55,false],
+  ['crystalCluster',4.5,20.0,-292,0.5,false],
+  ['crystalSparks',10,0,-290,7],
+
+  // Mid path — east wall continuous; west wall gapped for the steam-curtain secret
+  ['solid',0,20.0,-300,14,0.4,20,0x2a1e38,{surf:'stone'}],
+  ['solid',0,20.15,-300,5.5,0.06,16,0x4a3a78,{surf:'stone'}],
+  ['solid',8.5,20.0,-300,3.5,6.5,20,0x1a1228,{surf:'stone'}],
+  // West wall split: gap around z=-308 for the side steam curtain
+  ['solid',-8.5,20.0,-294,3.5,6.5,10,0x1a1228,{surf:'stone'}],
+  ['solid',-8.5,20.0,-322,3.5,6.5,12,0x1a1228,{surf:'stone'}],
+  ['solid',0,26.4,-304,22,1.2,28,0x1a1228,{surf:'stone'}],
+  ['crystalCluster',6.2,20.0,-302,1.2,true],
+  ['crystalCluster',-3.5,20.0,-318,0.7,false],
+
+  // Side secret — steam curtain fills the west-wall gap (optional; main route stays center).
+  ['steamCurtain',-7.0,20.0,-308,5.0,3.8,'x'],
+  ['solid',-12.2,20.0,-308,6.0,0.4,8,0x2a1e38,{surf:'stone'}],
+  ['solid',-15.0,20.0,-308,1.4,4.5,8,0x1a1228,{surf:'stone'}],
+  ['solid',-12.2,20.0,-312.2,6.0,4.5,1.4,0x1a1228,{surf:'stone'}],
+  ['solid',-12.2,20.0,-303.8,6.0,4.5,1.4,0x1a1228,{surf:'stone'}],
+  ['solid',-12.2,24.2,-308,6.0,1.0,8,0x1a1228,{surf:'stone'}],
+  // Secret notes exist at build time (visible, blocked by curtain until gust).
+  ['note',-11.8,21.1,-306.5,false],
+  ['note',-12.6,21.3,-309.2,false],
+  ['crystalCluster',-13.2,20.0,-308,0.85,true],
+
+  // Main chamber — Snoozle 3 in a cracked-open geode offset east so the center exit stays clear.
+  ['solid',0,20.0,-328,16,0.4,22,0x2a1e38,{surf:'stone'}],
+  ['solid',0,20.18,-328,7,0.06,14,0x5a48a0,{surf:'stone'}],
+  ['solid',-10.5,20.0,-328,4.0,6.5,22,0x1a1228,{surf:'stone'}],
+  ['solid',10.5,20.0,-328,4.0,6.5,22,0x1a1228,{surf:'stone'}],
+  ['solid',0,26.6,-328,24,1.2,24,0x1a1228,{surf:'stone'}],
+  ['crackedGeode',3.2,20.0,-330,1.55],
+  ['crystalCluster',-6.5,20.0,-334,1.15,true],
+  ['crystalCluster',-2.5,20.0,-322,0.55,false],
+  ['crystalCluster',7.2,20.0,-338,0.55,false],
+  ['crystalSparks',14,0,-328,9],
+
+  // Exit corridor — opens onto the Climb / caldera reveal (Stage 5 soft-return removed).
+  ['solid',0,20.5,-348,12,0.4,14,0x2a1e38,{surf:'stone'}],
+  ['solid',0,20.7,-348,5,0.06,10,0x3a2e55,{surf:'stone'}],
+  ['solid',-7.5,20.5,-348,3.5,6.0,16,0x1a1228,{surf:'stone'}],
+  ['solid',7.5,20.5,-348,3.5,6.0,16,0x1a1228,{surf:'stone'}],
+  ['solid',0,26.5,-348,18,1.0,16,0x1a1228,{surf:'stone'}],
+  ['solid',0,21.5,-360,12,0.4,12,0x2e2438,{surf:'stone'}],
+  ['solid',0,21.7,-360,5,0.06,8,0x4a3a60,{surf:'stone'}],
+  ['crystalCluster',-4.5,21.5,-356,0.9,true],
+  ['crystalCluster',4.8,21.5,-358,0.5,false],
+
+  // ========== AREA 5 — The Climb ==========
+  // Quiet geode behind → huge hot caldera ahead. Elevation via stairs; Sky Blast clears flat gaps.
+  // Floor height continues from the Hollow exit pad (y=21.5) so STEP can take the first stair.
+  ['solid',0,21.5,-372,16,0.4,16,0x2a2420,{surf:'stone'}],
+  ['solid',0,21.65,-372,6,0.06,10,0x4a3a32,{surf:'stone'}],
+  ['crystalCluster',-5.5,21.5,-366,0.45,false],
+  ['crystalCluster',5.2,21.5,-370,0.4,false],
+  ['solid',-10,21.5,-378,4,10,12,0x1a1614,{surf:'stone'}],
+  ['solid',10,21.5,-378,4,10,12,0x1a1614,{surf:'stone'}],
+  ['solid',-10,28.0,-378,0.35,0.2,8,0xff6a20,{surf:'stone'}],
+  ['solid',10,30.0,-378,0.35,0.2,8,0xff6a20,{surf:'stone'}],
+  ['basaltRock',-7,21.5,-374,1.3],['basaltRock',7,21.5,-376,1.1],
+  // Deep caldera lava under the Climb
+  ['lava',0,6.0,-400,28,0.55,50],
+  ['lava',-12,4.0,-450,10,0.55,100],
+  ['lava',12,4.0,-450,10,0.55,100],
+  ['lava',0,4.0,-500,26,0.55,120],
+  ['lava',0,4.0,-560,26,0.55,100],
+
+  // Base terrace + checkpoint, then stairs to first takeoff height
+  ['solid',0,21.5,-382,16,0.4,14,0x2e2a28,{surf:'stone'}],
+  ['solid',0,21.7,-382,5,0.06,8,0x5a3a28,{surf:'stone'}],
+  ['cinder',-4,-380,'small'],
+  ['basaltRock',6,21.5,-384,0.9],
+  ['solid',0,22.5,-384,14,0.4,6,0x2e2a28,{surf:'stone'}],
+  ['solid',0,23.5,-385,14,0.4,4,0x2e2a28,{surf:'stone'}],
+  ['solid',0,24.0,-386,14,0.4,10,0x3a3538,{surf:'stone'}],
+  ['steamVent',0,24.4,-386,1.4],
+  ['solid',0,24.4,-390.7,12,0.06,0.35,0x8a2010,{surf:'stone'}],
+
+  // Leap 1 — climbShelfA (flat 24.4)
+  ['solid',0,24.0,-405.5,14,0.4,12,0x3a3538,{surf:'stone'}],
+  ['solid',0,24.4,-399.65,12,0.06,0.35,0x8a2010,{surf:'stone'}],
+  ['lava',0,22.0,-395.0,16,0.55,8.0],
+  ['lava',0,-0.15,-395,28,0.55,24],
+  ['solid',-8,24.0,-405,3,5,8,0x1a1614,{surf:'stone'}],
+  ['solid',8,24.0,-405,3,5,8,0x1a1614,{surf:'stone'}],
+
+  // Stairs to Shelf B
+  ['solid',0,25.0,-414,12,0.4,6,0x2e2a28,{surf:'stone'}],
+  ['solid',0,26.0,-416,12,0.4,4,0x2e2a28,{surf:'stone'}],
+  ['solid',0,27.0,-418,12,0.4,4,0x2e2a28,{surf:'stone'}],
+  ['solid',0,28.0,-422,14,0.4,10,0x3a3538,{surf:'stone'}],
+  ['steamVent',0,28.4,-422,1.35],
+  ['solid',0,28.4,-426.7,12,0.06,0.35,0x8a2010,{surf:'stone'}],
+
+  // Leap 2 — climbShelfB into halfway rest (flat 28.4)
+  ['solid',0,28.0,-441.5,16,0.4,12,0x4a3a32,{surf:'stone'}],
+  ['solid',0,28.4,-435.65,14,0.06,0.35,0x8a2010,{surf:'stone'}],
+  ['lava',0,26.0,-431.0,16,0.55,8.0],
+  ['lava',0,-0.15,-431,28,0.55,24],
+  ['solid',0,28.0,-448,18,0.4,14,0x4a3a32,{surf:'stone'}],
+  ['solid',0,28.2,-448,6,0.06,8,0xffd24a,{surf:'stone'}],
+  ['basaltRock',-7,28.0,-444,1.2],['basaltRock',6,28.0,-450,1.0],
+  ['solid',-10,28.0,-448,3,6,10,0x1a1614,{surf:'stone'}],
+
+  // Optional hard challenge — east spur off halfway (main route stays center −Z)
+  ['solid',8.5,28.0,-441,7,0.4,8,0x3a3538,{surf:'stone'}],
+  ['steamVent',10.5,28.4,-443,1.2],
+  ['solid',11.0,28.5,-458,8,0.4,10,0x3a3538,{surf:'stone'}],
+  ['lava',10.5,26.0,-450,8,0.55,10],
+  ['lava',10.5,-0.15,-450,10,0.55,16],
+  ['steamVent',11.0,28.9,-460,1.15],
+  ['solid',11.0,28.5,-472,9,0.4,12,0x4a3a32,{surf:'stone'}],
+  ['lava',11.0,26.0,-466,8,0.55,8],
+  ['lava',11.0,-0.15,-466,10,0.55,14],
+  ['wisp',[
+    {x:9.5,y:29.6,z:-468},{x:11.5,y:29.8,z:-470},{x:10.0,y:29.6,z:-472}
+  ],{speed:1.55}],
+  ['wisp',[
+    {x:12.5,y:29.7,z:-470},{x:12.0,y:29.9,z:-474},{x:11.0,y:29.7,z:-476}
+  ],{speed:1.45}],
+  ['note',10.2,29.2,-470.5,false],
+  ['note',11.0,29.3,-472.0,false],
+  ['note',11.8,29.2,-473.5,false],
+  ['solid',6.0,28.0,-452,6,0.4,10,0x3a3538,{surf:'stone'}],
+  ['solid',3.0,28.0,-450,6,0.4,8,0x3a3538,{surf:'stone'}],
+
+  // Stairs to Shelf C
+  ['solid',0,29.0,-454,12,0.4,6,0x2e2a28,{surf:'stone'}],
+  ['solid',0,30.0,-456,12,0.4,4,0x2e2a28,{surf:'stone'}],
+  ['solid',0,31.0,-458,12,0.4,4,0x2e2a28,{surf:'stone'}],
+  ['solid',0,32.0,-460,14,0.4,8,0x3a3538,{surf:'stone'}],
+  ['steamVent',0,32.4,-460,1.35],
+  ['solid',0,32.4,-463.7,12,0.06,0.35,0x8a2010,{surf:'stone'}],
+
+  // Leap 3 — climbShelfC (flat 32.4)
+  ['solid',0,32.0,-479.5,14,0.4,12,0x3a3538,{surf:'stone'}],
+  ['solid',0,32.4,-473.65,12,0.06,0.35,0x8a2010,{surf:'stone'}],
+  ['lava',0,30.0,-469.0,16,0.55,8.0],
+  ['lava',0,-0.15,-469,28,0.55,24],
+  ['solid',-8,32.0,-479,3,5,8,0x1a1614,{surf:'stone'}],
+  ['solid',8,32.0,-479,3,5,8,0x1a1614,{surf:'stone'}],
+
+  // Stairs to Shelf D
+  ['solid',0,33.0,-488,12,0.4,6,0x2e2a28,{surf:'stone'}],
+  ['solid',0,34.0,-490,12,0.4,4,0x2e2a28,{surf:'stone'}],
+  ['solid',0,35.0,-492,12,0.4,4,0x2e2a28,{surf:'stone'}],
+  ['solid',0,36.0,-496,14,0.4,10,0x3a3538,{surf:'stone'}],
+  ['steamVent',0,36.4,-496,1.4],
+  ['solid',0,36.4,-500.7,12,0.06,0.35,0x8a2010,{surf:'stone'}],
+
+  // Leap 4 — climbShelfD (flat 36.4)
+  ['solid',0,36.0,-515.5,14,0.4,12,0x4a3a32,{surf:'stone'}],
+  ['solid',0,36.4,-509.65,12,0.06,0.35,0x8a2010,{surf:'stone'}],
+  ['lava',0,34.0,-505.0,16,0.55,8.0],
+  ['lava',0,-0.15,-505,28,0.55,24],
+
+  // Stairs to Shelf E
+  ['solid',0,37.0,-524,12,0.4,6,0x2e2a28,{surf:'stone'}],
+  ['solid',0,38.0,-526,12,0.4,4,0x2e2a28,{surf:'stone'}],
+  ['solid',0,39.0,-528,12,0.4,4,0x2e2a28,{surf:'stone'}],
+  ['solid',0,40.0,-532,14,0.4,10,0x3a3538,{surf:'stone'}],
+  ['steamVent',0,40.4,-532,1.35],
+  ['solid',0,40.4,-536.7,12,0.06,0.35,0x8a2010,{surf:'stone'}],
+
+  // Leap 5 — climbShelfE (flat 40.4)
+  ['solid',0,40.0,-551.5,14,0.4,12,0x3a3538,{surf:'stone'}],
+  ['solid',0,40.4,-545.65,12,0.06,0.35,0x8a2010,{surf:'stone'}],
+  ['lava',0,38.0,-541.0,16,0.55,8.0],
+  ['lava',0,-0.15,-541,28,0.55,24],
+
+  // Stairs to rim takeoff
+  ['solid',0,41.0,-558,12,0.4,6,0x2e2a28,{surf:'stone'}],
+  ['solid',0,42.0,-560,12,0.4,4,0x2e2a28,{surf:'stone'}],
+  ['solid',0,43.0,-562,12,0.4,4,0x2e2a28,{surf:'stone'}],
+  ['solid',0,44.0,-566,14,0.4,10,0x3a3538,{surf:'stone'}],
+  ['steamVent',0,44.4,-566,1.4],
+  ['solid',0,44.4,-570.7,12,0.06,0.35,0x8a2010,{surf:'stone'}],
+
+  // Leap 6 — climbRimLeap onto crater rim (flat 44.4)
+  ['solid',0,44.0,-585.5,16,0.4,12,0x4a3a32,{surf:'stone'}],
+  ['solid',0,44.4,-579.65,14,0.06,0.35,0x8a2010,{surf:'stone'}],
+  ['lava',0,42.0,-575.0,16,0.55,8.0],
+  ['lava',0,-0.15,-575,28,0.55,24],
+
+  // ========== AREA 6 — The Crater ==========
+  // Broad rim summit: Snoozle 4 reward platform, Organ visible ahead (−Z).
+  ['solid',0,44.0,-592,20,0.4,16,0x4a3a32,{surf:'stone'}],
+  ['solid',0,44.2,-590,6,0.06,6,0xc45a28,{surf:'stone'}],
+  ['solid',-5,44.0,-590,4.2,0.45,4.2,0xc45a28,{surf:'stone'}],
+  ['solid',-5,44.45,-590,3.0,0.08,3.0,0xe07a3a,{surf:'stone'}],
+  ['basaltRock',-9,44.0,-588,1.1],['basaltRock',6,44.0,-594,1.0],
+  // Caldera walls + distant molten glow (deep decorative lava — not on the victory walk).
+  ['solid',-14,44.0,-620,4,8,40,0x1a1614,{surf:'stone'}],
+  ['solid',14,44.0,-620,4,8,40,0x1a1614,{surf:'stone'}],
+  ['lava',0,28.0,-640,22,0.5,28],
+  // Short forgiving victory walk from Snoozle 4 to the keyboard.
+  ['solid',0,44.0,-608,14,0.4,12,0x3a3538,{surf:'stone'}],
+  ['solid',0,44.0,-620,14,0.4,10,0x4a3a32,{surf:'stone'}],
+  ['solid',0,44.2,-614,5,0.06,8,0x5a4030,{surf:'stone'}],
+  ['basaltRock',-6,44.0,-612,0.9],['basaltRock',7,44.0,-618,1.0],
+  // Great Steam Organ + keyboard finish (registers FINISH).
+  ['steamOrgan',0,44.4,-640]
 ]
 };
 
@@ -716,9 +993,43 @@ function deepVoice(i,sib,s,chord,t){
     tone(f,0.7,{at:t,type:'sine',gain:0.05,attack:0.04});
   }
 }
+// The Peak: warm volcanic bed; four Snoozle layers; layer 5 is the Great Steam Organ (win only).
+function peakBed(sib,chord,t){
+  if(sib===0)tone(hz(chord[0],55),0.5,{at:t,type:'sine',gain:0.11,attack:0.03});
+  if(sib===4)tone(hz(chord[1],82.41),0.35,{at:t,type:'triangle',gain:0.07,attack:0.025});
+  if(sib%4===2)noise(0.07,{at:t,type:'lowpass',freq:700,fslide:280,gain:0.03,attack:0.02});
+}
+function peakVoice(i,sib,s,chord,t){
+  if(i>=5)return;
+  if(i===4){
+    // Great Steam Organ — only after keyboard win (AU.layers>=5).
+    if(sib%2!==0)return;
+    const f=hz(chord[sib%3],65.41);
+    tone(f,0.85,{at:t,type:'sawtooth',gain:0.055,attack:0.06});
+    tone(f*2,0.55,{at:t,type:'triangle',gain:0.035,attack:0.05});
+    if(sib===0)noise(0.12,{at:t,type:'bandpass',freq:480,fslide:900,gain:0.04,attack:0.03});
+    return;
+  }
+  const pats=[[0,4],[2,6],[1,3,5],[0,2,5,7]];
+  if(pats[i%4].indexOf(sib)<0)return;
+  if(i===0){
+    const f=hz(chord[sib%3]+12,261.63);
+    tone(f,0.45,{at:t,type:'triangle',gain:0.07,attack:0.008});
+  }else if(i===1){
+    const deg=[0,4,7,12,7,4,9,5][(s+sib)%8];
+    tone(hz(chord[0]+deg,196),0.4,{at:t,type:'sine',gain:0.05,attack:0.015});
+  }else if(i===2){
+    tone(hz(chord[0],110),0.7,{at:t,type:'triangle',gain:0.06,attack:0.04});
+    tone(hz(chord[2],110),0.7,{at:t,type:'sine',gain:0.03,attack:0.04});
+  }else{
+    const mel=[0,3,7,12,10,7,5,3][s%8];
+    tone(hz(chord[0]+mel+12,196),0.55,{at:t,type:'sine',gain:0.045,attack:0.03});
+  }
+}
 const SONGS={
   meadow:{id:'meadow',bpm:112,chords:[[0,4,7],[-3,0,4],[-7,-3,0],[-5,-1,2]],bed:meadowBed,voice:meadowVoice},
-  deep:{id:'deep',bpm:84,chords:[[0,3,7],[-2,2,5],[-5,0,3],[2,5,9]],bed:deepBed,voice:deepVoice}
+  deep:{id:'deep',bpm:84,chords:[[0,3,7],[-2,2,5],[-5,0,3],[2,5,9]],bed:deepBed,voice:deepVoice},
+  peak:{id:'peak',bpm:96,chords:[[0,4,7],[-2,2,5],[-5,0,4],[3,7,10]],bed:peakBed,voice:peakVoice}
 };
 AU.song=SONGS.meadow;
 // Kept as aliases so older call sites / mental model still match meadow.
@@ -808,7 +1119,10 @@ const SFX={
   emberHit(){noise(0.12,{type:'highpass',freq:1600,gain:0.12});tone(260,0.1,{type:'square',gain:0.07,slide:140});},
   wispOut(){noise(0.35,{type:'lowpass',freq:1400,fslide:300,gain:0.12});tone(520,0.25,{type:'triangle',gain:0.07,slide:160});},
   geyser(){noise(0.35,{type:'bandpass',freq:700,fslide:1600,gain:0.16,q:0.5});tone(180,0.28,{type:'sine',gain:0.1,slide:420});},
+  crystalChime(){if(!AU.ctx)return;const c=chordNow();const f=hz(c[Math.floor(Math.random()*3)]+24,523.25);tone(f,0.5,{type:'sine',gain:0.05,attack:0.02});tone(f*1.5,0.28,{type:'triangle',gain:0.025,attack:0.02});},
   conchOpen(){if(!AU.ctx)return;const c=AU.ctx.currentTime;tone(220,0.55,{at:c,type:'sine',gain:0.16,slide:440,attack:0.04});[0,4,7,12,16].forEach((n,i)=>tone(hz(n,329.63),0.55,{at:c+0.12+i*0.08,type:'triangle',gain:0.12}));noise(0.45,{at:c,type:'bandpass',freq:900,fslide:1800,gain:0.1,attack:0.05});},
+  organSwell(){if(!AU.ctx)return;const c=AU.ctx.currentTime;tone(82,1.1,{at:c,type:'sawtooth',gain:0.12,attack:0.08,slide:110});tone(164,0.9,{at:c+0.08,type:'triangle',gain:0.09,attack:0.1});[0,4,7,12].forEach((n,i)=>tone(hz(n,110),0.7,{at:c+0.15+i*0.1,type:'sine',gain:0.08}));noise(0.7,{at:c,type:'bandpass',freq:500,fslide:1400,gain:0.08,attack:0.08});},
+  organKey(){if(!AU.ctx)return;const c=chordNow();tone(hz(c[0],130.81),0.35,{type:'triangle',gain:0.1,attack:0.01});tone(hz(c[2],130.81),0.28,{type:'sine',gain:0.06});},
   fishPop(){tone(rand(700,950),0.08,{type:'sine',gain:0.1,slide:400});noise(0.06,{type:'highpass',freq:2500,gain:0.08});},
   sharkPop(){noise(0.2,{type:'lowpass',freq:600,fslide:200,gain:0.15});tone(180,0.15,{type:'sine',gain:0.1,slide:90});},
   sharkBite(){noise(0.12,{type:'bandpass',freq:500,gain:0.18});tone(120,0.1,{type:'square',gain:0.08,slide:70});},
@@ -1049,10 +1363,12 @@ function parseSnoozleHome(home){
   if(!home)return {x:0,z:0};
   if(Array.isArray(home)){
     const h={x:home[0],z:home[1]};
-    if(home[2]&&Array.isArray(home[2]))h.path=home[2].map(p=>({x:p[0],y:p[1],z:p[2]}));
+    let i=2;
+    if(home[i]&&Array.isArray(home[i])){h.path=home[i].map(p=>({x:p[0],y:p[1],z:p[2]}));i++;}
+    if(typeof home[i]==='number')h.y=home[i];
     return h;
   }
-  return {x:home.x,z:home.z,path:home.path||null};
+  return {x:home.x,z:home.z,y:home.y,path:home.path||null};
 }
 function addTree(x,z){addSolid(x,0,z,0.8,3.6,0.8,0x7a4f2b,{surf:'wood'});const c=lam(0x4d9a3a);addDecor(mesh(SPH,c,x,4.2,z,1.9,1.6,1.9));addDecor(mesh(SPH,c,x+0.9,3.6,z-0.4,1.2));addDecor(mesh(SPH,c,x-0.8,3.9,z+0.6,1.1));}
 function addFan(x,z,r,top){const g=new THREE.Group();g.position.set(x,0,z);g.add(mesh(CYL,lam(0x4b5563),0,0.15,0,r,0.3,r));const ring=new THREE.Mesh(new THREE.TorusGeometry(r,0.08,8,32),pho(0xd1a83c,120,0xfff0b8));ring.rotation.x=Math.PI/2;ring.position.y=0.32;g.add(ring);
@@ -1099,6 +1415,7 @@ function clearLevelWorld(){
   decorKelps.length=0;suspendMotes.length=0;biolumGlows.length=0;
   if(underwaterGroup)while(underwaterGroup.children.length)underwaterGroup.remove(underwaterGroup.children[0]);
   if(CONCH&&CONCH.g)rem(CONCH.g);CONCH=null;
+  if(ORGAN&&ORGAN.g)rem(ORGAN.g);ORGAN=null;
   if(WRECK){for(const m of(WRECK.shellMeshes||[]))rem(m);if(WRECK.g)rem(WRECK.g);WRECK=null;}
   if(RAINBOW){rem(RAINBOW);RAINBOW=null;}
   if(WM&&WM.parts)WM.parts.forEach(rem);WM=null;
@@ -1323,7 +1640,12 @@ function loadLevel(L){
     else if(k==='peakTuft')addPeakTuft(step[1],step[2],step[3]);
     else if(k==='basaltRock')addBasaltRock(step[1],step[2],step[3],step[4]);
     else if(k==='driftSparks')addDriftSparks(step[1]);
-    else if(k==='protoEndpoint')addProtoEndpoint(step[1],step[2],step[3]);
+    else if(k==='geodeMouth')addGeodeMouth(step[1],step[2],step[3]);
+    else if(k==='crackedGeode')addCrackedGeode(step[1],step[2],step[3],step[4]);
+    else if(k==='crystalCluster')addCrystalCluster(step[1],step[2],step[3],step[4],step[5]);
+    else if(k==='steamCurtain')addSteamCurtain(step[1],step[2],step[3],step[4],step[5],step[6]);
+    else if(k==='crystalSparks')addCrystalSparks(step[1],step[2],step[3],step[4]);
+    else if(k==='protoEndpoint')addProtoEndpoint(step[1],step[2],step[3],step[4]);
     else if(k==='windmill')buildWindmill(step[1],step[2]);
     else if(k==='rainbow')RAINBOW=buildRainbow(step[1],step[2]);
     else if(k==='pinwheelRow'){for(let i=0;i<step[4];i++)addPinwheel(step[1]+i*step[5],step[2]+i*step[6],step[3]);}
@@ -1360,6 +1682,7 @@ function loadLevel(L){
     else if(k==='wreckLedge')wreckLedge(step[1],step[2],step[3],step[4],step[5],step[6]||'');
     else if(k==='unfinishedFinish')registerUnfinishedFinish(step[1],step[2],step[3]);
     else if(k==='conch')buildConch(step[1],step[2]);
+    else if(k==='steamOrgan')buildSteamOrgan(step[1],step[2],step[3]);
   }
   for(const t of L.trees)addTree(t[0],t[1]);
   for(const s of L.snoozles){const x=s[0]!=null?s[0]:TX,y=s[1],z=s[2]!=null?s[2]:TZ;addSnoozle(x,y,z,homes[s[3]],s[4]);}
@@ -1573,7 +1896,7 @@ function beginLavaRecovery(){
   P.anchorSettleT=0;
 }
 function lavaContact(){
-  if(P.dead||P.lavaRecT>0)return;
+  if(won||P.dead||P.lavaRecT>0)return;
   if(P.inv>0)return; // i-frames block another heart, same as goo
   P.hp--;P.inv=HURT_INV;
   beginLavaRecovery();
@@ -1688,6 +2011,7 @@ function doGust(){const yaw=P.yaw,fx=Math.sin(yaw),fz=Math.cos(yaw);const mx=P.p
   gustSteamVents(mx,mz,k);
   gustGeysers(mx,mz,k);
   gustSalamanders(mx,mz,k);
+  gustSteamCurtains(mx,mz,k);
   if(isUnderwater())gustHitKelp(mx,mz,k);
   rumble(60,0.2,0.4);
   if(isUnderwater()&&P.bubble)fireBubble();
@@ -1724,7 +2048,7 @@ function slamImpact(){const px=P.pos.x,py=P.pos.y,pz=P.pos.z;SFX.slam();CAM.shak
   {if(WM){const s=kk(WM.sailX,WM.sailZ);if(s>0)WM.spin+=s*4;}}
   {if(BOAT){const s=kk(BOAT.pos.x,BOAT.pos.z);if(s>0){const d=Math.hypot(BOAT.pos.x-px,BOAT.pos.z-pz)||0.01;BOAT.vel.x+=(BOAT.pos.x-px)/d*s*4;BOAT.vel.z+=(BOAT.pos.z-pz)/d*s*4;}}}
   P.vel.y=SLAM_REBOUND;P.grounded=false;P.lastGround=-9;P.slam=0;P.sq=0.5;if(!P.puff){P.puff=true;refillFX();}}
-function hurtPlayer(kx,kz,col){if(P.inv>0||P.dead)return;P.hp--;P.inv=1.4;const l=Math.hypot(kx,kz)||1;P.vel.x=kx/l*5;P.vel.z=kz/l*5;P.vel.y=Math.max(P.vel.y,5);P.grounded=false;P.slam=0;P.puffAir=0;endHover();clearLeapBoost();clearGlide();P.sq=0.6;SFX.hurt();CAM.shake=0.45;rumble(150,0.7,0.3);
+function hurtPlayer(kx,kz,col){if(won||P.inv>0||P.dead)return;P.hp--;P.inv=1.4;const l=Math.hypot(kx,kz)||1;P.vel.x=kx/l*5;P.vel.z=kz/l*5;P.vel.y=Math.max(P.vel.y,5);P.grounded=false;P.slam=0;P.puffAir=0;endHover();clearLeapBoost();clearGlide();P.sq=0.6;SFX.hurt();CAM.shake=0.45;rumble(150,0.7,0.3);
   for(let i=0;i<10;i++)spawnP(P.pos.x,P.pos.y+0.6,P.pos.z,rand(-3,3),rand(1,4),rand(-3,3),rand(0.06,0.12),col||GOOC,rand(0.3,0.5),0.3,-8,0.9);
   const lostFire=P.fire;
   const lostBubble=P.bubble&&isUnderwater();
@@ -1943,7 +2267,7 @@ function updateSnoozles(dt){for(const s of snoozles){const g=s.g;
   if(s.state==='sleep'){if(s.boat&&BOAT){g.position.set(BOAT.pos.x,0.28,BOAT.pos.z);g.rotation.y=BOAT.yaw+Math.PI/2;}
     g.scale.set(1,1+Math.sin(time*2+s.ph)*0.03,1);s.zz-=dt;if(s.zz<=0){s.zz=rand(0.8,1.3);spawnZ(g.position.x+0.2,g.position.y+0.8,g.position.z);}}
   else if(s.state==='wake'){s.t+=dt;const k=Math.min(s.t/1.1,1);g.position.y=s.baseY+Math.sin(k*Math.PI)*1.3;g.rotation.y+=dt*10;
-    if(s.t>1.1){s.t=0;s.fx=g.position.x;s.fy=s.baseY;s.fz=g.position.z;s.homeY=groundHeightAt(s.home.x,s.home.z);
+    if(s.t>1.1){s.t=0;s.fx=g.position.x;s.fy=s.baseY;s.fz=g.position.z;s.homeY=(s.home.y!=null)?s.home.y:groundHeightAt(s.home.x,s.home.z);
       if(s.path&&s.path.length){s.state='path';s.pathIdx=0;}else s.state='zoom';}}
   else if(s.state==='path'){s.t+=dt;const dur=1.15;const k=Math.min(s.t/dur,1);const tgt=s.path[s.pathIdx];
     g.position.x=lerp(s.fx,tgt.x,k);g.position.y=lerp(s.fy,tgt.y,k);g.position.z=lerp(s.fz,tgt.z,k);
@@ -2259,10 +2583,13 @@ function updateGeysers(dt){
 function updatePeak(dt){
   updateCinders(dt);updateEmbers(dt);updateWisps(dt);updateSalamanders(dt);updateGeysers(dt);
   updateDriftSparks(dt);updateProtoEndpoints(dt);
+  updateSteamCurtains(dt);updateCrystalSparks(dt);updateGeodeAmbience(dt);
+  // Steam Organ finish update is owned by FINISH.update — do not double-drive here.
 }
 
-// ---- Stage 4 presentation + temporary endpoint (easy to remove in Stage 5) ----
-const protoEndpoints=[],driftSparks=[];
+// ---- Stage 4 presentation + temporary endpoint + Stage 5 Geode Hollow ----
+const protoEndpoints=[],driftSparks=[],steamCurtains=[],crystalSparks=[];
+let geodeAmbT=0,geodeInside=false;
 function clearPeakWorld(){
   const rem=m=>{
     if(!m)return;
@@ -2278,6 +2605,11 @@ function clearPeakWorld(){
   for(const s of scorches){s.alive=false;s.m.visible=false;}
   for(const e of protoEndpoints)rem(e.g);protoEndpoints.length=0;
   for(const s of driftSparks)rem(s.m);driftSparks.length=0;
+  for(const c of steamCurtains){rem(c.g);if(c.sol&&c.sol.mesh)rem(c.sol.mesh);}steamCurtains.length=0;
+  for(const s of crystalSparks)rem(s.m);crystalSparks.length=0;
+  for(const f of organFireworks){if(f.m)rem(f.m);}organFireworks.length=0;
+  if(ORGAN&&ORGAN.g)rem(ORGAN.g);ORGAN=null;
+  geodeAmbT=0;geodeInside=false;
 }
 function addVolcanoLandmark(x,y,z,scale){
   scale=scale||1;
@@ -2319,18 +2651,30 @@ function updateDriftSparks(dt){
     s.m.material.opacity=0.45+0.35*Math.sin(time*4+s.ph);
   }
 }
-function addProtoEndpoint(x,y,z){
-  // Temporary blocked geode mouth — unmistakably not the Steam Organ finish.
+function addProtoEndpoint(x,y,z,kind){
+  // Temporary soft-return marker — never a real FINISH / win.
+  // kind:'climb' (Stage 5 exit) suggests ascent; default is a blocked mouth wall.
   const g=new THREE.Group();g.position.set(x,y,z);
-  g.add(mesh(BOXG,lam(0x4a3a55),0,2.2,0,7.5,4.4,1.6));
-  g.add(mesh(BOXG,lam(0x2a2035),0,1.6,0.55,4.2,3.2,0.5));
-  g.add(mesh(CONE,pho(0x88ccff,40,0xffffff),-1.6,2.8,0.3,0.35,1.1,0.35));
-  g.add(mesh(CONE,pho(0xc48cff,40,0xffffff),1.4,3.0,0.25,0.3,1.0,0.3));
-  g.add(mesh(CONE,pho(0x66ffe0,40,0xffffff),0.2,3.4,0.35,0.28,0.9,0.28));
-  // Wall sits on the landmark; trigger zone is the approach pad in front (+Z).
-  addSolid(x,y,z,7.8,4.6,1.8,0x4a3a55,{surf:'stone',invisible:true});
+  const climb=kind==='climb';
+  if(climb){
+    g.add(mesh(BOXG,lam(0x3a2e38),0,1.6,0.4,8.5,3.2,1.2));
+    g.add(mesh(BOXG,lam(0x2a2030),-2.6,2.8,-0.2,2.4,2.4,1.4));
+    g.add(mesh(BOXG,lam(0x2a2030),2.6,3.4,-0.5,2.2,3.0,1.5));
+    g.add(mesh(BOXG,lam(0x4a3a55),0,4.2,-0.8,5.5,0.5,2.2));
+    // Far lava glow under the silhouette, steam drifting up.
+    g.add(mesh(BOXG,new THREE.MeshBasicMaterial({color:0xff6a18,transparent:true,opacity:0.45}),0,0.6,-1.2,4.5,0.08,1.6));
+    for(let i=0;i<4;i++)g.add(mesh(SPH,new THREE.MeshBasicMaterial({color:0xffe0c0,transparent:true,opacity:0.35}),rand(-1.5,1.5),2.2+i*0.7,rand(-0.6,0.2),0.35+i*0.08));
+    addSolid(x,y,z,8.8,5.2,1.6,0x3a2e38,{surf:'stone',invisible:true});
+  }else{
+    g.add(mesh(BOXG,lam(0x4a3a55),0,2.2,0,7.5,4.4,1.6));
+    g.add(mesh(BOXG,lam(0x2a2035),0,1.6,0.55,4.2,3.2,0.5));
+    g.add(mesh(CONE,pho(0x88ccff,40,0xffffff),-1.6,2.8,0.3,0.35,1.1,0.35));
+    g.add(mesh(CONE,pho(0xc48cff,40,0xffffff),1.4,3.0,0.25,0.3,1.0,0.3));
+    g.add(mesh(CONE,pho(0x66ffe0,40,0xffffff),0.2,3.4,0.35,0.28,0.9,0.28));
+    addSolid(x,y,z,7.8,4.6,1.8,0x4a3a55,{surf:'stone',invisible:true});
+  }
   scene.add(g);
-  protoEndpoints.push({g,x,y,z,trigZ:z+2.4,triggered:false,fxT:0});
+  protoEndpoints.push({g,x,y,z,trigZ:z+2.4,triggered:false,fxT:0,kind:climb?'climb':'mouth'});
 }
 function updateProtoEndpoints(dt){
   for(const e of protoEndpoints){
@@ -2355,6 +2699,368 @@ function updateProtoEndpoints(dt){
     }
   }
 }
+
+// ---- Geode Hollow builders (Stage 5) ----
+const GEODE_ROCK=0x2a1e38,GEODE_DEEP=0x1a1228,GEODE_CRYSTAL=0x7a5cff,GEODE_CRYSTAL2=0x88ccff,GEODE_PALE=0xd8c8ff;
+function addCrystalShard(parent,x,y,z,sx,sy,sz,col,emissive){
+  const m=mesh(CONE,pho(col||GEODE_CRYSTAL,45,emissive!=null?emissive:0xffffff),x,y,z,sx,sy,sz);
+  parent.add(m);return m;
+}
+function addCrystalCluster(x,y,z,scale,blocking){
+  scale=scale||1;
+  const g=new THREE.Group();g.position.set(x,y,z);
+  const rock=lam(GEODE_ROCK),deep=lam(GEODE_DEEP);
+  g.add(mesh(BOXG,rock,0,0.35*scale,0,1.1*scale,0.7*scale,0.9*scale));
+  g.add(mesh(BOXG,deep,0.15*scale,0.55*scale,0.1*scale,0.55*scale,0.4*scale,0.5*scale));
+  addCrystalShard(g,-0.25*scale,1.1*scale,0,0.22*scale,1.4*scale,0.22*scale,GEODE_CRYSTAL,0xc8b0ff);
+  addCrystalShard(g,0.3*scale,0.95*scale,0.15*scale,0.18*scale,1.1*scale,0.18*scale,GEODE_CRYSTAL2,0xffffff);
+  addCrystalShard(g,0.05*scale,1.35*scale,-0.2*scale,0.14*scale,0.9*scale,0.14*scale,GEODE_PALE,0xffffff);
+  scene.add(g);levelDecor.push(g);
+  // Large clusters that visibly block the path get matching collision; tiny décor does not.
+  if(blocking)addSolid(x,y,z,1.15*scale,1.6*scale,0.95*scale,GEODE_ROCK,{surf:'stone',invisible:true});
+  return g;
+}
+function addGeodeMouth(x,y,z){
+  // Open cave mouth — crystal frame, no blocking wall (replaces Stage 4 blocker).
+  const g=new THREE.Group();g.position.set(x,y,z);
+  g.add(mesh(BOXG,lam(GEODE_ROCK),-4.2,2.4,0,1.6,4.8,2.2));
+  g.add(mesh(BOXG,lam(GEODE_ROCK),4.2,2.4,0,1.6,4.8,2.2));
+  g.add(mesh(BOXG,lam(GEODE_DEEP),0,4.6,0,7.2,1.2,2.0));
+  g.add(mesh(BOXG,lam(0x3a2a48),0,2.0,0.35,5.2,3.6,0.35));
+  addCrystalShard(g,-3.2,3.6,0.4,0.35,1.3,0.35,GEODE_CRYSTAL2,0xffffff);
+  addCrystalShard(g,3.0,3.8,0.35,0.3,1.2,0.3,GEODE_CRYSTAL,0xc8b0ff);
+  addCrystalShard(g,-1.2,4.8,0.3,0.22,0.9,0.22,GEODE_PALE,0xffffff);
+  addCrystalShard(g,1.4,4.9,0.25,0.2,0.85,0.2,GEODE_CRYSTAL2,0xffffff);
+  // Soft cool wash so the opening reads as "inside is different".
+  g.add(mesh(BOXG,new THREE.MeshBasicMaterial({color:0xa090ff,transparent:true,opacity:0.18}),0,2.2,-0.6,4.6,3.6,0.08));
+  scene.add(g);levelDecor.push(g);
+  addSolid(x-4.2,y,z,1.6,4.8,2.2,GEODE_ROCK,{surf:'stone',invisible:true});
+  addSolid(x+4.2,y,z,1.6,4.8,2.2,GEODE_ROCK,{surf:'stone',invisible:true});
+  addSolid(x,y+4.0,z,7.2,1.2,2.0,GEODE_DEEP,{surf:'stone',invisible:true});
+}
+function addCrackedGeode(x,y,z,scale){
+  // Large broken crystal shell open toward +Z (player approach). Snoozle sits inside.
+  scale=scale||1.6;
+  const g=new THREE.Group();g.position.set(x,y,z);
+  const shell=pho(0x5a48a0,35,0xb8a0ff),inner=pho(0x88ccff,55,0xffffff),rim=lam(GEODE_DEEP);
+  // Back half + side lobes; front (+Z) stays open.
+  g.add(mesh(SPH,shell,0,1.1*scale,-0.55*scale,1.55*scale,1.35*scale,1.1*scale));
+  g.add(mesh(SPH,inner,0,1.05*scale,-0.35*scale,1.15*scale,1.0*scale,0.85*scale));
+  g.add(mesh(BOXG,rim,-1.35*scale,1.2*scale,0.15*scale,0.55*scale,2.0*scale,1.6*scale));
+  g.add(mesh(BOXG,rim,1.35*scale,1.2*scale,0.15*scale,0.55*scale,2.0*scale,1.6*scale));
+  g.add(mesh(BOXG,rim,0,2.15*scale,-0.1*scale,2.4*scale,0.45*scale,1.5*scale));
+  g.add(mesh(BOXG,rim,0,0.15*scale,-0.1*scale,2.2*scale,0.35*scale,1.4*scale));
+  addCrystalShard(g,-0.9*scale,2.0*scale,-0.7*scale,0.28*scale,1.1*scale,0.28*scale,GEODE_CRYSTAL,0xc8b0ff);
+  addCrystalShard(g,0.85*scale,1.9*scale,-0.65*scale,0.24*scale,1.0*scale,0.24*scale,GEODE_CRYSTAL2,0xffffff);
+  addCrystalShard(g,0.1*scale,2.35*scale,-0.9*scale,0.2*scale,0.85*scale,0.2*scale,GEODE_PALE,0xffffff);
+  // Floor cushion inside the shell
+  g.add(mesh(BOXG,lam(0x3a2e55),0,0.28*scale,0.35*scale,1.6*scale,0.2*scale,1.2*scale));
+  scene.add(g);levelDecor.push(g);
+  // Collision for the closed back / sides — leave the +Z mouth open for approach.
+  addSolid(x,y,z-0.7*scale,2.8*scale,2.4*scale,0.9*scale,GEODE_ROCK,{surf:'stone',invisible:true});
+  addSolid(x-1.45*scale,y,z+0.05*scale,0.55*scale,2.2*scale,1.5*scale,GEODE_ROCK,{surf:'stone',invisible:true});
+  addSolid(x+1.45*scale,y,z+0.05*scale,0.55*scale,2.2*scale,1.5*scale,GEODE_ROCK,{surf:'stone',invisible:true});
+  addSolid(x,y+2.0*scale,z-0.15*scale,2.5*scale,0.45*scale,1.5*scale,GEODE_ROCK,{surf:'stone',invisible:true});
+  return g;
+}
+function addSteamCurtain(x,y,z,w,h,axis){
+  w=w||4.2;h=h||3.8;axis=axis||'z';
+  const g=new THREE.Group();g.position.set(x,y,z);
+  const plumes=[];
+  const alongZ=axis==='x';
+  for(let i=0;i<7;i++){
+    const t=(i+0.5)/7,off=(t-0.5)*w*0.92;
+    const px=alongZ?0:off,pz=alongZ?off:0;
+    const p=mesh(SPH,new THREE.MeshBasicMaterial({color:0xe8f0ff,transparent:true,opacity:0.42}),px,h*0.45,pz,alongZ?0.28:0.35+rand(0,0.12),h*0.55,alongZ?0.35+rand(0,0.12):0.28);
+    g.add(p);plumes.push({m:p,base:off});
+  }
+  if(alongZ){
+    g.add(mesh(BOXG,lam(0x4a3a48),0,0.15,0,0.55,0.3,w*0.95));
+    g.add(mesh(BOXG,new THREE.MeshBasicMaterial({color:0xc8d8ff,transparent:true,opacity:0.22}),0.05,h*0.5,0,0.12,h*0.95,w*0.9));
+  }else{
+    g.add(mesh(BOXG,lam(0x4a3a48),0,0.15,0,w*0.95,0.3,0.55));
+    g.add(mesh(BOXG,new THREE.MeshBasicMaterial({color:0xc8d8ff,transparent:true,opacity:0.22}),0,h*0.5,0.05,w*0.9,h*0.95,0.12));
+  }
+  scene.add(g);
+  const sol=alongZ
+    ?addSolid(x,y,z,0.7,h+0.4,w+0.35,0x4a3a55,{surf:'stone',invisible:true})
+    :addSolid(x,y,z,w+0.35,h+0.4,0.7,0x4a3a55,{surf:'stone',invisible:true});
+  // openSide pushes plumes left (−X) for side curtains, or −X for Z curtains (matches kelp secret).
+  steamCurtains.push({g,plumes,sol,x,y,z,w,h,axis,parted:false,partT:0,pt:0,openSide:alongZ?-1:-1});
+  return steamCurtains[steamCurtains.length-1];
+}
+function partSteamCurtain(c){
+  if(!c||c.parted)return;
+  c.parted=true;c.partT=0;
+  const i=solids.indexOf(c.sol);if(i>=0)solids.splice(i,1);
+  if(c.sol&&c.sol.mesh)c.sol.mesh.visible=false;
+  SFX.gust();SFX.reveal();
+  spawnRing(c.x,c.y+c.h*0.45,c.z,0xc8e0ff,0.4,6,0.4);
+  for(let j=0;j<16;j++)spawnP(c.x+rand(-c.w*0.4,c.w*0.4),c.y+rand(0.4,c.h),c.z+rand(-0.3,0.3),rand(-2,2),rand(1,4),rand(-1,1),rand(0.07,0.14),Math.random()<0.5?0xe8f4ff:0xc48cff,0.6,0.45,-2,0.85);
+}
+function gustSteamCurtains(mx,mz,k){
+  for(const c of steamCurtains){
+    if(c.parted)continue;
+    const s=k(c.x,c.z);
+    const nearFeet=Math.hypot(P.pos.x-c.x,P.pos.z-c.z)<(c.axis==='x'?1.2:c.w*0.55)+0.55;
+    if(s>0.14||(nearFeet&&Math.abs(P.pos.y-c.y)<c.h))partSteamCurtain(c);
+  }
+}
+function updateSteamCurtains(dt){
+  for(const c of steamCurtains){
+    if(c.parted){
+      c.partT+=dt;const k=smooth(Math.min(c.partT/0.55,1));
+      if(c.axis==='x')c.g.position.z=lerp(c.z,c.z-2.2,k);
+      else c.g.position.x=lerp(c.x,c.x+c.openSide*2.4,k);
+      for(let i=0;i<c.plumes.length;i++){
+        const p=c.plumes[i],m=p.m||p;
+        m.material.opacity=0.42*(1-k*0.85);
+      }
+      continue;
+    }
+    c.pt-=dt;if(c.pt<=0){c.pt=0.12;
+      const ox=c.axis==='x'?rand(-0.15,0.15):rand(-c.w*0.4,c.w*0.4);
+      const oz=c.axis==='x'?rand(-c.w*0.4,c.w*0.4):rand(-0.15,0.15);
+      spawnP(c.x+ox,c.y+0.4,c.z+oz,rand(-0.2,0.2),rand(1.2,2.8),rand(-0.15,0.15),rand(0.06,0.1),0xe8f0ff,0.45,0.55,0,0.55);
+    }
+    for(let i=0;i<c.plumes.length;i++){
+      const m=(c.plumes[i].m||c.plumes[i]);
+      m.scale.y=(c.h*0.55)*(0.9+0.12*Math.sin(time*2.4+i));
+      m.material.opacity=0.32+0.14*Math.sin(time*3+i*0.7);
+    }
+  }
+}
+function addCrystalSparks(n,cx,cz,spread){
+  n=n||14;spread=spread||8;
+  for(let i=0;i<n;i++){
+    const col=Math.random()<0.5?GEODE_CRYSTAL2:GEODE_PALE;
+    const m=mesh(SPH,new THREE.MeshBasicMaterial({color:col,transparent:true,opacity:0.55}),0,0,0,0.05);
+    m.position.set(cx+rand(-spread,spread),rand(21,26),cz+rand(-spread,spread));
+    scene.add(m);
+    crystalSparks.push({m,vx:rand(-0.12,0.12),vy:rand(0.15,0.45),vz:rand(-0.12,0.12),ph:rand(0,TAU),baseY:m.position.y,cx,cz,spread});
+  }
+}
+function updateCrystalSparks(dt){
+  for(const s of crystalSparks){
+    s.m.position.x+=s.vx*dt;s.m.position.y+=s.vy*dt;s.m.position.z+=s.vz*dt;
+    if(s.m.position.y>s.baseY+3.5){s.m.position.y=s.baseY;s.m.position.x=s.cx+rand(-s.spread,s.spread);s.m.position.z=s.cz+rand(-s.spread,s.spread);}
+    s.m.material.opacity=0.35+0.35*Math.sin(time*3.5+s.ph);
+  }
+}
+function inGeodeHollow(){
+  const z=CURRENT_LEVEL&&CURRENT_LEVEL.route&&CURRENT_LEVEL.route.geodeHollow;
+  if(!z)return false;
+  return P.pos.z<=z.zEnter&&P.pos.z>=z.zExit&&Math.abs(P.pos.x)<(z.halfW||12);
+}
+function updateGeodeAmbience(dt){
+  const inside=inGeodeHollow();
+  if(inside!==geodeInside){
+    geodeInside=inside;
+    if(CURRENT_LEVEL&&CURRENT_LEVEL.peakAtmosphere){
+      if(inside){
+        // Cooler, closer fog — register break without a separate music system.
+        scene.background=new THREE.Color(0x2a2048);
+        scene.fog=new THREE.Fog(0x3a2a68,12,55);
+      }else beginPeakLevel();
+    }
+  }
+  if(!inside)return;
+  geodeAmbT-=dt;
+  if(geodeAmbT<=0){
+    geodeAmbT=rand(1.6,3.2);
+    // Sparse crystal chime — thins the Peak bed by presence, not by rewriting the sequencer.
+    if(typeof SFX.crystalChime==='function')SFX.crystalChime();
+    else if(AU.ctx){const c=chordNow();tone(hz(c[Math.floor(Math.random()*3)]+24,523.25),0.45,{type:'sine',gain:0.045,attack:0.02});}
+  }
+}
+
+// ---- Great Steam Organ + crater finish (Stage 7) ----
+let ORGAN=null;
+const organFireworks=[];
+function playerInOrganKeyboard(){
+  if(!ORGAN||!ORGAN.trigger||!ORGAN.active)return false;
+  const t=ORGAN.trigger,p=P.pos;
+  return Math.abs(p.x-t.x)<t.hx&&Math.abs(p.z-t.z)<t.hz&&p.y>t.y-0.4&&p.y<t.y+t.hy;
+}
+function activateSteamOrgan(){
+  if(!ORGAN||ORGAN.active)return;
+  ORGAN.active=true;ORGAN.activateT=0;
+  if(typeof SFX.organSwell==='function')SFX.organSwell();
+  else SFX.wake();
+  CAM.fovKick=Math.max(CAM.fovKick,5);CAM.shake=Math.max(CAM.shake,0.22);
+  spawnRing(ORGAN.cx,ORGAN.deckY+1.2,ORGAN.cz+6,0xffd24a,0.45,8,0.6);
+  spawnRing(ORGAN.cx,ORGAN.deckY+2.4,ORGAN.cz+2,0xff9a3c,0.3,7,0.5);
+  for(let i=0;i<28;i++){
+    spawnP(ORGAN.cx+rand(-3,3),ORGAN.deckY+rand(1,6),ORGAN.cz+rand(0,8),
+      rand(-1.5,1.5),rand(1,4),rand(-1,2),0.1,Math.random()<0.5?0xffe36b:0xff9a3c,0.8,0.35,-3,1);
+  }
+  showToast('The mountain woke up!');
+}
+function stageOrganWinPose(){
+  if(!ORGAN)return;
+  const kx=ORGAN.trigger.x,kz=ORGAN.trigger.z,ky=ORGAN.deckY+0.4;
+  P.pos.set(kx,ky,kz);P.vel.set(0,0,0);P.yaw=Math.PI;P.grounded=true;P.puff=true;P.puffAir=0;endHover();
+  // Camera from the rim side (+Z), looking toward Organ (−Z). Pling stays in front of pipes.
+  CAM.look.set(kx,ky+1.6,kz-1.5);
+  CAM.pos.set(kx+0.4,ky+4.2,kz+13.5);
+  CAM.yaw=0.02;CAM.pitch=0.22;CAM.boomDist=14;CAM.targetDist=14;CAM.mode='finish';
+  CAM.fovKick=Math.max(CAM.fovKick,8);CAM.shake=Math.max(CAM.shake,0.3);
+  CAM.lastManual=time+99;
+}
+function spawnOrganFireworkBurst(){
+  if(!ORGAN)return;
+  // Behind / beside / above the celebration — never a bright flash over Pling.
+  const baseZ=ORGAN.cz-2,baseY=ORGAN.deckY+10;
+  for(let n=0;n<3;n++){
+    const ox=ORGAN.cx+rand(-10,10),oy=baseY+rand(0,6),oz=baseZ+rand(-8,2);
+    const col=Math.random()<0.34?0xff6a18:(Math.random()<0.5?0xffe36b:0xff9a3c);
+    for(let i=0;i<14;i++){
+      const a=rand(0,TAU),sp=rand(2,7);
+      const m=mesh(SPH,new THREE.MeshBasicMaterial({color:col,transparent:true,opacity:0.95}),0,0,0,0.12);
+      m.position.set(ox,oy,oz);scene.add(m);
+      organFireworks.push({m,vx:Math.cos(a)*sp,vy:rand(2,8),vz:Math.sin(a)*sp*0.5,life:rand(0.7,1.4),grav:-9,kind:'fw'});
+    }
+    spawnRing(ox,oy,oz,col,0.35,6,0.55);
+  }
+}
+function updateOrganFireworks(dt){
+  for(let i=organFireworks.length-1;i>=0;i--){
+    const f=organFireworks[i];
+    f.life-=dt;f.vy+=f.grav*dt;f.m.position.x+=f.vx*dt;f.m.position.y+=f.vy*dt;f.m.position.z+=f.vz*dt;
+    f.m.material.opacity=Math.max(0,f.life*0.9);
+    if(f.life<=0){if(f.m.parent)f.m.parent.remove(f.m);else scene.remove(f.m);organFireworks.splice(i,1);}
+  }
+}
+function setOrganVisualState(lit,playing){
+  if(!ORGAN)return;
+  const glow=lit?(playing?0.85:0.55):(0.04+Math.sin(time*0.7)*0.015);
+  const steamOp=lit?(playing?0.55:0.38):(0.06+Math.sin(time*0.5)*0.02);
+  if(ORGAN.pipeLights)for(const L of ORGAN.pipeLights){
+    L.m.material.opacity=glow*(0.55+0.45*Math.sin(time*(playing?4:1.4)+L.ph));
+  }
+  if(ORGAN.valves)for(const v of ORGAN.valves){
+    if(v.glow)v.glow.material.opacity=lit?(playing?0.7:0.45):(0.05+Math.sin(time*0.9+v.ph)*0.02);
+  }
+  if(ORGAN.steamPuffs)for(const s of ORGAN.steamPuffs){
+    s.m.material.opacity=steamOp*(0.6+0.4*Math.sin(time*2+s.ph));
+    if(lit)s.m.position.y=s.baseY+((time*0.7+s.ph)%2.4);
+  }
+  if(ORGAN.keyGlow)ORGAN.keyGlow.material.opacity=lit?(0.22+Math.sin(time*1.6)*0.1):(0.04);
+  if(ORGAN.keyGlow)ORGAN.keyGlow.visible=!!lit;
+}
+function organCamHold(dt){
+  if(!ORGAN)return;
+  const kx=ORGAN.trigger.x,kz=ORGAN.trigger.z,ky=ORGAN.deckY+0.4;
+  const lookX=kx,lookY=ky+1.7,lookZ=kz-2.0;
+  const posX=kx+0.35,posY=ky+4.4,posZ=kz+14.2;
+  CAM.look.x=damp(CAM.look.x,lookX,8,dt);CAM.look.y=damp(CAM.look.y,lookY,8,dt);CAM.look.z=damp(CAM.look.z,lookZ,8,dt);
+  CAM.pos.x=damp(CAM.pos.x,posX,7,dt);CAM.pos.y=damp(CAM.pos.y,posY,7,dt);CAM.pos.z=damp(CAM.pos.z,posZ,7,dt);
+  CAM.yaw=0.02;CAM.pitch=0.22;CAM.boomDist=14;CAM.targetDist=14;CAM.mode='finish';
+  CAM.effectiveDist=Math.hypot(CAM.pos.x-CAM.look.x,CAM.pos.y-CAM.look.y,CAM.pos.z-CAM.look.z);
+  CAM.collisionPulled=false;
+}
+function updateSteamOrgan(dt,winT){
+  if(!ORGAN)return;
+  if(ORGAN.active)ORGAN.activateT+=dt;
+  setOrganVisualState(ORGAN.active,won);
+  updateOrganFireworks(dt);
+  if(winT>=0){
+    ORGAN.fwT=(ORGAN.fwT||0)-dt;
+    if(ORGAN.fwT<=0&&winT<14){ORGAN.fwT=0.55;spawnOrganFireworkBurst();}
+    return;
+  }
+  if(ORGAN.active&&!won&&playerInOrganKeyboard()){
+    if(typeof SFX.organKey==='function')SFX.organKey();
+    triggerWin();
+  }
+}
+function buildSteamOrgan(cx,deckY,cz){
+  deckY=deckY!=null?deckY:44.4;cz=cz!=null?cz:-640;
+  const g=new THREE.Group();g.position.set(cx,0,cz);
+  const brassDark=lam(0x5a4030),brass=lam(0xb08a4a),brassLite=pho(0xd4a85a,40,0xffe0a0);
+  const rock=lam(0x3a3538),rockDeep=lam(0x2a2218);
+  // Monumental pipe bank rising from volcanic rock.
+  const pipes=[
+    {x:-6.2,z:-2.0,h:12.5,r:0.55},
+    {x:-3.4,z:-3.5,h:15.5,r:0.48},
+    {x:-0.8,z:-4.2,h:17.2,r:0.62},
+    {x:2.2,z:-3.2,h:14.0,r:0.5},
+    {x:5.4,z:-1.6,h:11.8,r:0.58},
+    {x:7.6,z:-3.8,h:13.6,r:0.42},
+    {x:-7.8,z:-4.5,h:10.5,r:0.4}
+  ];
+  ORGAN={cx,cz,deckY,active:false,playing:false,activateT:0,pipeLights:[],valves:[],steamPuffs:[],homes:[],fwT:0,g};
+  for(const p of pipes){
+    const body=mesh(CYL,brassDark,p.x,deckY+p.h*0.5,p.z,p.r,p.h,p.r);g.add(body);
+    const rim=mesh(CYL,brass,p.x,deckY+p.h+0.08,p.z,p.r*1.15,0.16,p.r*1.15);g.add(rim);
+    const light=mesh(SPH,new THREE.MeshBasicMaterial({color:0xff9a3c,transparent:true,opacity:0.05,depthWrite:false}),p.x,deckY+p.h*0.65,p.z,p.r*0.85);
+    g.add(light);ORGAN.pipeLights.push({m:light,ph:rand(0,TAU)});
+  }
+  // Rock plinth under pipes
+  g.add(mesh(BOXG,rock,0,deckY-0.2,-3.2,18,1.2,8));
+  g.add(mesh(BOXG,rockDeep,0,deckY+1.2,-4.5,14,3.5,4));
+  // Valves along the bank
+  for(let i=0;i<6;i++){
+    const vx=-7+i*2.6,vz=-1.2;
+    g.add(mesh(CYL,brass,vx,deckY+1.1,vz,0.22,0.7,0.22));
+    const glow=mesh(SPH,new THREE.MeshBasicMaterial({color:0xff6a18,transparent:true,opacity:0.05,depthWrite:false}),vx,deckY+1.55,vz,0.28);
+    g.add(glow);ORGAN.valves.push({glow,ph:i*0.7});
+  }
+  // Walkways / side rails — frame, not cover, the keyboard.
+  addSolid(cx-9.5,deckY,cz+4,2.4,0.4,14,0x4a3a32,{surf:'stone'});
+  addSolid(cx+9.5,deckY,cz+4,2.4,0.4,14,0x4a3a32,{surf:'stone'});
+  g.add(mesh(BOXG,brass,-9.5,deckY+1.1,4,0.2,2.0,12));
+  g.add(mesh(BOXG,brass,9.5,deckY+1.1,4,0.2,2.0,12));
+  // Keyboard deck — broad, readable keys, easy entry from +Z.
+  const keyZ=8.5;
+  addSolid(cx,deckY,cz+keyZ,12,0.4,7,0x5a4030,{surf:'stone'});
+  for(let i=0;i<8;i++){
+    const kx=-5.2+i*1.45;
+    const key=mesh(BOXG,i%2?brassLite:brass,kx,deckY+0.28,keyZ,1.2,0.16,4.8);
+    g.add(key);
+  }
+  const keyGlow=mesh(BOXG,new THREE.MeshBasicMaterial({color:0xffe36b,transparent:true,opacity:0.04,depthWrite:false}),0,deckY+0.35,keyZ,10,0.05,5.2);
+  keyGlow.visible=false;g.add(keyGlow);ORGAN.keyGlow=keyGlow;
+  // Subtle ambient steam (always faint); grows when active.
+  for(let i=0;i<8;i++){
+    const sx=rand(-6,6),sz=rand(-4,2);
+    const m=mesh(SPH,new THREE.MeshBasicMaterial({color:0xffe0c0,transparent:true,opacity:0.08,depthWrite:false}),sx,deckY+3+i*0.4,sz,0.5+i*0.05);
+    g.add(m);ORGAN.steamPuffs.push({m,baseY:deckY+2.5+i*0.35,ph:rand(0,TAU)});
+  }
+  // Pipe-top home pads (collision so surface/home settle reads) — offset so Snoozles frame Pling.
+  const homes=[
+    {x:cx-6.2,y:deckY+12.7,z:cz-2.0},
+    {x:cx+5.4,y:deckY+12.0,z:cz-1.6},
+    {x:cx-3.4,y:deckY+15.7,z:cz-3.5},
+    {x:cx+2.2,y:deckY+14.2,z:cz-3.2}
+  ];
+  for(const h of homes){
+    addSolid(h.x,h.y-0.15,h.z,1.1,0.3,1.1,0xb08a4a,{surf:'stone'});
+    ORGAN.homes.push(h);
+  }
+  ORGAN.trigger={x:cx,y:deckY,z:cz+keyZ,hx:5.2,hy:2.4,hz:3.0};
+  ORGAN.keyboard={x:cx,y:deckY,z:cz+keyZ,w:12,d:7};
+  scene.add(g);levelDecor.push(g);
+  setOrganVisualState(false,false);
+  registerFinish({
+    x:cx,z:cz+keyZ,top:deckY+16,
+    winMsg:'The mountain is singing!',
+    onAllAwake(){activateSteamOrgan();},
+    onWin(){
+      ORGAN.playing=true;
+      // Organ layer joins only at keyboard win — keeps climax/finish distinct.
+      AU.layers=Math.max(AU.layers,5);
+      stageOrganWinPose();
+      spawnOrganFireworkBurst();
+      ORGAN.fwT=0.35;
+    },
+    camHold(dt){organCamHold(dt);},
+    update(dt,t){updateSteamOrgan(dt,t);}
+  });
+  return ORGAN;
+}
+window.__ORGAN=()=>ORGAN;
+window.__organFireworks=()=>organFireworks;
 
 
 // ===== src/deep.js =====
@@ -3416,13 +4122,13 @@ updatePickerUI();
 // ===== src/game.js =====
 let time=0,rescued=0,gotNotes=0;
 let started=false;
-window.__W={solids,gloops,goos,hearts,crates,powers,fires,checks,snoozles,notes,dust,puddles,sharks,fish,spikefish,clams,bubbleShots,kelps,steamVents,lavas,cinders,embers,wisps,salamanders,geysers,scorches,protoEndpoints,celebrationParticles:PART,get underwaterGroup(){return underwaterGroup;},get won(){return won;},get WM(){return WM;},get RAINBOW(){return RAINBOW;},get FINISH(){return FINISH;},get sfx(){return SFX;},get wreck(){return WRECK;},get conch(){return CONCH;}};
+window.__W={solids,gloops,goos,hearts,crates,powers,fires,checks,snoozles,notes,dust,puddles,sharks,fish,spikefish,clams,bubbleShots,kelps,steamVents,lavas,cinders,embers,wisps,salamanders,geysers,scorches,protoEndpoints,steamCurtains,crystalSparks,celebrationParticles:PART,get underwaterGroup(){return underwaterGroup;},get won(){return won;},get WM(){return WM;},get RAINBOW(){return RAINBOW;},get FINISH(){return FINISH;},get sfx(){return SFX;},get wreck(){return WRECK;},get conch(){return CONCH;},get organ(){return ORGAN;},get organFireworks(){return organFireworks;}};
 window.__started=()=>started;
 
 // ---------- camera ----------
 const CAM=window.__CAM={yaw:0,pitch:0.42,dist:8.5,pos:new THREE.Vector3(0,5,19),look:new THREE.Vector3(0,1,10),shake:0,fovKick:0,lastManual:-9,boomDist:8.5,targetDist:8.5,effectiveDist:8.5,collisionPulled:false,mode:'outdoor'};
 // Stage 4.8A — temporary Level 3 landscape camera-distance diagnostic (not a shipping profile).
-const VERSION_BASE='v32 · Player shadow';
+const VERSION_BASE='v36 · The Peak Complete';
 const CAMDIST_ALLOW={'8.5':8.5,'8.50':8.5,'6.8':6.8,'6.80':6.8,'6.07':6.07,'5':5,'5.0':5,'5.00':5,'3.93':3.93};
 const CAMDIST_STEPS=[8.5,6.8,6.07,5,3.93];
 function parseCamDistQuery(search){
@@ -3513,6 +4219,17 @@ if(typeof addEventListener==='function'){
 }
 
 function updateCamera(dt){
+  // FINISH-owned celebration framing supersedes gameplay boom (incl. camdiag) while won.
+  if(won&&FINISH&&typeof FINISH.camHold==='function'){
+    FINISH.camHold(dt);
+    CAM.shake=Math.max(0,CAM.shake-dt*2.2);const sh=CAM.shake*CAM.shake*0.35;
+    camera.position.set(CAM.pos.x+rand(-sh,sh),CAM.pos.y+rand(-sh,sh),CAM.pos.z+rand(-sh,sh));camera.lookAt(CAM.look);
+    CAM.fovKick=damp(CAM.fovKick,0,9,dt);
+    const baseFov=62;const fov=baseFov+CAM.fovKick;CAM.baseFov=baseFov;CAM.fov=fov;
+    if(Math.abs(camera.fov-fov)>0.01){camera.fov=fov;camera.updateProjectionMatrix();}
+    if(camDistParam!=null)updateCamDiagUI();
+    return;
+  }
   const inWreck=window.__inWreckInterior&&window.__inWreckInterior();
   const inConch=window.__inConchInterior&&window.__inConchInterior();
   const tight=inWreck||inConch;

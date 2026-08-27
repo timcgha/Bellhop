@@ -116,10 +116,12 @@ function parseSnoozleHome(home){
   if(!home)return {x:0,z:0};
   if(Array.isArray(home)){
     const h={x:home[0],z:home[1]};
-    if(home[2]&&Array.isArray(home[2]))h.path=home[2].map(p=>({x:p[0],y:p[1],z:p[2]}));
+    let i=2;
+    if(home[i]&&Array.isArray(home[i])){h.path=home[i].map(p=>({x:p[0],y:p[1],z:p[2]}));i++;}
+    if(typeof home[i]==='number')h.y=home[i];
     return h;
   }
-  return {x:home.x,z:home.z,path:home.path||null};
+  return {x:home.x,z:home.z,y:home.y,path:home.path||null};
 }
 function addTree(x,z){addSolid(x,0,z,0.8,3.6,0.8,0x7a4f2b,{surf:'wood'});const c=lam(0x4d9a3a);addDecor(mesh(SPH,c,x,4.2,z,1.9,1.6,1.9));addDecor(mesh(SPH,c,x+0.9,3.6,z-0.4,1.2));addDecor(mesh(SPH,c,x-0.8,3.9,z+0.6,1.1));}
 function addFan(x,z,r,top){const g=new THREE.Group();g.position.set(x,0,z);g.add(mesh(CYL,lam(0x4b5563),0,0.15,0,r,0.3,r));const ring=new THREE.Mesh(new THREE.TorusGeometry(r,0.08,8,32),pho(0xd1a83c,120,0xfff0b8));ring.rotation.x=Math.PI/2;ring.position.y=0.32;g.add(ring);
@@ -166,6 +168,7 @@ function clearLevelWorld(){
   decorKelps.length=0;suspendMotes.length=0;biolumGlows.length=0;
   if(underwaterGroup)while(underwaterGroup.children.length)underwaterGroup.remove(underwaterGroup.children[0]);
   if(CONCH&&CONCH.g)rem(CONCH.g);CONCH=null;
+  if(ORGAN&&ORGAN.g)rem(ORGAN.g);ORGAN=null;
   if(WRECK){for(const m of(WRECK.shellMeshes||[]))rem(m);if(WRECK.g)rem(WRECK.g);WRECK=null;}
   if(RAINBOW){rem(RAINBOW);RAINBOW=null;}
   if(WM&&WM.parts)WM.parts.forEach(rem);WM=null;
@@ -390,7 +393,12 @@ function loadLevel(L){
     else if(k==='peakTuft')addPeakTuft(step[1],step[2],step[3]);
     else if(k==='basaltRock')addBasaltRock(step[1],step[2],step[3],step[4]);
     else if(k==='driftSparks')addDriftSparks(step[1]);
-    else if(k==='protoEndpoint')addProtoEndpoint(step[1],step[2],step[3]);
+    else if(k==='geodeMouth')addGeodeMouth(step[1],step[2],step[3]);
+    else if(k==='crackedGeode')addCrackedGeode(step[1],step[2],step[3],step[4]);
+    else if(k==='crystalCluster')addCrystalCluster(step[1],step[2],step[3],step[4],step[5]);
+    else if(k==='steamCurtain')addSteamCurtain(step[1],step[2],step[3],step[4],step[5],step[6]);
+    else if(k==='crystalSparks')addCrystalSparks(step[1],step[2],step[3],step[4]);
+    else if(k==='protoEndpoint')addProtoEndpoint(step[1],step[2],step[3],step[4]);
     else if(k==='windmill')buildWindmill(step[1],step[2]);
     else if(k==='rainbow')RAINBOW=buildRainbow(step[1],step[2]);
     else if(k==='pinwheelRow'){for(let i=0;i<step[4];i++)addPinwheel(step[1]+i*step[5],step[2]+i*step[6],step[3]);}
@@ -427,6 +435,7 @@ function loadLevel(L){
     else if(k==='wreckLedge')wreckLedge(step[1],step[2],step[3],step[4],step[5],step[6]||'');
     else if(k==='unfinishedFinish')registerUnfinishedFinish(step[1],step[2],step[3]);
     else if(k==='conch')buildConch(step[1],step[2]);
+    else if(k==='steamOrgan')buildSteamOrgan(step[1],step[2],step[3]);
   }
   for(const t of L.trees)addTree(t[0],t[1]);
   for(const s of L.snoozles){const x=s[0]!=null?s[0]:TX,y=s[1],z=s[2]!=null?s[2]:TZ;addSnoozle(x,y,z,homes[s[3]],s[4]);}
