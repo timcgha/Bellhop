@@ -9,7 +9,7 @@ ok(L&&L.id==='level3','boots Level 3');
 ok(R.geodeHollow&&R.caveMouth&&R.snoozle3&&R.secretCurtain,'Geode Hollow route markers present');
 ok(H.getSky().puffVMul===1.4&&H.getSky().boostMax===12.5&&H.getSky().glideDur===0.55,'Sky Blast unchanged');
 ok(L.snoozleGoal===4,'snoozleGoal remains 4');
-ok(W.snoozles.length===3,'exactly three physical Level 3 Snoozles');
+ok(W.snoozles.length===4,'exactly four physical Level 3 Snoozles');
 ok(el('snz').textContent==='😴 0/4','HUD 0/4');
 
 function release(){
@@ -90,13 +90,14 @@ ok(W.snoozles[2].state!=='sleep','Snoozle 3 wakes via normal gust');
 ok(el('snz').textContent==='😴 1/4','awake count becomes 1/4 after Snoozle 3 alone');
 ok(!W.won,'waking Snoozle 3 does not win');
 ok(!el('win')||el('win').style.display!=='flex','no CONGRATULATIONS after Snoozle 3');
-ok(typeof W.FINISH.onAllAwake==='function','unfinishedFinish still registered');
+ok(typeof W.FINISH.onAllAwake==='function','FINISH onAllAwake registered (Organ)');
 
 reloadL3();
 for(let i=0;i<3;i++)wakeSnoozle(i);
-ok(W.snoozles.every(s=>s.state!=='sleep'),'all three placed Snoozles can wake');
+ok(W.snoozles.slice(0,3).every(s=>s.state!=='sleep'),'first three Snoozles can wake');
 ok(el('snz').textContent==='😴 3/4','HUD shows 3/4 — organ/finish still waits for fourth');
 ok(!W.won,'3/4 does not trigger win or Organ climax');
+ok(W.organ&&!W.organ.active,'Organ stays dark at 3/4');
 
 // ---- Snoozle 3 flight stays in corridor (no wall-cut path) ----
 reloadL3();
@@ -214,20 +215,14 @@ walkToward(0,-328,260);
 ok(P.pos.z<-320&&Math.abs(P.pos.x)<4,'main route traversable while curtain closed');
 ok(W.notes.length===10,'reload restores fixed note total');
 
-// ---- Soft-return is at crater rim, not Hollow exit ----
+// ---- Hollow exit has no soft-return; Crater continues past Climb ----
 reloadL3();
-ok(!W.protoEndpoints.some(e=>Math.abs(e.z-(-368))<2),'no soft-return blocker at Hollow exit');
-const ep2=W.protoEndpoints[0];
-ok(ep2&&Math.abs(ep2.z-R.endpoint.z)<1&&ep2.z<R.climbRim.z+2,'Stage 6 crater-rim endpoint present');
-settle(ep2.x,ep2.y,ep2.z+3);
-P.pos.set(ep2.x,ep2.y+0.2,ep2.z+2.6);P.vel.set(0,0,-1);
-for(let i=0;i<40;i++)frames(1);
-ok(ep2.triggered,'rim endpoint engages');
-for(let i=0;i<100;i++)frames(1);
-ok(!W.won,'rim endpoint is non-winning soft return');
-ok(!H.isStarted(),'endpoint returns to the level picker');
+ok(!W.protoEndpoints||W.protoEndpoints.length===0,'no soft-return proto endpoints remain');
+ok(!W.protoEndpoints.some||!W.protoEndpoints.some(e=>Math.abs(e.z-(-368))<2),'no soft-return blocker at Hollow exit');
+ok(W.organ&&L.route.snoozle4,'Crater Organ and Snoozle 4 exist beyond Hollow');
 
 // ---- Regressions ----
+H.window.__softReturnToPicker();frames(2);
 H.startLevel(0);
 ok(H.getLevel().id==='level1'&&H.getPhys().grav===-30&&H.getSky().boostMax===0,'Level 1 untouched');
 H.window.__softReturnToPicker();frames(2);H.startLevel(1);
@@ -238,7 +233,7 @@ ok(H.getSky().glideDur===0.55&&H.getSky().glideFallCap===-2.2&&H.getSky().glideS
 const lavaIds=['firstLavaLeap','islandA','islandB','wideRiver','geyserApproach'];
 ok(lavaIds.every(id=>H.getLevel().mandatoryLeaps.some(l=>l.id===id)),'Lava Field mandatory leaps unchanged');
 ok(W.geysers.length===1&&W.steamVents.length>=1,'vents/geyser systems present');
-ok(typeof H.getCamDiag==='function'&&H.getCamDiag().VERSION_BASE==='v35 · The Climb','version stamp + camdiag preserved');
+ok(typeof H.getCamDiag==='function'&&H.getCamDiag().VERSION_BASE==='v36 · The Peak Complete','version stamp + camdiag preserved');
 ok(H.getCamDiag().parse('?camdist=6.8')===6.8,'camdist diagnostic parse unchanged');
 
 report();

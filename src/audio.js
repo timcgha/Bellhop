@@ -43,9 +43,43 @@ function deepVoice(i,sib,s,chord,t){
     tone(f,0.7,{at:t,type:'sine',gain:0.05,attack:0.04});
   }
 }
+// The Peak: warm volcanic bed; four Snoozle layers; layer 5 is the Great Steam Organ (win only).
+function peakBed(sib,chord,t){
+  if(sib===0)tone(hz(chord[0],55),0.5,{at:t,type:'sine',gain:0.11,attack:0.03});
+  if(sib===4)tone(hz(chord[1],82.41),0.35,{at:t,type:'triangle',gain:0.07,attack:0.025});
+  if(sib%4===2)noise(0.07,{at:t,type:'lowpass',freq:700,fslide:280,gain:0.03,attack:0.02});
+}
+function peakVoice(i,sib,s,chord,t){
+  if(i>=5)return;
+  if(i===4){
+    // Great Steam Organ — only after keyboard win (AU.layers>=5).
+    if(sib%2!==0)return;
+    const f=hz(chord[sib%3],65.41);
+    tone(f,0.85,{at:t,type:'sawtooth',gain:0.055,attack:0.06});
+    tone(f*2,0.55,{at:t,type:'triangle',gain:0.035,attack:0.05});
+    if(sib===0)noise(0.12,{at:t,type:'bandpass',freq:480,fslide:900,gain:0.04,attack:0.03});
+    return;
+  }
+  const pats=[[0,4],[2,6],[1,3,5],[0,2,5,7]];
+  if(pats[i%4].indexOf(sib)<0)return;
+  if(i===0){
+    const f=hz(chord[sib%3]+12,261.63);
+    tone(f,0.45,{at:t,type:'triangle',gain:0.07,attack:0.008});
+  }else if(i===1){
+    const deg=[0,4,7,12,7,4,9,5][(s+sib)%8];
+    tone(hz(chord[0]+deg,196),0.4,{at:t,type:'sine',gain:0.05,attack:0.015});
+  }else if(i===2){
+    tone(hz(chord[0],110),0.7,{at:t,type:'triangle',gain:0.06,attack:0.04});
+    tone(hz(chord[2],110),0.7,{at:t,type:'sine',gain:0.03,attack:0.04});
+  }else{
+    const mel=[0,3,7,12,10,7,5,3][s%8];
+    tone(hz(chord[0]+mel+12,196),0.55,{at:t,type:'sine',gain:0.045,attack:0.03});
+  }
+}
 const SONGS={
   meadow:{id:'meadow',bpm:112,chords:[[0,4,7],[-3,0,4],[-7,-3,0],[-5,-1,2]],bed:meadowBed,voice:meadowVoice},
-  deep:{id:'deep',bpm:84,chords:[[0,3,7],[-2,2,5],[-5,0,3],[2,5,9]],bed:deepBed,voice:deepVoice}
+  deep:{id:'deep',bpm:84,chords:[[0,3,7],[-2,2,5],[-5,0,3],[2,5,9]],bed:deepBed,voice:deepVoice},
+  peak:{id:'peak',bpm:96,chords:[[0,4,7],[-2,2,5],[-5,0,4],[3,7,10]],bed:peakBed,voice:peakVoice}
 };
 AU.song=SONGS.meadow;
 // Kept as aliases so older call sites / mental model still match meadow.
@@ -137,6 +171,8 @@ const SFX={
   geyser(){noise(0.35,{type:'bandpass',freq:700,fslide:1600,gain:0.16,q:0.5});tone(180,0.28,{type:'sine',gain:0.1,slide:420});},
   crystalChime(){if(!AU.ctx)return;const c=chordNow();const f=hz(c[Math.floor(Math.random()*3)]+24,523.25);tone(f,0.5,{type:'sine',gain:0.05,attack:0.02});tone(f*1.5,0.28,{type:'triangle',gain:0.025,attack:0.02});},
   conchOpen(){if(!AU.ctx)return;const c=AU.ctx.currentTime;tone(220,0.55,{at:c,type:'sine',gain:0.16,slide:440,attack:0.04});[0,4,7,12,16].forEach((n,i)=>tone(hz(n,329.63),0.55,{at:c+0.12+i*0.08,type:'triangle',gain:0.12}));noise(0.45,{at:c,type:'bandpass',freq:900,fslide:1800,gain:0.1,attack:0.05});},
+  organSwell(){if(!AU.ctx)return;const c=AU.ctx.currentTime;tone(82,1.1,{at:c,type:'sawtooth',gain:0.12,attack:0.08,slide:110});tone(164,0.9,{at:c+0.08,type:'triangle',gain:0.09,attack:0.1});[0,4,7,12].forEach((n,i)=>tone(hz(n,110),0.7,{at:c+0.15+i*0.1,type:'sine',gain:0.08}));noise(0.7,{at:c,type:'bandpass',freq:500,fslide:1400,gain:0.08,attack:0.08});},
+  organKey(){if(!AU.ctx)return;const c=chordNow();tone(hz(c[0],130.81),0.35,{type:'triangle',gain:0.1,attack:0.01});tone(hz(c[2],130.81),0.28,{type:'sine',gain:0.06});},
   fishPop(){tone(rand(700,950),0.08,{type:'sine',gain:0.1,slide:400});noise(0.06,{type:'highpass',freq:2500,gain:0.08});},
   sharkPop(){noise(0.2,{type:'lowpass',freq:600,fslide:200,gain:0.15});tone(180,0.15,{type:'sine',gain:0.1,slide:90});},
   sharkBite(){noise(0.12,{type:'bandpass',freq:500,gain:0.18});tone(120,0.1,{type:'square',gain:0.08,slide:70});},

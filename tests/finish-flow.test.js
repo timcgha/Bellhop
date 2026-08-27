@@ -77,7 +77,7 @@ function validFinish(f){
   const entities=fs.readFileSync(path.join(__dirname,'..','src','entities.js'),'utf8');
   const enemies=fs.readFileSync(path.join(__dirname,'..','src','enemies.js'),'utf8');
   const genericWin=entities.slice(entities.indexOf('function triggerWin'),entities.indexOf('function loadLevel'));
-  ok(!/\bWM\b|\bRAINBOW\b|\bCONCH\b|\bconch\b/.test(genericWin),'generic triggerWin/updateWin contain no landmark references');
+  ok(!/\bWM\b|\bRAINBOW\b|\bCONCH\b|\bconch\b|\bORGAN\b|\borgan\b/.test(genericWin),'generic triggerWin/updateWin contain no landmark references');
   ok(/FINISH\.onWin\(\)/.test(genericWin)&&/FINISH\.x/.test(genericWin)&&/FINISH\.top/.test(genericWin),
     'generic win flow delegates startup and anchors celebration through FINISH');
   const snoozleMove=enemies.slice(enemies.indexOf('function updateSnoozles'),enemies.indexOf('function updateBoat'));
