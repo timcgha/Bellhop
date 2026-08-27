@@ -220,10 +220,12 @@ function updateGeysers(dt){
 function updatePeak(dt){
   updateCinders(dt);updateEmbers(dt);updateWisps(dt);updateSalamanders(dt);updateGeysers(dt);
   updateDriftSparks(dt);updateProtoEndpoints(dt);
+  updateSteamCurtains(dt);updateCrystalSparks(dt);updateGeodeAmbience(dt);
 }
 
-// ---- Stage 4 presentation + temporary endpoint (easy to remove in Stage 5) ----
-const protoEndpoints=[],driftSparks=[];
+// ---- Stage 4 presentation + temporary endpoint + Stage 5 Geode Hollow ----
+const protoEndpoints=[],driftSparks=[],steamCurtains=[],crystalSparks=[];
+let geodeAmbT=0,geodeInside=false;
 function clearPeakWorld(){
   const rem=m=>{
     if(!m)return;
@@ -239,6 +241,9 @@ function clearPeakWorld(){
   for(const s of scorches){s.alive=false;s.m.visible=false;}
   for(const e of protoEndpoints)rem(e.g);protoEndpoints.length=0;
   for(const s of driftSparks)rem(s.m);driftSparks.length=0;
+  for(const c of steamCurtains){rem(c.g);if(c.sol&&c.sol.mesh)rem(c.sol.mesh);}steamCurtains.length=0;
+  for(const s of crystalSparks)rem(s.m);crystalSparks.length=0;
+  geodeAmbT=0;geodeInside=false;
 }
 function addVolcanoLandmark(x,y,z,scale){
   scale=scale||1;
@@ -280,18 +285,30 @@ function updateDriftSparks(dt){
     s.m.material.opacity=0.45+0.35*Math.sin(time*4+s.ph);
   }
 }
-function addProtoEndpoint(x,y,z){
-  // Temporary blocked geode mouth — unmistakably not the Steam Organ finish.
+function addProtoEndpoint(x,y,z,kind){
+  // Temporary soft-return marker — never a real FINISH / win.
+  // kind:'climb' (Stage 5 exit) suggests ascent; default is a blocked mouth wall.
   const g=new THREE.Group();g.position.set(x,y,z);
-  g.add(mesh(BOXG,lam(0x4a3a55),0,2.2,0,7.5,4.4,1.6));
-  g.add(mesh(BOXG,lam(0x2a2035),0,1.6,0.55,4.2,3.2,0.5));
-  g.add(mesh(CONE,pho(0x88ccff,40,0xffffff),-1.6,2.8,0.3,0.35,1.1,0.35));
-  g.add(mesh(CONE,pho(0xc48cff,40,0xffffff),1.4,3.0,0.25,0.3,1.0,0.3));
-  g.add(mesh(CONE,pho(0x66ffe0,40,0xffffff),0.2,3.4,0.35,0.28,0.9,0.28));
-  // Wall sits on the landmark; trigger zone is the approach pad in front (+Z).
-  addSolid(x,y,z,7.8,4.6,1.8,0x4a3a55,{surf:'stone',invisible:true});
+  const climb=kind==='climb';
+  if(climb){
+    g.add(mesh(BOXG,lam(0x3a2e38),0,1.6,0.4,8.5,3.2,1.2));
+    g.add(mesh(BOXG,lam(0x2a2030),-2.6,2.8,-0.2,2.4,2.4,1.4));
+    g.add(mesh(BOXG,lam(0x2a2030),2.6,3.4,-0.5,2.2,3.0,1.5));
+    g.add(mesh(BOXG,lam(0x4a3a55),0,4.2,-0.8,5.5,0.5,2.2));
+    // Far lava glow under the silhouette, steam drifting up.
+    g.add(mesh(BOXG,new THREE.MeshBasicMaterial({color:0xff6a18,transparent:true,opacity:0.45}),0,0.6,-1.2,4.5,0.08,1.6));
+    for(let i=0;i<4;i++)g.add(mesh(SPH,new THREE.MeshBasicMaterial({color:0xffe0c0,transparent:true,opacity:0.35}),rand(-1.5,1.5),2.2+i*0.7,rand(-0.6,0.2),0.35+i*0.08));
+    addSolid(x,y,z,8.8,5.2,1.6,0x3a2e38,{surf:'stone',invisible:true});
+  }else{
+    g.add(mesh(BOXG,lam(0x4a3a55),0,2.2,0,7.5,4.4,1.6));
+    g.add(mesh(BOXG,lam(0x2a2035),0,1.6,0.55,4.2,3.2,0.5));
+    g.add(mesh(CONE,pho(0x88ccff,40,0xffffff),-1.6,2.8,0.3,0.35,1.1,0.35));
+    g.add(mesh(CONE,pho(0xc48cff,40,0xffffff),1.4,3.0,0.25,0.3,1.0,0.3));
+    g.add(mesh(CONE,pho(0x66ffe0,40,0xffffff),0.2,3.4,0.35,0.28,0.9,0.28));
+    addSolid(x,y,z,7.8,4.6,1.8,0x4a3a55,{surf:'stone',invisible:true});
+  }
   scene.add(g);
-  protoEndpoints.push({g,x,y,z,trigZ:z+2.4,triggered:false,fxT:0});
+  protoEndpoints.push({g,x,y,z,trigZ:z+2.4,triggered:false,fxT:0,kind:climb?'climb':'mouth'});
 }
 function updateProtoEndpoints(dt){
   for(const e of protoEndpoints){
@@ -314,5 +331,179 @@ function updateProtoEndpoints(dt){
       spawnRing(e.x,e.y+1.2,e.z,0xaaccff,0.4,7,0.55);
       for(let i=0;i<22;i++)spawnP(e.x,e.y+1.5,e.z,rand(-3,3),rand(2,6),rand(-2,2),rand(0.08,0.16),Math.random()<0.5?0xc48cff:0xffe36b,0.7,0.5,-4,0.9);
     }
+  }
+}
+
+// ---- Geode Hollow builders (Stage 5) ----
+const GEODE_ROCK=0x2a1e38,GEODE_DEEP=0x1a1228,GEODE_CRYSTAL=0x7a5cff,GEODE_CRYSTAL2=0x88ccff,GEODE_PALE=0xd8c8ff;
+function addCrystalShard(parent,x,y,z,sx,sy,sz,col,emissive){
+  const m=mesh(CONE,pho(col||GEODE_CRYSTAL,45,emissive!=null?emissive:0xffffff),x,y,z,sx,sy,sz);
+  parent.add(m);return m;
+}
+function addCrystalCluster(x,y,z,scale,blocking){
+  scale=scale||1;
+  const g=new THREE.Group();g.position.set(x,y,z);
+  const rock=lam(GEODE_ROCK),deep=lam(GEODE_DEEP);
+  g.add(mesh(BOXG,rock,0,0.35*scale,0,1.1*scale,0.7*scale,0.9*scale));
+  g.add(mesh(BOXG,deep,0.15*scale,0.55*scale,0.1*scale,0.55*scale,0.4*scale,0.5*scale));
+  addCrystalShard(g,-0.25*scale,1.1*scale,0,0.22*scale,1.4*scale,0.22*scale,GEODE_CRYSTAL,0xc8b0ff);
+  addCrystalShard(g,0.3*scale,0.95*scale,0.15*scale,0.18*scale,1.1*scale,0.18*scale,GEODE_CRYSTAL2,0xffffff);
+  addCrystalShard(g,0.05*scale,1.35*scale,-0.2*scale,0.14*scale,0.9*scale,0.14*scale,GEODE_PALE,0xffffff);
+  scene.add(g);levelDecor.push(g);
+  // Large clusters that visibly block the path get matching collision; tiny décor does not.
+  if(blocking)addSolid(x,y,z,1.15*scale,1.6*scale,0.95*scale,GEODE_ROCK,{surf:'stone',invisible:true});
+  return g;
+}
+function addGeodeMouth(x,y,z){
+  // Open cave mouth — crystal frame, no blocking wall (replaces Stage 4 blocker).
+  const g=new THREE.Group();g.position.set(x,y,z);
+  g.add(mesh(BOXG,lam(GEODE_ROCK),-4.2,2.4,0,1.6,4.8,2.2));
+  g.add(mesh(BOXG,lam(GEODE_ROCK),4.2,2.4,0,1.6,4.8,2.2));
+  g.add(mesh(BOXG,lam(GEODE_DEEP),0,4.6,0,7.2,1.2,2.0));
+  g.add(mesh(BOXG,lam(0x3a2a48),0,2.0,0.35,5.2,3.6,0.35));
+  addCrystalShard(g,-3.2,3.6,0.4,0.35,1.3,0.35,GEODE_CRYSTAL2,0xffffff);
+  addCrystalShard(g,3.0,3.8,0.35,0.3,1.2,0.3,GEODE_CRYSTAL,0xc8b0ff);
+  addCrystalShard(g,-1.2,4.8,0.3,0.22,0.9,0.22,GEODE_PALE,0xffffff);
+  addCrystalShard(g,1.4,4.9,0.25,0.2,0.85,0.2,GEODE_CRYSTAL2,0xffffff);
+  // Soft cool wash so the opening reads as "inside is different".
+  g.add(mesh(BOXG,new THREE.MeshBasicMaterial({color:0xa090ff,transparent:true,opacity:0.18}),0,2.2,-0.6,4.6,3.6,0.08));
+  scene.add(g);levelDecor.push(g);
+  addSolid(x-4.2,y,z,1.6,4.8,2.2,GEODE_ROCK,{surf:'stone',invisible:true});
+  addSolid(x+4.2,y,z,1.6,4.8,2.2,GEODE_ROCK,{surf:'stone',invisible:true});
+  addSolid(x,y+4.0,z,7.2,1.2,2.0,GEODE_DEEP,{surf:'stone',invisible:true});
+}
+function addCrackedGeode(x,y,z,scale){
+  // Large broken crystal shell open toward +Z (player approach). Snoozle sits inside.
+  scale=scale||1.6;
+  const g=new THREE.Group();g.position.set(x,y,z);
+  const shell=pho(0x5a48a0,35,0xb8a0ff),inner=pho(0x88ccff,55,0xffffff),rim=lam(GEODE_DEEP);
+  // Back half + side lobes; front (+Z) stays open.
+  g.add(mesh(SPH,shell,0,1.1*scale,-0.55*scale,1.55*scale,1.35*scale,1.1*scale));
+  g.add(mesh(SPH,inner,0,1.05*scale,-0.35*scale,1.15*scale,1.0*scale,0.85*scale));
+  g.add(mesh(BOXG,rim,-1.35*scale,1.2*scale,0.15*scale,0.55*scale,2.0*scale,1.6*scale));
+  g.add(mesh(BOXG,rim,1.35*scale,1.2*scale,0.15*scale,0.55*scale,2.0*scale,1.6*scale));
+  g.add(mesh(BOXG,rim,0,2.15*scale,-0.1*scale,2.4*scale,0.45*scale,1.5*scale));
+  g.add(mesh(BOXG,rim,0,0.15*scale,-0.1*scale,2.2*scale,0.35*scale,1.4*scale));
+  addCrystalShard(g,-0.9*scale,2.0*scale,-0.7*scale,0.28*scale,1.1*scale,0.28*scale,GEODE_CRYSTAL,0xc8b0ff);
+  addCrystalShard(g,0.85*scale,1.9*scale,-0.65*scale,0.24*scale,1.0*scale,0.24*scale,GEODE_CRYSTAL2,0xffffff);
+  addCrystalShard(g,0.1*scale,2.35*scale,-0.9*scale,0.2*scale,0.85*scale,0.2*scale,GEODE_PALE,0xffffff);
+  // Floor cushion inside the shell
+  g.add(mesh(BOXG,lam(0x3a2e55),0,0.28*scale,0.35*scale,1.6*scale,0.2*scale,1.2*scale));
+  scene.add(g);levelDecor.push(g);
+  // Collision for the closed back / sides — leave the +Z mouth open for approach.
+  addSolid(x,y,z-0.7*scale,2.8*scale,2.4*scale,0.9*scale,GEODE_ROCK,{surf:'stone',invisible:true});
+  addSolid(x-1.45*scale,y,z+0.05*scale,0.55*scale,2.2*scale,1.5*scale,GEODE_ROCK,{surf:'stone',invisible:true});
+  addSolid(x+1.45*scale,y,z+0.05*scale,0.55*scale,2.2*scale,1.5*scale,GEODE_ROCK,{surf:'stone',invisible:true});
+  addSolid(x,y+2.0*scale,z-0.15*scale,2.5*scale,0.45*scale,1.5*scale,GEODE_ROCK,{surf:'stone',invisible:true});
+  return g;
+}
+function addSteamCurtain(x,y,z,w,h,axis){
+  w=w||4.2;h=h||3.8;axis=axis||'z';
+  const g=new THREE.Group();g.position.set(x,y,z);
+  const plumes=[];
+  const alongZ=axis==='x';
+  for(let i=0;i<7;i++){
+    const t=(i+0.5)/7,off=(t-0.5)*w*0.92;
+    const px=alongZ?0:off,pz=alongZ?off:0;
+    const p=mesh(SPH,new THREE.MeshBasicMaterial({color:0xe8f0ff,transparent:true,opacity:0.42}),px,h*0.45,pz,alongZ?0.28:0.35+rand(0,0.12),h*0.55,alongZ?0.35+rand(0,0.12):0.28);
+    g.add(p);plumes.push({m:p,base:off});
+  }
+  if(alongZ){
+    g.add(mesh(BOXG,lam(0x4a3a48),0,0.15,0,0.55,0.3,w*0.95));
+    g.add(mesh(BOXG,new THREE.MeshBasicMaterial({color:0xc8d8ff,transparent:true,opacity:0.22}),0.05,h*0.5,0,0.12,h*0.95,w*0.9));
+  }else{
+    g.add(mesh(BOXG,lam(0x4a3a48),0,0.15,0,w*0.95,0.3,0.55));
+    g.add(mesh(BOXG,new THREE.MeshBasicMaterial({color:0xc8d8ff,transparent:true,opacity:0.22}),0,h*0.5,0.05,w*0.9,h*0.95,0.12));
+  }
+  scene.add(g);
+  const sol=alongZ
+    ?addSolid(x,y,z,0.7,h+0.4,w+0.35,0x4a3a55,{surf:'stone',invisible:true})
+    :addSolid(x,y,z,w+0.35,h+0.4,0.7,0x4a3a55,{surf:'stone',invisible:true});
+  // openSide pushes plumes left (−X) for side curtains, or −X for Z curtains (matches kelp secret).
+  steamCurtains.push({g,plumes,sol,x,y,z,w,h,axis,parted:false,partT:0,pt:0,openSide:alongZ?-1:-1});
+  return steamCurtains[steamCurtains.length-1];
+}
+function partSteamCurtain(c){
+  if(!c||c.parted)return;
+  c.parted=true;c.partT=0;
+  const i=solids.indexOf(c.sol);if(i>=0)solids.splice(i,1);
+  if(c.sol&&c.sol.mesh)c.sol.mesh.visible=false;
+  SFX.gust();SFX.reveal();
+  spawnRing(c.x,c.y+c.h*0.45,c.z,0xc8e0ff,0.4,6,0.4);
+  for(let j=0;j<16;j++)spawnP(c.x+rand(-c.w*0.4,c.w*0.4),c.y+rand(0.4,c.h),c.z+rand(-0.3,0.3),rand(-2,2),rand(1,4),rand(-1,1),rand(0.07,0.14),Math.random()<0.5?0xe8f4ff:0xc48cff,0.6,0.45,-2,0.85);
+}
+function gustSteamCurtains(mx,mz,k){
+  for(const c of steamCurtains){
+    if(c.parted)continue;
+    const s=k(c.x,c.z);
+    const nearFeet=Math.hypot(P.pos.x-c.x,P.pos.z-c.z)<(c.axis==='x'?1.2:c.w*0.55)+0.55;
+    if(s>0.14||(nearFeet&&Math.abs(P.pos.y-c.y)<c.h))partSteamCurtain(c);
+  }
+}
+function updateSteamCurtains(dt){
+  for(const c of steamCurtains){
+    if(c.parted){
+      c.partT+=dt;const k=smooth(Math.min(c.partT/0.55,1));
+      if(c.axis==='x')c.g.position.z=lerp(c.z,c.z-2.2,k);
+      else c.g.position.x=lerp(c.x,c.x+c.openSide*2.4,k);
+      for(let i=0;i<c.plumes.length;i++){
+        const p=c.plumes[i],m=p.m||p;
+        m.material.opacity=0.42*(1-k*0.85);
+      }
+      continue;
+    }
+    c.pt-=dt;if(c.pt<=0){c.pt=0.12;
+      const ox=c.axis==='x'?rand(-0.15,0.15):rand(-c.w*0.4,c.w*0.4);
+      const oz=c.axis==='x'?rand(-c.w*0.4,c.w*0.4):rand(-0.15,0.15);
+      spawnP(c.x+ox,c.y+0.4,c.z+oz,rand(-0.2,0.2),rand(1.2,2.8),rand(-0.15,0.15),rand(0.06,0.1),0xe8f0ff,0.45,0.55,0,0.55);
+    }
+    for(let i=0;i<c.plumes.length;i++){
+      const m=(c.plumes[i].m||c.plumes[i]);
+      m.scale.y=(c.h*0.55)*(0.9+0.12*Math.sin(time*2.4+i));
+      m.material.opacity=0.32+0.14*Math.sin(time*3+i*0.7);
+    }
+  }
+}
+function addCrystalSparks(n,cx,cz,spread){
+  n=n||14;spread=spread||8;
+  for(let i=0;i<n;i++){
+    const col=Math.random()<0.5?GEODE_CRYSTAL2:GEODE_PALE;
+    const m=mesh(SPH,new THREE.MeshBasicMaterial({color:col,transparent:true,opacity:0.55}),0,0,0,0.05);
+    m.position.set(cx+rand(-spread,spread),rand(21,26),cz+rand(-spread,spread));
+    scene.add(m);
+    crystalSparks.push({m,vx:rand(-0.12,0.12),vy:rand(0.15,0.45),vz:rand(-0.12,0.12),ph:rand(0,TAU),baseY:m.position.y,cx,cz,spread});
+  }
+}
+function updateCrystalSparks(dt){
+  for(const s of crystalSparks){
+    s.m.position.x+=s.vx*dt;s.m.position.y+=s.vy*dt;s.m.position.z+=s.vz*dt;
+    if(s.m.position.y>s.baseY+3.5){s.m.position.y=s.baseY;s.m.position.x=s.cx+rand(-s.spread,s.spread);s.m.position.z=s.cz+rand(-s.spread,s.spread);}
+    s.m.material.opacity=0.35+0.35*Math.sin(time*3.5+s.ph);
+  }
+}
+function inGeodeHollow(){
+  const z=CURRENT_LEVEL&&CURRENT_LEVEL.route&&CURRENT_LEVEL.route.geodeHollow;
+  if(!z)return false;
+  return P.pos.z<=z.zEnter&&P.pos.z>=z.zExit&&Math.abs(P.pos.x)<(z.halfW||12);
+}
+function updateGeodeAmbience(dt){
+  const inside=inGeodeHollow();
+  if(inside!==geodeInside){
+    geodeInside=inside;
+    if(CURRENT_LEVEL&&CURRENT_LEVEL.peakAtmosphere){
+      if(inside){
+        // Cooler, closer fog — register break without a separate music system.
+        scene.background=new THREE.Color(0x2a2048);
+        scene.fog=new THREE.Fog(0x3a2a68,12,55);
+      }else beginPeakLevel();
+    }
+  }
+  if(!inside)return;
+  geodeAmbT-=dt;
+  if(geodeAmbT<=0){
+    geodeAmbT=rand(1.6,3.2);
+    // Sparse crystal chime — thins the Peak bed by presence, not by rewriting the sequencer.
+    if(typeof SFX.crystalChime==='function')SFX.crystalChime();
+    else if(AU.ctx){const c=chordNow();tone(hz(c[Math.floor(Math.random()*3)]+24,523.25),0.45,{type:'sine',gain:0.045,attack:0.02});}
   }
 }

@@ -78,28 +78,42 @@ route:{
   wispOpen:{x:6,z:-230},
   wispCorridor:{x:0,z:-248},
   geyser:{x:0,y:17.4,z:-216},
-  endpoint:{x:0,y:20.4,z:-265}
+  // Stage 4 temporary endpoint was at z:-265 (blocked mouth). Stage 5 opens that mouth.
+  caveMouth:{x:0,y:20.0,z:-268},
+  geodeHollow:{zEnter:-266,zExit:-372,halfW:14},
+  snoozle3:{x:3.2,z:-330},
+  secretCurtain:{x:-7.0,y:20.0,z:-308},
+  secretAlcove:{x:-12.2,z:-308},
+  climbExit:{x:0,y:22.0,z:-368},
+  endpoint:{x:0,y:22.0,z:-368}
 },
 fence:0x5a2e1a,
 fenceSolids:[
-  [0,0,30,36,2.2,0.7],[0,0,-278,36,2.2,0.7],
-  [-18,0,-124,0.7,2.2,312],[18,0,-124,0.7,2.2,312]
+  [0,0,30,36,2.2,0.7],[0,0,-380,36,2.2,0.7],
+  [-18,0,-170,0.7,2.2,420],[18,0,-170,0.7,2.2,420]
 ],
 pathTiles:[],
 hedges:[],
-checks:[[0,22],[0,-4,2.2],[0,-34,5.2],[0,-70,8.2],[0,-100,11.2],[0,-134,13.2],[0,-168,15.2],[0,-240,19.2]],
+checks:[[0,22],[0,-4,2.2],[0,-34,5.2],[0,-70,8.2],[0,-100,11.2],[0,-134,13.2],[0,-168,15.2],[0,-240,19.2],[0,-272,20.2],[0,-350,21.2]],
 tower:{tx:0,tz:-260},
-snoozleHomes:[[-3,-258],[3,-258],[-2,-266],[2,-266]],
-snoozles:[[-5,0.55,6,0,false],[-9,8.55,-78,1,false]],
+// Homes sit on the open approach plaza. Snoozle 3 follows a corridor path out of the Hollow
+// before the final zoom so it does not cut through cave walls (no shared wake special-case).
+snoozleHomes:[
+  [-3,-258],
+  [3,-258],
+  [-4,-260,[[3.2,23.5,-318],[0,22.8,-300],[0,22.0,-280],[0,21.5,-272]]],
+  [2,-266]
+],
+snoozles:[[-5,0.55,6,0,false],[-9,8.55,-78,1,false],[3.2,20.55,-330,2,false]],
 trees:[],
 steps:[
   ['volcanoLandmark',0,0,-290,1.35],
   ['driftSparks',22],
-  ['solid',0,28,-124,38,2,312,0xffc48a,{invisible:true}],
+  ['solid',0,28,-170,38,2,420,0xffc48a,{invisible:true}],
   ['solid',0,6,30,36.5,28,0.7,0x5a2e1a,{invisible:true}],
-  ['solid',0,6,-278,36.5,28,0.7,0x5a2e1a,{invisible:true}],
-  ['solid',-18,6,-124,0.7,28,312,0x5a2e1a,{invisible:true}],
-  ['solid',18,6,-124,0.7,28,312,0x5a2e1a,{invisible:true}],
+  ['solid',0,6,-380,36.5,28,0.7,0x5a2e1a,{invisible:true}],
+  ['solid',-18,6,-170,0.7,28,420,0x5a2e1a,{invisible:true}],
+  ['solid',18,6,-170,0.7,28,420,0x5a2e1a,{invisible:true}],
 
   // ========== AREA 1 — The Warm Slopes ==========
   // Volcanic sand / dark warm earth — green is accent tufts only, not the floor.
@@ -252,7 +266,74 @@ steps:[
   ],{speed:1.6}],
   ['solid',0,20.0,-262,14,0.4,10,0x2a2624,{surf:'stone'}],
   ['basaltRock',-6,20.0,-258,1.2],['basaltRock',6,20.0,-260,1.0],
-  ['protoEndpoint',0,20.0,-265],
-  ['unfinishedFinish',0,-262,28]
+  ['salamander',5,-260,{}],
+
+  // ========== AREA 4 — The Geode Hollow ==========
+  // Open mouth (Stage 4 blocker removed). Cool register begins here.
+  ['geodeMouth',0,20.0,-268],
+  ['solid',0,20.0,-278,12,0.4,18,0x2a1e38,{surf:'stone'}],
+  ['solid',0,20.15,-278,6,0.06,14,0x3a2e55,{surf:'stone'}],
+  // Entrance corridor walls / ceiling
+  ['solid',-8.5,20.0,-278,3.5,6.5,16,0x1a1228,{surf:'stone'}],
+  ['solid',8.5,20.0,-278,3.5,6.5,16,0x1a1228,{surf:'stone'}],
+  ['solid',0,26.2,-278,20,1.2,18,0x1a1228,{surf:'stone'}],
+  ['crystalCluster',-5.5,20.0,-274,1.1,true],
+  ['crystalCluster',5.8,20.0,-280,0.95,true],
+  ['crystalCluster',-4.2,20.0,-288,0.55,false],
+  ['crystalCluster',4.5,20.0,-292,0.5,false],
+  ['crystalSparks',10,0,-290,7],
+
+  // Mid path — east wall continuous; west wall gapped for the steam-curtain secret
+  ['solid',0,20.0,-300,14,0.4,20,0x2a1e38,{surf:'stone'}],
+  ['solid',0,20.15,-300,5.5,0.06,16,0x4a3a78,{surf:'stone'}],
+  ['solid',8.5,20.0,-300,3.5,6.5,20,0x1a1228,{surf:'stone'}],
+  // West wall split: gap around z=-308 for the side steam curtain
+  ['solid',-8.5,20.0,-294,3.5,6.5,10,0x1a1228,{surf:'stone'}],
+  ['solid',-8.5,20.0,-322,3.5,6.5,12,0x1a1228,{surf:'stone'}],
+  ['solid',0,26.4,-304,22,1.2,28,0x1a1228,{surf:'stone'}],
+  ['crystalCluster',6.2,20.0,-302,1.2,true],
+  ['crystalCluster',-3.5,20.0,-318,0.7,false],
+
+  // Side secret — steam curtain fills the west-wall gap (optional; main route stays center).
+  ['steamCurtain',-7.0,20.0,-308,5.0,3.8,'x'],
+  ['solid',-12.2,20.0,-308,6.0,0.4,8,0x2a1e38,{surf:'stone'}],
+  ['solid',-15.0,20.0,-308,1.4,4.5,8,0x1a1228,{surf:'stone'}],
+  ['solid',-12.2,20.0,-312.2,6.0,4.5,1.4,0x1a1228,{surf:'stone'}],
+  ['solid',-12.2,20.0,-303.8,6.0,4.5,1.4,0x1a1228,{surf:'stone'}],
+  ['solid',-12.2,24.2,-308,6.0,1.0,8,0x1a1228,{surf:'stone'}],
+  // Secret notes exist at build time (visible, blocked by curtain until gust).
+  ['note',-11.8,21.1,-306.5,false],
+  ['note',-12.6,21.3,-309.2,false],
+  ['crystalCluster',-13.2,20.0,-308,0.85,true],
+
+  // Main chamber — Snoozle 3 in a cracked-open geode offset east so the center exit stays clear.
+  ['solid',0,20.0,-328,16,0.4,22,0x2a1e38,{surf:'stone'}],
+  ['solid',0,20.18,-328,7,0.06,14,0x5a48a0,{surf:'stone'}],
+  ['solid',-10.5,20.0,-328,4.0,6.5,22,0x1a1228,{surf:'stone'}],
+  ['solid',10.5,20.0,-328,4.0,6.5,22,0x1a1228,{surf:'stone'}],
+  ['solid',0,26.6,-328,24,1.2,24,0x1a1228,{surf:'stone'}],
+  ['crackedGeode',3.2,20.0,-330,1.55],
+  ['crystalCluster',-6.5,20.0,-334,1.15,true],
+  ['crystalCluster',-2.5,20.0,-322,0.55,false],
+  ['crystalCluster',7.2,20.0,-338,0.55,false],
+  ['crystalSparks',14,0,-328,9],
+
+  // Exit corridor — reads as upward/outward toward the future Climb.
+  ['solid',0,20.5,-348,12,0.4,14,0x2a1e38,{surf:'stone'}],
+  ['solid',0,20.7,-348,5,0.06,10,0x3a2e55,{surf:'stone'}],
+  ['solid',-7.5,20.5,-348,3.5,6.0,16,0x1a1228,{surf:'stone'}],
+  ['solid',7.5,20.5,-348,3.5,6.0,16,0x1a1228,{surf:'stone'}],
+  ['solid',0,26.5,-348,18,1.0,16,0x1a1228,{surf:'stone'}],
+  ['solid',0,21.5,-360,12,0.4,12,0x2e2438,{surf:'stone'}],
+  ['solid',0,21.7,-360,5,0.06,8,0x4a3a60,{surf:'stone'}],
+  // Opening silhouette + far lava glow under the climb hint (decorative).
+  ['solid',-6,21.5,-366,4,0.4,6,0x2a2030,{surf:'stone'}],
+  ['solid',6,21.5,-366,4,0.4,6,0x2a2030,{surf:'stone'}],
+  ['lava',0,8.0,-372,10,0.4,8],
+  ['crystalCluster',-4.5,21.5,-356,0.9,true],
+  ['crystalCluster',4.8,21.5,-358,0.5,false],
+  // Stage 5 temporary endpoint — soft return, not a win. Stage 6 Climb begins past here.
+  ['protoEndpoint',0,21.5,-368,'climb'],
+  ['unfinishedFinish',0,-365,30]
 ]
 };

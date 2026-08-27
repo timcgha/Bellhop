@@ -314,6 +314,7 @@ function doGust(){const yaw=P.yaw,fx=Math.sin(yaw),fz=Math.cos(yaw);const mx=P.p
   gustSteamVents(mx,mz,k);
   gustGeysers(mx,mz,k);
   gustSalamanders(mx,mz,k);
+  gustSteamCurtains(mx,mz,k);
   if(isUnderwater())gustHitKelp(mx,mz,k);
   rumble(60,0.2,0.4);
   if(isUnderwater()&&P.bubble)fireBubble();

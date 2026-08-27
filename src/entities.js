@@ -390,7 +390,12 @@ function loadLevel(L){
     else if(k==='peakTuft')addPeakTuft(step[1],step[2],step[3]);
     else if(k==='basaltRock')addBasaltRock(step[1],step[2],step[3],step[4]);
     else if(k==='driftSparks')addDriftSparks(step[1]);
-    else if(k==='protoEndpoint')addProtoEndpoint(step[1],step[2],step[3]);
+    else if(k==='geodeMouth')addGeodeMouth(step[1],step[2],step[3]);
+    else if(k==='crackedGeode')addCrackedGeode(step[1],step[2],step[3],step[4]);
+    else if(k==='crystalCluster')addCrystalCluster(step[1],step[2],step[3],step[4],step[5]);
+    else if(k==='steamCurtain')addSteamCurtain(step[1],step[2],step[3],step[4],step[5],step[6]);
+    else if(k==='crystalSparks')addCrystalSparks(step[1],step[2],step[3],step[4]);
+    else if(k==='protoEndpoint')addProtoEndpoint(step[1],step[2],step[3],step[4]);
     else if(k==='windmill')buildWindmill(step[1],step[2]);
     else if(k==='rainbow')RAINBOW=buildRainbow(step[1],step[2]);
     else if(k==='pinwheelRow'){for(let i=0;i<step[4];i++)addPinwheel(step[1]+i*step[5],step[2]+i*step[6],step[3]);}

@@ -9,7 +9,7 @@ ok(Math.abs(L.spawn.z-24)<0.01&&Math.abs(P.pos.z-24)<0.5,'boots at Warm Slopes s
 ok(L.peakAtmosphere===true,'Peak atmosphere flag set');
 ok(H.getSky().puffVMul===1.4&&H.getSky().boostMax===12.5&&H.getSky().boostDecay===1.6,'Sky Blast tuning unchanged');
 ok(L.snoozleGoal===4,'finished Level 3 still expects four Snoozles');
-ok(W.snoozles.length===2,'only two Snoozles are physically present in this slice');
+ok(W.snoozles.length===3,'three physical Snoozles in the Stage 5 production slice');
 ok(el('snz').textContent==='😴 0/4','HUD shows 0/4 against the finished goal');
 
 // Prototype arena is gone — no flat Stage 2 pads at z=9/-16 as the playable boot.
@@ -242,8 +242,10 @@ ok(noteSal.note.hidden===false&&W.notes.length===notes0,'note salamanders / held
 H.test.loadLevel(2);
 ok(W.protoEndpoints&&W.protoEndpoints.length===1,'temporary proto endpoint exists');
 const ep=W.protoEndpoints[0];
-ok(Math.abs(ep.z-R.endpoint.z)<2,'endpoint sits before Geode Hollow');
-// Stand on the approach pad in front of the blocked mouth
+ok(Math.abs(ep.z-R.endpoint.z)<2,'endpoint sits at Geode Hollow exit (Climb placeholder)');
+ok(ep.z<-350,'Stage 5 endpoint is past the Hollow, not the old mouth blocker');
+ok(!L.steps.some(s=>s[0]==='protoEndpoint'&&s[3]>-270),'old Stage 4 mouth blocker endpoint removed');
+// Stand on the approach pad in front of the blocked climb hint
 settle(ep.x,ep.y,ep.z+3.2);
 P.pos.set(ep.x,ep.y+0.2,ep.z+2.6);P.vel.set(0,0,-1);P.grounded=true;
 for(let i=0;i<30;i++)frames(1);
@@ -260,7 +262,7 @@ ok(H.getLevel().id==='level1'&&H.getPhys().grav===-30&&H.getSky().boostMax===0,'
 H.test.loadLevel(1);
 ok(H.getLevel().id==='level2'&&H.getPhys().grav===-6,'Level 2 regression');
 H.test.loadLevel(2);
-ok(H.getLevel().id==='level3'&&H.getSky().boostMax===12.5&&W.snoozles.length===2,'Level 3 production slice restores');
+ok(H.getLevel().id==='level3'&&H.getSky().boostMax===12.5&&W.snoozles.length===3,'Level 3 production slice restores');
 ok(H.getLevel().snoozleGoal===4,'Level 3 snoozleGoal still 4 after reload');
 
 report();

@@ -135,6 +135,7 @@ const SFX={
   emberHit(){noise(0.12,{type:'highpass',freq:1600,gain:0.12});tone(260,0.1,{type:'square',gain:0.07,slide:140});},
   wispOut(){noise(0.35,{type:'lowpass',freq:1400,fslide:300,gain:0.12});tone(520,0.25,{type:'triangle',gain:0.07,slide:160});},
   geyser(){noise(0.35,{type:'bandpass',freq:700,fslide:1600,gain:0.16,q:0.5});tone(180,0.28,{type:'sine',gain:0.1,slide:420});},
+  crystalChime(){if(!AU.ctx)return;const c=chordNow();const f=hz(c[Math.floor(Math.random()*3)]+24,523.25);tone(f,0.5,{type:'sine',gain:0.05,attack:0.02});tone(f*1.5,0.28,{type:'triangle',gain:0.025,attack:0.02});},
   conchOpen(){if(!AU.ctx)return;const c=AU.ctx.currentTime;tone(220,0.55,{at:c,type:'sine',gain:0.16,slide:440,attack:0.04});[0,4,7,12,16].forEach((n,i)=>tone(hz(n,329.63),0.55,{at:c+0.12+i*0.08,type:'triangle',gain:0.12}));noise(0.45,{at:c,type:'bandpass',freq:900,fslide:1800,gain:0.1,attack:0.05});},
   fishPop(){tone(rand(700,950),0.08,{type:'sine',gain:0.1,slide:400});noise(0.06,{type:'highpass',freq:2500,gain:0.08});},
   sharkPop(){noise(0.2,{type:'lowpass',freq:600,fslide:200,gain:0.15});tone(180,0.15,{type:'sine',gain:0.1,slide:90});},
