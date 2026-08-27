@@ -39,7 +39,7 @@ function wingsOpen(){
 
 // ---- More Sky Blast mystery boxes (vents stay independent) ----
 const skyCrates=W.crates.filter(c=>c.item==='sky');
-ok(skyCrates.length>=5&&skyCrates.length<=8,'Areas 1–3 have multiple Sky Blast crates ('+skyCrates.length+')');
+ok(skyCrates.length>=2&&skyCrates.length<=4,'Areas 1–3 keep a lean Sky Blast crate set ('+skyCrates.length+')');
 ok(L.route.skyCrates&&L.route.skyCrates.length===skyCrates.length,'route.skyCrates metadata matches live crates');
 const vents=W.steamVents;
 ok(vents.length>=5,'renewable steam vents remain on the route');

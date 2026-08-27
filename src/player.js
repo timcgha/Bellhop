@@ -114,6 +114,7 @@ function applyLavaTuning(L){
 window.__PHYS=()=>({speed:SPEED,acc:ACC,dec:DEC,airAcc:AIRACC,grav:GRAV,jumpV:JUMPV,puffV:PUFFV,maxFall:MAXFALL,coyote:COYOTE,buffer:BUFFER,step:STEP,r:R,h:H});
 window.__SKY=()=>({puffVMul:SKY.puffVMul,boostMax:SKY.boostMax,boostDecay:SKY.boostDecay,glideDur:SKY.glideDur,glideFallCap:SKY.glideFallCap,glideStartVy:SKY.glideStartVy});
 window.__LAVA=()=>({anchorSettle:LAVA_ANCHOR_SETTLE,anchorClear:LAVA_ANCHOR_CLEAR,recovery:LAVA_RECOVERY,hurtInv:HURT_INV});
+window.__VOID=()=>({y:CURRENT_LEVEL&&CURRENT_LEVEL.voidY!=null?CURRENT_LEVEL.voidY:null,floor:CURRENT_LEVEL&&CURRENT_LEVEL.voidFloor!=null?CURRENT_LEVEL.voidFloor:null});
 function clearLeapBoost(){P.leapBoost.set(0,0,0);}
 function clearGlide(){P.glideT=0;P.glideArmed=false;P.wingsOut=false;}
 function leapBoostMag(){return Math.hypot(P.leapBoost.x,P.leapBoost.z);}
@@ -197,6 +198,13 @@ function beginLavaRecovery(){
   P.lavaRecFrom.copy(P.pos);
   P.vel.set(0,0,0);
   P.anchorSettleT=0;
+}
+function beginVoidRecovery(){
+  // Level-owned impossible-world safety net. No heart cost — this is a geometry bug state, not a hazard.
+  if(won||P.dead||P.lavaRecT>0)return;
+  beginLavaRecovery();
+  SFX.refill();CAM.shake=Math.max(CAM.shake,0.25);
+  showToast('Whoops!');
 }
 function lavaContact(){
   if(won||P.dead||P.lavaRecT>0)return;
@@ -443,7 +451,10 @@ function updatePlayer(dt){const p=P.pos,v=P.vel;
   if(p.y<=gy&&gy>landY){landY=gy;landSurf=(CURRENT_LEVEL&&CURRENT_LEVEL.peakAtmosphere)?'stone':(inPond(p.x,p.z)?'water':'grass');}
   if(landY>-Infinity){p.y=landY;landOn(landSurf);}
   else if(bump){p.y=bumpY-H-0.001;if(v.y>0)v.y=0;}
-  if(p.y<-6){p.set(P.spawn.x,P.spawn.y,P.spawn.z);v.set(0,0,0);clearLeapBoost();clearGlide();}
+  // Level-owned void recovery runs before the crude y<-6 spawn snap.
+  // Levels without voidY keep the old failsafe. No heart cost; celebration skipped via !won.
+  if(!P.dead&&!won&&P.lavaRecT<=0&&CURRENT_LEVEL&&CURRENT_LEVEL.voidY!=null&&p.y<CURRENT_LEVEL.voidY)beginVoidRecovery();
+  else if(p.y<-6){p.set(P.spawn.x,P.spawn.y,P.spawn.z);v.set(0,0,0);clearLeapBoost();clearGlide();}
   if(P.jetT>0){P.jetT-=dt;jetDamage();
     P.jetP-=dt;if(P.jetP<=0){P.jetP=0.028;const cy=Math.cos(P.yaw),sy=Math.sin(P.yaw);
       for(let sg=-1;sg<=1;sg+=2)spawnP(p.x+sg*0.12*cy,p.y-0.04,p.z-sg*0.12*sy,rand(-0.8,0.8),rand(-4,-1.8),rand(-0.8,0.8),rand(0.07,0.13),Math.random()<0.5?0x5ec8ff:0xe4f8ff,rand(0.25,0.42),1.1,0,0.85);}}

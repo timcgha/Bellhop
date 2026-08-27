@@ -123,8 +123,8 @@ ok(P.wingsOut===false&&P.glideT===0,'lava retracts wings and clears glide');
 // ---- Accessible Sky Blast crates ----
 H.test.loadLevel(2);
 const skyCrates=W.crates.filter(c=>c.item==='sky');
-ok(skyCrates.length===6,'exactly six Sky Blast crates');
-ok(L.route.skyCrates.length===6,'route metadata lists six crates');
+ok(skyCrates.length===2,'exactly two Sky Blast crates');
+ok(L.route.skyCrates.length===2,'route metadata lists two crates');
 for(const meta of L.route.skyCrates){
   const c=skyCrates.find(x=>Math.abs(x.x-meta.x)<0.2&&Math.abs(x.z-meta.z)<0.2);
   ok(!!c,'live crate matches metadata '+meta.note);
