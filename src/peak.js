@@ -287,10 +287,24 @@ function updateDriftSparks(dt){
 }
 function addProtoEndpoint(x,y,z,kind){
   // Temporary soft-return marker — never a real FINISH / win.
-  // kind:'climb' (Stage 5 exit) suggests ascent; default is a blocked mouth wall.
+  // kind:'rim' (Stage 6 crater-rim threshold); 'climb' (legacy ascent hint); default blocked mouth.
   const g=new THREE.Group();g.position.set(x,y,z);
-  const climb=kind==='climb';
-  if(climb){
+  const rim=kind==='rim',climb=kind==='climb';
+  if(rim){
+    // Crater-rim silhouette + glow beyond — anticipation only, no Organ / keyboard / pipes.
+    g.add(mesh(BOXG,lam(0x2a2428),-4.2,1.4,0.2,4.2,2.8,1.4));
+    g.add(mesh(BOXG,lam(0x2a2428),4.2,1.6,0.1,4.2,3.2,1.5));
+    g.add(mesh(BOXG,lam(0x3a322e),0,2.8,-0.4,5.5,1.2,1.8));
+    g.add(mesh(BOXG,lam(0x4a3a32),-2.8,3.6,-0.6,2.4,2.2,1.2));
+    g.add(mesh(BOXG,lam(0x4a3a32),2.6,3.9,-0.7,2.6,2.6,1.3));
+    // Warm glow past the rim (suggests the crater beyond).
+    g.add(mesh(BOXG,new THREE.MeshBasicMaterial({color:0xff6a18,transparent:true,opacity:0.5}),0,1.0,-1.4,7.5,0.1,2.2));
+    g.add(mesh(BOXG,new THREE.MeshBasicMaterial({color:0xff9a3c,transparent:true,opacity:0.28}),0,2.2,-1.8,5.5,2.4,0.4));
+    // Distant brass hint — a single dull cylinder, not an Organ.
+    g.add(mesh(CYL,lam(0x8a7048),0,4.8,-2.0,0.35,2.4,0.35));
+    for(let i=0;i<5;i++)g.add(mesh(SPH,new THREE.MeshBasicMaterial({color:0xffe0c0,transparent:true,opacity:0.32}),rand(-2,2),2.4+i*0.55,rand(-1.2,-0.2),0.4+i*0.06));
+    addSolid(x,y,z,10.5,5.5,1.8,0x2a2428,{surf:'stone',invisible:true});
+  }else if(climb){
     g.add(mesh(BOXG,lam(0x3a2e38),0,1.6,0.4,8.5,3.2,1.2));
     g.add(mesh(BOXG,lam(0x2a2030),-2.6,2.8,-0.2,2.4,2.4,1.4));
     g.add(mesh(BOXG,lam(0x2a2030),2.6,3.4,-0.5,2.2,3.0,1.5));
@@ -308,7 +322,7 @@ function addProtoEndpoint(x,y,z,kind){
     addSolid(x,y,z,7.8,4.6,1.8,0x4a3a55,{surf:'stone',invisible:true});
   }
   scene.add(g);
-  protoEndpoints.push({g,x,y,z,trigZ:z+2.4,triggered:false,fxT:0,kind:climb?'climb':'mouth'});
+  protoEndpoints.push({g,x,y,z,trigZ:z+2.4,triggered:false,fxT:0,kind:rim?'rim':(climb?'climb':'mouth')});
 }
 function updateProtoEndpoints(dt){
   for(const e of protoEndpoints){
