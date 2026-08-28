@@ -22,7 +22,8 @@ openSpace:{
   brake:52,
   jumpV:8.5,
   puffV:7.5,
-  upBias:0.55
+  pitchNeutral:0.42,
+  takeoffBias:0.32
 },
 openSpaceZones:[{x0:-45,y0:-8,x1:45,y1:55,z0:-45,z1:45}],
 playVolume:{cx:8,cy:16,cz:-4,soft:58,hard:78,recoverDur:0.5,recoverTo:{x:0,y:0.45,z:0}},

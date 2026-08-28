@@ -244,6 +244,9 @@ module.exports = function boot(opts = {}) {
     isStarted: () => window.__started && window.__started(),
     pickerIdx: () => window.__pickerIdx && window.__pickerIdx(),
     touchArmed: () => !!(window.__touchArmed && window.__touchArmed()),
+    setCamPitch(p) { CAM.pitch = p; },
+    setTouchStick(x, z) { window.__setTouchStick && window.__setTouchStick(x, z); },
+    clearTouchStick() { window.__clearTouchStick && window.__clearTouchStick(); },
     AU: () => window.__AU,
     SONGS: () => window.__SONGS,
     test: window.__TEST
