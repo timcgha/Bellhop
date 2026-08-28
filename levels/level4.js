@@ -3,6 +3,7 @@ id:'level4',
 music:'space',
 spaceAtmosphere:true,
 spawn:{x:0,y:0.45,z:0},
+firstDestination:{x:22,y:0,z:-10,label:'practicePad'},
 physics:{
   speed:6.8,acc:44,dec:60,airAcc:20,
   grav:-30,maxFall:-32,jumpV:10.5,puffV:9.4,
@@ -22,8 +23,10 @@ openSpace:{
   brake:52,
   jumpV:8.5,
   puffV:7.5,
-  pitchNeutral:0.42,
-  takeoffBias:0.32
+  levelBand:0.18,
+  vertGain:0.92,
+  takeoffBias:0.32,
+  takeoffAssistH:3.5
 },
 openSpaceZones:[{x0:-45,y0:-8,x1:45,y1:55,z0:-45,z1:45}],
 playVolume:{cx:8,cy:16,cz:-4,soft:58,hard:78,recoverDur:0.5,recoverTo:{x:0,y:0.45,z:0}},
@@ -41,6 +44,7 @@ snoozles:[],
 trees:[],
 steps:[
   ['launchDock',0,0,0,14,14],
+  ['routeTrail',0,2.5,0,22,2.5,-10,7],
   ['practicePad',22,0,-10,5.5],
   ['spaceBuoy',-18,2,14],['spaceBuoy',28,4,-22],['spaceBuoy',-8,6,32],['spaceBuoy',36,3,18],
   ['backdropPlanet',-55,18,-70,6,0x6a4a9a,true],

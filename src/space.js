@@ -1,7 +1,8 @@
-// Level 4 — open-space zones, Launch Dock builders, recovery, backdrop.
+// Level 4 — open-space zones, Launch Dock builders, recovery, backdrop, landing assist.
 let spaceGroup=null,blackHoleLandmark=null,spaceStars=[];
 let spaceOpenZones=[],spacePlayVolume=null,spaceDecorPlanets=[];
 let spaceRecoveryT=0,spaceRecoveryFrom=null;
+let spaceLandingTargets=[],spaceRouteTrail=[],spaceFirstDest=null,spaceRouteBeacons=[];
 
 function isSpaceLevel(){return !!(CURRENT_LEVEL&&CURRENT_LEVEL.spaceAtmosphere);}
 function spaceCfg(){return CURRENT_LEVEL&&CURRENT_LEVEL.openSpace;}
@@ -11,6 +12,7 @@ function clearSpaceWorld(){
   if(spaceGroup){while(spaceGroup.children.length)spaceGroup.remove(spaceGroup.children[0]);spaceGroup.visible=false;}
   blackHoleLandmark=null;spaceStars.length=0;spaceDecorPlanets.length=0;
   spaceOpenZones=[];spacePlayVolume=null;spaceRecoveryT=0;spaceRecoveryFrom=null;
+  spaceLandingTargets.length=0;spaceRouteTrail.length=0;spaceFirstDest=null;spaceRouteBeacons.length=0;
 }
 
 function beginSpaceLevel(L){
@@ -24,7 +26,7 @@ function beginSpaceLevel(L){
   while(spaceGroup.children.length)spaceGroup.remove(spaceGroup.children[0]);
   spaceOpenZones=(L&&L.openSpaceZones)||[];
   spacePlayVolume=(L&&L.playVolume)||null;
-  // Distant star shell
+  spaceFirstDest=(L&&L.firstDestination)||null;
   for(let i=0;i<140;i++){
     const r=rand(55,180),a=rand(0,TAU),el=rand(-0.35,0.55);
     const sx=Math.cos(a)*Math.cos(el)*r,sy=Math.sin(el)*r+rand(-8,18),sz=Math.sin(a)*Math.cos(el)*r;
@@ -35,12 +37,13 @@ function beginSpaceLevel(L){
 
 function addBackdropPlanet(x,y,z,r,col,ring){
   const g=new THREE.Group();g.position.set(x,y,z);
-  g.add(mesh(SPH,lam(col),0,0,0,r,r*0.92,r));
+  const body=mesh(SPH,new THREE.MeshBasicMaterial({color:col,transparent:true,opacity:0.42}),0,0,0,r,r*0.92,r);
+  g.add(body);
   if(ring){
-    const tor=new THREE.Mesh(new THREE.TorusGeometry(r*1.35,r*0.08,8,32),new THREE.MeshBasicMaterial({color:0xc8d0e8,transparent:true,opacity:0.55}));
+    const tor=new THREE.Mesh(new THREE.TorusGeometry(r*1.35,r*0.06,8,32),new THREE.MeshBasicMaterial({color:0x8898b8,transparent:true,opacity:0.28}));
     tor.rotation.x=Math.PI/2;g.add(tor);
   }
-  g.userData.decor=true;
+  g.userData.decor=true;g.userData.landable=false;
   scene.add(g);spaceDecorPlanets.push(g);levelDecor.push(g);return g;
 }
 
@@ -55,17 +58,63 @@ function addBlackHoleLandmark(x,y,z){
     const a=i/12*TAU;
     g.add(mesh(SPH,new THREE.MeshBasicMaterial({color:0xffffff,transparent:true,opacity:0.7}),Math.cos(a)*6.8,Math.sin(a*2)*0.4,Math.sin(a)*6.8,0.12));
   }
-  g.userData.landmark=true;g.userData.interactive=false;
+  g.userData.landmark=true;g.userData.interactive=false;g.userData.landable=false;
   scene.add(g);blackHoleLandmark=g;levelDecor.push(g);
   return g;
 }
 
-function addSpaceBuoy(x,y,z){
+function addSpaceBuoy(x,y,z,bright){
   const g=new THREE.Group();g.position.set(x,y,z);
   g.add(mesh(CYL,lam(0x5a6a78),0,0,0,0.08,1.6,0.08));
-  g.add(mesh(SPH,new THREE.MeshBasicMaterial({color:0x5ec8ff}),0,0.9,0,0.22));
-  g.add(mesh(SPH,new THREE.MeshBasicMaterial({color:0xffe078,transparent:true,opacity:0.55}),0,0.9,0,0.38));
-  scene.add(g);levelDecor.push(g);return g;
+  const coreCol=bright?0xffe078:0x5ec8ff;
+  g.add(mesh(SPH,new THREE.MeshBasicMaterial({color:coreCol}),0,0.9,0,0.22));
+  const halo=mesh(SPH,new THREE.MeshBasicMaterial({color:coreCol,transparent:true,opacity:bright?0.72:0.45}),0,0.9,0,0.38);
+  g.add(halo);
+  g.userData.routeBuoy=true;
+  scene.add(g);spaceRouteBeacons.push(g);levelDecor.push(g);return g;
+}
+
+function addRouteTrail(x0,y0,z0,x1,y1,z1,n){
+  const pts=[];
+  for(let i=0;i<=n;i++){
+    const t=i/n;
+    const px=lerp(x0,x1,t),py=lerp(y0,y1,t)+Math.sin(t*Math.PI)*2.2,pz=lerp(z0,z1,t);
+    pts.push({x:px,y:py,z:pz});
+  }
+  spaceRouteTrail.push({from:{x:x0,y:y0,z:z0},to:{x:x1,y:y1,z:z1},points:pts});
+  for(let i=0;i<pts.length;i++){
+    if(i%2===0)continue;
+    const p=pts[i];
+    const star=mesh(SPH,new THREE.MeshBasicMaterial({color:0xffe078,transparent:true,opacity:0.85}),p.x,p.y,p.z,0.16);
+    star.userData.routeStar=true;star.userData.pulseT=rand(0,TAU);
+    scene.add(star);spaceRouteBeacons.push(star);levelDecor.push(star);
+  }
+  return pts;
+}
+
+function addLandingBeacon(x,y,z,r,opts){
+  opts=opts||{};
+  const g=new THREE.Group();g.position.set(x,y,z);
+  const ring=new THREE.Mesh(new THREE.TorusGeometry(r*0.92,0.14,10,40),new THREE.MeshBasicMaterial({color:0xffe078,transparent:true,opacity:0.88}));
+  ring.rotation.x=Math.PI/2;ring.position.y=0.28;g.add(ring);
+  const inner=mesh(SPH,new THREE.MeshBasicMaterial({color:0xfff4c8,transparent:true,opacity:0.55}),0,0.28,0,r*0.55,0.04,r*0.55);
+  g.add(inner);
+  const beam=mesh(CYL,new THREE.MeshBasicMaterial({color:0x5ec8ff,transparent:true,opacity:0.42}),0,1.8,0,0.12,3.6,0.12);
+  g.add(beam);
+  for(let i=0;i<4;i++){
+    const a=i/4*TAU;
+    g.add(mesh(SPH,new THREE.MeshBasicMaterial({color:0xffe078,transparent:true,opacity:0.75}),Math.cos(a)*r*0.82,0.55,Math.sin(a)*r*0.82,0.1));
+  }
+  g.userData.landingBeacon=true;g.userData.pulseT=0;
+  scene.add(g);levelDecor.push(g);
+  spaceLandingTargets.push({
+    x,y,z,r,
+    approachR:opts.approachR||18,
+    nearR:opts.nearR||8,
+    primary:!!opts.primary,
+    beacon:g
+  });
+  return g;
 }
 
 function addLaunchDock(x,y,z,w,d){
@@ -73,13 +122,11 @@ function addLaunchDock(x,y,z,w,d){
   const plate=addSolid(x,y,z,w,0.45,d,0x4a5260,{surf:'pad',role:'landable'});
   plate.mesh.visible=true;
   if(plate.mesh.material&&plate.mesh.material.color)plate.mesh.material.color.setHex(0x5a6470);
-  // Rim glow / tether markers
   const rim=mesh(BOXG,new THREE.MeshBasicMaterial({color:0x5ec8ff,transparent:true,opacity:0.55}),0,0.24,0,w+0.6,0.06,d+0.6);
   scene.add(rim);levelDecor.push(rim);
   [[-1,-1],[1,-1],[-1,1],[1,1]].forEach(([sx,sz])=>{
     addSpaceBuoy(x+sx*(w*0.42),y+0.5,z+sz*(d*0.42));
   });
-  // Metallic deck detail
   for(let i=0;i<6;i++){
     const px=rand(-w*0.35,w*0.35),pz=rand(-d*0.35,d*0.35);
     addDecor(mesh(BOXG,lam(0x788898),x+px,y+0.24,z+pz,rand(0.4,1.2),0.04,rand(0.4,1.2)));
@@ -89,17 +136,69 @@ function addLaunchDock(x,y,z,w,d){
 
 function addPracticePad(x,y,z,r){
   const w=r*2;
-  const sol=addSolid(x,y,z,w,0.38,w,0x3a4868,{surf:'pad',role:'landable'});
+  const sol=addSolid(x,y,z,w,0.38,w,0x3a4868,{surf:'pad',role:'landable',landingPad:true});
   sol.mesh.visible=true;
-  const rim=mesh(BOXG,new THREE.MeshBasicMaterial({color:0xffe078,transparent:true,opacity:0.65}),x,y+0.22,z,w+0.5,0.05,w+0.5);
-  scene.add(rim);levelDecor.push(rim);
-  addSpaceBuoy(x+r*0.7,y+0.4,z);
-  addSpaceBuoy(x-r*0.7,y+0.4,z+r*0.5);
+  if(sol.mesh.material&&sol.mesh.material.color)sol.mesh.material.color.setHex(0x4a5878);
+  addLandingBeacon(x,y,z,r,{approachR:18,nearR:8,primary:true});
   return sol;
 }
 
 function solidIsLandable(s){
   return !!(s&&(s.role==='landable'||s.surf==='pad'));
+}
+
+function nearLandableAssist(p,cfg,maxH){
+  maxH=maxH!=null?maxH:(cfg&&cfg.takeoffAssistH!=null?cfg.takeoffAssistH:3.5);
+  let best=Infinity;
+  for(const s of solids){
+    if(!solidIsLandable(s))continue;
+    if(p.x+R<=s.min.x||p.x-R>=s.max.x||p.z+R<=s.min.z||p.z-R>=s.max.z)continue;
+    const dy=p.y-s.max.y;
+    if(dy>=0&&dy<maxH)best=Math.min(best,dy);
+  }
+  return best<maxH;
+}
+
+function nearestLandingTarget(p){
+  let best=null,bestD=Infinity;
+  for(const t of spaceLandingTargets){
+    const dx=p.x-t.x,dz=p.z-t.z,dy=p.y-(t.y+0.4);
+    const dist=Math.hypot(Math.hypot(dx,dz),Math.abs(dy));
+    if(dist<t.approachR&&dist<bestD){best=t;bestD=dist;}
+  }
+  return best?{target:best,dist:bestD}:null;
+}
+
+function applyLandingAssist(dt,p,v){
+  if(!isSpaceLevel()||!spaceLandingTargets.length)return;
+  const hit=nearestLandingTarget(p);
+  if(!hit)return;
+  const t=hit.target,dx=p.x-t.x,dz=p.z-t.z,dy=p.y-(t.y+0.4);
+  const horiz=Math.hypot(dx,dz),dist=hit.dist;
+  const outer=1-clamp(dist/t.approachR,0,1);
+  const near=dist<t.nearR?1-clamp(dist/t.nearR,0,1):0;
+  if(outer<=0)return;
+  const sp=Math.hypot(v.x,v.y,v.z);
+  if(sp>2.5){
+    const slow=Math.exp(-(0.55*outer+0.85*near)*dt*3.2);
+    v.x*=slow;v.y*=slow;v.z*=slow;
+  }
+  if(outer>0.12){
+    const align=(0.9*outer+1.4*near)*dt;
+    const pull=align*(2.4+4.5*near);
+    if(horiz>0.12){v.x-=dx/(horiz||1)*pull;v.z-=dz/(horiz||1)*pull;}
+    if(dy>0.25)v.y-=align*2.4;
+    else if(dy<-0.15)v.y+=align*0.4;
+  }
+  if(near>0.35&&dy<2.0&&horiz<t.r*1.35){
+    const snap=near*dt*5.5;
+    if(horiz>0.08){v.x-=dx/(horiz||1)*snap;v.z-=dz/(horiz||1)*snap;}
+    if(dy>0.08)v.y=moveTo(v.y,-1.4,7*dt);
+  }
+  if(near>0.55&&dy<1.0&&horiz<t.r*0.95){
+    v.y=moveTo(v.y,-1.2,8*dt);
+    if(horiz>0.05){v.x=moveTo(v.x,-dx/(horiz||1)*1.0,5*dt);v.z=moveTo(v.z,-dz/(horiz||1)*1.0,5*dt);}
+  }
 }
 
 function landableSurfaceAt(x,z){
@@ -148,7 +247,6 @@ function applySpaceRecovery(dt){
     SFX.refill();showToast('Whoops — back to the dock!');
     return true;
   }
-  // Soft nudge toward center
   const nx=dx/(horiz||1),nz=dz/(horiz||1);
   const push=clamp((dist-soft)/(hard-soft),0,1)*18*dt;
   P.vel.x-=nx*push;P.vel.z-=nz*push;
@@ -159,6 +257,24 @@ function applySpaceRecovery(dt){
 
 function updateSpaceDecor(dt){
   if(!isSpaceLevel())return;
+  const pulse=0.55+Math.sin(time*3.2)*0.25;
+  for(const b of spaceRouteBeacons){
+    if(b.userData&&b.userData.routeStar){
+      const ph=b.userData.pulseT+time*2.4;
+      b.material.opacity=0.55+Math.sin(ph)*0.35;
+      b.scale.setScalar(0.14+Math.sin(ph*1.3)*0.04);
+    }
+  }
+  for(const t of spaceLandingTargets){
+    if(!t.beacon)continue;
+    const ph=time*2.8;
+    t.beacon.children.forEach((c,i)=>{
+      if(c.material&&c.material.opacity!=null){
+        if(i===0)c.material.opacity=0.72+Math.sin(ph)*0.2;
+        else if(i===2)c.material.opacity=0.32+Math.sin(ph*1.1)*0.18;
+      }
+    });
+  }
   if(blackHoleLandmark){
     blackHoleLandmark.rotation.y+=dt*0.08;
     const ch=blackHoleLandmark.children;
@@ -175,8 +291,13 @@ function beginSpaceOutOfRouteRecovery(){
 
 window.__SPACE={
   isSpaceLevel,spaceCfg,queryMoveZone,landableSurfaceAt,solidIsLandable,pointInOpenZone,
+  nearLandableAssist,nearestLandingTarget,applyLandingAssist,
   get blackHole(){return blackHoleLandmark;},
   get decorPlanets(){return spaceDecorPlanets;},
+  get landingTargets(){return spaceLandingTargets;},
+  get routeTrail(){return spaceRouteTrail;},
+  get firstDestination(){return spaceFirstDest;},
+  get routeBeacons(){return spaceRouteBeacons;},
   get openZones(){return spaceOpenZones;},
   get playVolume(){return spacePlayVolume;},
   get recoveryT(){return spaceRecoveryT;}

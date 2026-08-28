@@ -112,26 +112,29 @@ function applyLavaTuning(L){
   LAVA_RECOVERY=(L&&L.lavaRecovery!=null)?L.lavaRecovery:0.42;
 }
 // Level 4 open-space flight — inactive unless level supplies openSpace config.
-let SPACE_THRUST=5.5,SPACE_CAP=9,SPACE_COAST=4,SPACE_COAST_DEC=2.8,SPACE_STEER_T=38,SPACE_STEER_C=22,SPACE_BRAKE=52,SPACE_PITCH_NEUTRAL=0.42,SPACE_TAKEOFF_BIAS=0.32,SPACE_JUMP=8.5,SPACE_PUFF=7.5;
+let SPACE_THRUST=5.5,SPACE_CAP=9,SPACE_COAST=4,SPACE_COAST_DEC=2.8,SPACE_STEER_T=38,SPACE_STEER_C=22,SPACE_BRAKE=52,SPACE_LEVEL_BAND=0.18,SPACE_VERT_GAIN=0.92,SPACE_TAKEOFF_BIAS=0.32,SPACE_TAKEOFF_H=3.5,SPACE_JUMP=8.5,SPACE_PUFF=7.5;
 function applySpaceTuning(cfg){
-  if(!cfg){SPACE_THRUST=5.5;SPACE_CAP=9;SPACE_COAST=4;SPACE_COAST_DEC=2.8;SPACE_STEER_T=38;SPACE_STEER_C=22;SPACE_BRAKE=52;SPACE_PITCH_NEUTRAL=0.42;SPACE_TAKEOFF_BIAS=0.32;SPACE_JUMP=8.5;SPACE_PUFF=7.5;return;}
+  if(!cfg){SPACE_THRUST=5.5;SPACE_CAP=9;SPACE_COAST=4;SPACE_COAST_DEC=2.8;SPACE_STEER_T=38;SPACE_STEER_C=22;SPACE_BRAKE=52;SPACE_LEVEL_BAND=0.18;SPACE_VERT_GAIN=0.92;SPACE_TAKEOFF_BIAS=0.32;SPACE_TAKEOFF_H=3.5;SPACE_JUMP=8.5;SPACE_PUFF=7.5;return;}
   SPACE_THRUST=cfg.thrustHold;SPACE_CAP=cfg.thrustCap;SPACE_COAST=cfg.coastCap;SPACE_COAST_DEC=cfg.coastDecay;
   SPACE_STEER_T=cfg.steerThrust;SPACE_STEER_C=cfg.steerCoast;SPACE_BRAKE=cfg.brake;
-  SPACE_PITCH_NEUTRAL=cfg.pitchNeutral!=null?cfg.pitchNeutral:0.42;
+  SPACE_LEVEL_BAND=cfg.levelBand!=null?cfg.levelBand:0.18;
+  SPACE_VERT_GAIN=cfg.vertGain!=null?cfg.vertGain:0.92;
   SPACE_TAKEOFF_BIAS=cfg.takeoffBias!=null?cfg.takeoffBias:0.32;
+  SPACE_TAKEOFF_H=cfg.takeoffAssistH!=null?cfg.takeoffAssistH:3.5;
   SPACE_JUMP=cfg.jumpV;SPACE_PUFF=cfg.puffV;
 }
-function spaceThrustDir(wx,wz,wl,cfg){
-  const neutral=cfg.pitchNeutral!=null?cfg.pitchNeutral:SPACE_PITCH_NEUTRAL;
+function spaceThrustDir(wx,wz,wl,mz,cfg){
+  const band=cfg.levelBand!=null?cfg.levelBand:SPACE_LEVEL_BAND;
+  const vGain=cfg.vertGain!=null?cfg.vertGain:SPACE_VERT_GAIN;
   const takeoff=cfg.takeoffBias!=null?cfg.takeoffBias:SPACE_TAKEOFF_BIAS;
-  let tx,tz,ty;
-  if(wl>0.05){
-    tx=wx;tz=wz;
-    // Camera pitch relative to neutral outdoor boom: look up -> climb, look down -> descend.
-    ty=-Math.sin(CAM.pitch-neutral)*wl;
-  }else{
-    tx=Math.sin(P.yaw)*0.25;tz=Math.cos(P.yaw)*0.25;
-    ty=takeoff;
+  const takeoffH=cfg.takeoffAssistH!=null?cfg.takeoffAssistH:SPACE_TAKEOFF_H;
+  let tx,tz,ty=0;
+  if(mz<-band)ty=(-mz-band)*vGain;
+  else if(mz>band)ty=-(mz-band)*vGain;
+  if(wl>0.05){tx=wx;tz=wz;}
+  else{
+    tx=Math.sin(P.yaw)*0.2;tz=Math.cos(P.yaw)*0.2;
+    if(Math.abs(ty)<0.02&&nearLandableAssist(P.pos,cfg,takeoffH))ty=takeoff;
   }
   const len=Math.hypot(tx,ty,tz)||1;
   return {x:tx/len,y:ty/len,z:tz/len,tyRaw:ty};
@@ -139,7 +142,7 @@ function spaceThrustDir(wx,wz,wl,cfg){
 function endSpaceThrust(){P.spaceThrust=false;P.spaceThrustY=0;if(P.spaceThrustS){SFX.spaceThrustStop(P.spaceThrustS);P.spaceThrustS=null;}}
 function capSpaceVel(v,cap){const sp=Math.hypot(v.x,v.y,v.z);if(sp>cap){const k=cap/sp;v.x*=k;v.y*=k;v.z*=k;}}
 window.__PHYS=()=>({speed:SPEED,acc:ACC,dec:DEC,airAcc:AIRACC,grav:GRAV,jumpV:JUMPV,puffV:PUFFV,maxFall:MAXFALL,coyote:COYOTE,buffer:BUFFER,step:STEP,r:R,h:H});
-window.__SPACEPHYS=()=>({thrustHold:SPACE_THRUST,thrustCap:SPACE_CAP,coastCap:SPACE_COAST,coastDecay:SPACE_COAST_DEC,steerThrust:SPACE_STEER_T,steerCoast:SPACE_STEER_C,brake:SPACE_BRAKE,pitchNeutral:SPACE_PITCH_NEUTRAL,takeoffBias:SPACE_TAKEOFF_BIAS,jumpV:SPACE_JUMP,puffV:SPACE_PUFF});
+window.__SPACEPHYS=()=>({thrustHold:SPACE_THRUST,thrustCap:SPACE_CAP,coastCap:SPACE_COAST,coastDecay:SPACE_COAST_DEC,steerThrust:SPACE_STEER_T,steerCoast:SPACE_STEER_C,brake:SPACE_BRAKE,levelBand:SPACE_LEVEL_BAND,vertGain:SPACE_VERT_GAIN,takeoffBias:SPACE_TAKEOFF_BIAS,takeoffAssistH:SPACE_TAKEOFF_H,jumpV:SPACE_JUMP,puffV:SPACE_PUFF});
 window.__MOVEMENT=()=>({zone:P.moveZone,spaceThrust:!!P.spaceThrust,grounded:!!P.grounded,speed:Math.hypot(P.vel.x,P.vel.y,P.vel.z),horiz:Math.hypot(P.vel.x,P.vel.z),vy:P.vel.y,pitch:CAM.pitch,thrustY:P.spaceThrustY||0});
 window.__SKY=()=>({puffVMul:SKY.puffVMul,boostMax:SKY.boostMax,boostDecay:SKY.boostDecay,glideDur:SKY.glideDur,glideFallCap:SKY.glideFallCap,glideStartVy:SKY.glideStartVy});
 window.__LAVA=()=>({anchorSettle:LAVA_ANCHOR_SETTLE,anchorClear:LAVA_ANCHOR_CLEAR,recovery:LAVA_RECOVERY,hurtInv:HURT_INV});
@@ -411,9 +414,10 @@ function spit(e){const ox=e.x+Math.sin(e.face)*0.55*e.size,oz=e.z+Math.cos(e.fac
   let q=null;for(const g2 of goos){if(!g2.alive){q=g2;break;}}if(!q)return;q.alive=true;q.ref=false;q.life=4;q.trailT=0;q.pos.set(ox,oy,oz);q.vel.set(vx,vy,vz);q.m.visible=true;q.m.position.copy(q.pos);q.col=e.col;q.r=0.15+e.size*0.1;q.m.scale.setScalar(q.r);q.m.material.color.setHex(e.col);
   e.vx-=Math.sin(e.face)*1.5;e.vz-=Math.cos(e.face)*1.5;SFX.spit();for(let i=0;i<4;i++)spawnP(ox,oy,oz,vx*0.2+rand(-1,1),rand(0,2),vz*0.2+rand(-1,1),0.06,e.col,0.3,0.4,-6,0.8);}
 function killGoo(q){q.alive=false;q.m.visible=false;}
-function updateOpenSpacePlayer(dt,wx,wz,wl){
+function updateOpenSpacePlayer(dt,mx,mz){
   const p=P.pos,v=P.vel,cfg=spaceCfg()||{};
   const thrustCap=cfg.thrustCap||SPACE_CAP,coastCap=cfg.coastCap||SPACE_COAST;
+  const band=cfg.levelBand!=null?cfg.levelBand:SPACE_LEVEL_BAND;
   P.grounded=false;P.moveZone='openSpace';
   decayLeapBoost(dt);
   if(IN.jump)P.jumpBuf=time;
@@ -427,17 +431,26 @@ function updateOpenSpacePlayer(dt,wx,wz,wl){
     v.y=Math.max(v.y,0)*0.35+(cfg.puffV||SPACE_PUFF);P.puff=false;P.jumping=true;P.jumpBuf=-9;P.sq=1.25;
     puffJumpFX();SFX.puff();fireJet();CAM.fovKick=4;
   }
-  const dir=spaceThrustDir(wx,wz,wl,cfg);
+  const cy=CAM.yaw,fx=-Math.sin(cy),fz=-Math.cos(cy),rx=Math.cos(cy),rz=-Math.sin(cy);
+  const fmz=mz<-band?mz:0;
+  let wx=fx*(-fmz)+rx*mx,wz=fz*(-fmz)+rz*mx,wl=Math.hypot(wx,wz);
+  if(wl>1){wx/=wl;wz/=wl;wl=1;}
+  const dir=spaceThrustDir(wx,wz,wl,mz,cfg);
   const tx=dir.x,ty=dir.y,tz=dir.z;
   P.spaceThrustY=dir.tyRaw;
   const steer=thrusting?(cfg.steerThrust||SPACE_STEER_T):(cfg.steerCoast||SPACE_STEER_C);
   const hold=cfg.thrustHold||SPACE_THRUST;
+  applyLandingAssist(dt,p,v);
   if(thrusting){
     v.x+=tx*hold*dt;v.y+=ty*hold*dt;v.z+=tz*hold*dt;
     if(wl>0.05){
       v.x=moveTo(v.x,wx*thrustCap,steer*dt);
       v.z=moveTo(v.z,wz*thrustCap,steer*dt);
       v.y=moveTo(v.y,dir.tyRaw*thrustCap,steer*dt);
+    }else if(Math.abs(dir.tyRaw)>0.02){
+      v.y=moveTo(v.y,dir.tyRaw*thrustCap,steer*dt);
+    }else{
+      v.y=moveTo(v.y,0,steer*dt*0.9);
     }
     capSpaceVel(v,thrustCap);
   }else{
@@ -483,7 +496,7 @@ function updatePlayer(dt){const p=P.pos,v=P.vel;
   let wx=fx*(-IN.mz)+rx*IN.mx,wz=fz*(-IN.mz)+rz*IN.mx;let wl=Math.hypot(wx,wz);if(wl>1){wx/=wl;wz/=wl;wl=1;}if(P.dead){wx=0;wz=0;wl=0;}
   if(isSpaceLevel()){
     P.moveZone=queryMoveZone();
-    if(P.moveZone==='openSpace'){updateOpenSpacePlayer(dt,wx,wz,wl);return;}
+    if(P.moveZone==='openSpace'){updateOpenSpacePlayer(dt,IN.mx,IN.mz);return;}
     P.moveZone='grounded';
   }else P.moveZone='grounded';
   // Ordinary movement stays SPEED-capped. leapBoost is applied separately so stick reverse cannot cancel it.
