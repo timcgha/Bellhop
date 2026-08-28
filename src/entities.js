@@ -8,13 +8,15 @@ let SNOOZLE_GOAL=0;
 function snoozleGoalCount(){return SNOOZLE_GOAL>0?SNOOZLE_GOAL:snoozles.length;}
 window.__snoozleGoal=()=>snoozleGoalCount();
 const checks=[];let won=false,winT=0,confT=0;
-const LEVELS=[LEVEL1,LEVEL2,LEVEL3];
+const LEVELS=[LEVEL1,LEVEL2,LEVEL3,LEVEL4];
 let CURRENT_LEVEL=null;
 function isUnderwater(){return !!(CURRENT_LEVEL&&CURRENT_LEVEL.underwater);}
 const POND={x0:-6,x1:6,z0:-33,z1:-25};
 function inPond(x,z){return x>POND.x0&&x<POND.x1&&z>POND.z0&&z<POND.z1;}
 function groundHeightAt(x,z){
   if(isUnderwater())return 0;
+  if(CURRENT_LEVEL&&CURRENT_LEVEL.spaceAtmosphere)
+    return CURRENT_LEVEL.voidFloor!=null?CURRENT_LEVEL.voidFloor:-40;
   // Peak has no infinite meadow floor. Gaps without authored solids fall into the void
   // (Level 3 voidY recovery). Levels 1–2 keep the old y=0 / pond floor.
   if(CURRENT_LEVEL&&CURRENT_LEVEL.peakAtmosphere)
@@ -172,6 +174,7 @@ function clearLevelWorld(){
   for(const o of steamVents)rem(o.g);steamVents.length=0;
   for(const o of lavas){rem(o.g);if(o.edge)rem(o.edge);}lavas.length=0;
   clearPeakWorld();
+  clearSpaceWorld();
   for(const o of clouds)rem(o.g);clouds.length=0;
   for(const o of gloops)rem(o.g);gloops.length=0;
   for(const o of hearts)rem(o.g);hearts.length=0;
@@ -382,12 +385,17 @@ function loadLevel(L){
   if(L.physics)applyPhysics(L.physics);
   applySkyBlastTuning(L.skyBlast);
   applyLavaTuning(L);
+  applySpaceTuning(L.openSpace);
   CURRENT_LEVEL=L;
   SNOOZLE_GOAL=L.snoozleGoal||0;
   setSong(L.music||'meadow');
-  if(L.underwater)beginUnderwaterLevel(L);else if(L.peakAtmosphere)beginPeakLevel();else beginLandLevel();
-  P.fire=false;P.bubble=false;P.hasSkyBlast=false;clearLeapBoost();clearGlide();P.puff=true;P.puffAir=0;endHover();P.slam=0;P.lavaRecT=0;P.anchorSettleT=0;
-  if(L.spawn){P.spawn.x=L.spawn.x;P.spawn.y=L.spawn.y;P.spawn.z=L.spawn.z;P.pos.set(L.spawn.x,L.spawn.y,L.spawn.z);P.vel.set(0,0,0);initSafeAnchor(L.spawn.x,L.spawn.y,L.spawn.z);}
+  if(L.underwater)beginUnderwaterLevel(L);
+  else if(L.peakAtmosphere)beginPeakLevel();
+  else if(L.spaceAtmosphere)beginSpaceLevel(L);
+  else beginLandLevel();
+  P.fire=false;P.bubble=false;P.hasSkyBlast=false;clearLeapBoost();clearGlide();endSpaceThrust();P.puff=true;P.puffAir=0;endHover();P.slam=0;P.lavaRecT=0;P.anchorSettleT=0;P.moveZone='grounded';P.spaceThrust=false;
+  if(L.spawn){P.spawn.x=L.spawn.x;P.spawn.y=L.spawn.y;P.spawn.z=L.spawn.z;P.pos.set(L.spawn.x,L.spawn.y,L.spawn.z);P.vel.set(0,0,0);initSafeAnchor(L.spawn.x,L.spawn.y,L.spawn.z);
+    if(L.spaceAtmosphere&&typeof landableSurfaceAt==='function'){const land=landableSurfaceAt(L.spawn.x,L.spawn.z);if(land&&L.spawn.y<=land.y+STEP+0.3){P.pos.y=land.y;P.grounded=true;P.moveZone='grounded';P.surf=land.surf||'pad';P.lastGround=time;}}}
   const fence=L.fence;
   for(const s of L.fenceSolids)addSolid(s[0],s[1],s[2],s[3],s[4],s[5],fence);
   for(const p of L.pathTiles)pathTile(p[0],p[1],p[2],p[3]);
@@ -456,6 +464,11 @@ function loadLevel(L){
     else if(k==='wreckDeck')wreckDeck(step[1],step[2],step[3],step[4],step[5],step[6]||0,step[7]||0,step[8]||0);
     else if(k==='wreckLedge')wreckLedge(step[1],step[2],step[3],step[4],step[5],step[6]||'');
     else if(k==='unfinishedFinish')registerUnfinishedFinish(step[1],step[2],step[3]);
+    else if(k==='launchDock')addLaunchDock(step[1],step[2],step[3],step[4],step[5]);
+    else if(k==='practicePad')addPracticePad(step[1],step[2],step[3],step[4]);
+    else if(k==='spaceBuoy')addSpaceBuoy(step[1],step[2],step[3]);
+    else if(k==='backdropPlanet')addBackdropPlanet(step[1],step[2],step[3],step[4],step[5],step[6]);
+    else if(k==='blackHoleLandmark')addBlackHoleLandmark(step[1],step[2],step[3]);
     else if(k==='conch')buildConch(step[1],step[2]);
     else if(k==='steamOrgan')buildSteamOrgan(step[1],step[2],step[3]);
   }

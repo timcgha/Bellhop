@@ -6,7 +6,7 @@ addEventListener('keydown',e=>{
   if(!started){
     if(e.code==='ArrowLeft'||e.code==='KeyA'){setPickerIdx(pickerIdx-1);return;}
     if(e.code==='ArrowRight'||e.code==='KeyD'){setPickerIdx(pickerIdx+1);return;}
-    if(e.code==='Space'||e.code==='Enter'){startGame();return;}
+    if(e.code==='Space'||e.code==='Enter'){startGame();keys.Space=false;keys.Enter=false;return;}
     return;
   }
   if(e.code==='Space')IN.jump=true;

@@ -12,7 +12,7 @@ ok(H.getSky().glideDur===0.55&&H.getSky().glideFallCap===-2.2&&H.getSky().glideS
 ok(L.snoozleGoal===4,'snoozleGoal remains 4');
 ok(W.snoozles.length===4,'exactly four physical Snoozles');
 ok(el('snz').textContent==='😴 0/4','HUD 0/4');
-ok(H.getCamDiag().VERSION_BASE==='v38 · Peak playtest readability','version stamp is Peak playtest fixes');
+ok(H.getCamDiag().VERSION_BASE==='v39 · Launch Dock','version stamp is Peak playtest fixes');
 
 const climbLeaps=L.mandatoryLeaps.filter(l=>/^climb/.test(l.id));
 const lavaLeaps=L.mandatoryLeaps.filter(l=>['firstLavaLeap','islandA','islandB','wideRiver','geyserApproach'].includes(l.id));
