@@ -39,31 +39,51 @@ feels in the open, not what the buttons mean.
 
 ### Open space (zero gravity)
 
-In the big empty areas between landings, there is no gravity.
+In the big empty areas between landings, there is no gravity pulling Pling
+down. This is Level 4 only; Levels 1–3 are unchanged.
 
-- **Jump (A / Space)** still gives a foot-jet puff. In space the puff pushes
-  Pling in the direction he is facing, up and forward like always, but he does
-  not fall afterward.
-- **Hold jump after a puff** keeps a gentle blue jet running from his feet. He
-  keeps drifting in that direction while the button is held. This is the space
-  version of float — same button, same idea, but with no ground pulling him
-  down he can effectively keep flying.
-- **Release jump** and the jet stops. Pling coasts slowly until he presses
-  jump again. There is a soft top speed so he never blasts out of control.
-- **Air-puff** (jump again while already in the air) still works once per
-  flight. Two puffs, then wait for a short breath before the second stroke is
-  ready again. Same rhythm as Level 1, just with no sinking between strokes.
+**Hold-A flight contract (designer-locked):**
+
+- **Press or hold jump (A / Space)** and a blue foot-jet fires immediately.
+  While jump stays held, thrust continues — no need to release and press again.
+  Pling can keep flying indefinitely in open space as long as the button is
+  held.
+- **Release jump** and the jet stops. Pling **coasts** at a gentle, capped
+  speed. He does not fall. Move input still steers during the coast.
+- **Press jump again** after release (or while coasting) restarts the jet.
+- **Air-puff** (jump again while already thrusting, before the second stroke
+  cooldown) still works once per flight. Same two-stroke rhythm as Level 1,
+  just with no sinking between strokes.
+- **Move (stick / WASD / arrows)** steers thrust and coast direction. This is
+  not realistic inertia — Pling turns and corrects quickly enough that a child
+  can recover from overshoots without fighting the controls.
+- **No downward gravity** in open-space zones. Vertical aim comes from facing
+  plus move input, not from falling.
+- **Soft speed cap** while thrusting and while coasting so he never blasts out
+  of control. Exact numbers are for playtest; the invariant is *freedom +
+  controllability*, not orbital simulation.
 - **Spin (Y / K)** still hits everything nearby.
 - **B / J / Shift** always performs the **gust** in open space. There is no
   ground-pound in zero gravity. Pressing B pushes space dust, spins little
   satellite dishes, and nudges loose asteroids aside. With Star Beam power, the
-  same button fires the beam (see below).
+  same gust also fires the beam forward (see below).
 - **Air-slam** does not exist in open space. Pressing B while drifting performs
-  gust, not slam.
+  gust (and beam if powered), not slam.
 
 The child-facing rule:
 
 **Hold jump to fly. Let go to glide. B is your space breath.**
+
+**Behavioral invariants (implementation contract):**
+
+- Open-space `grav === 0`. Releasing jump never starts a fall loop.
+- Holding jump from a standstill in an open-space zone begins flight
+  immediately (Launch Dock teaches this first).
+- Leaving a surface pad into open space: jump launches off; holding jump
+  continues flight in the new zone without a mode change delay.
+- Touching a landable surface while moving slowly enough to land snaps to
+  grounded state; Level 1 rules apply until Pling jumps back into open space.
+- Flight can restart immediately from any surface or mid-coast.
 
 ### On a planet surface
 
@@ -84,7 +104,12 @@ interior volume with normal gravity and a visible sky dome so it still feels
 like outer space outside the windows.
 
 Inside, all Level 1 movement rules apply. Star Beam still works the same way
-(gust fires the beam). Zero-gravity flight does not work indoors.
+(gust breath plus forward beam). Zero-gravity flight does not work indoors.
+
+**Interior gravity rule (frozen):** option B — interiors restore ordinary
+grounded Bellhop movement. Open space alone uses hold-A flight. The transition
+must read clearly: landing pad colour, rim glow, or a short whoosh plus
+footstep SFX when crossing from open space to surface/interior.
 
 **Important:** zero gravity is a property of Level 4 open-space zones, not a
 global change.
@@ -95,19 +120,41 @@ Level 1 carries its current physics values explicitly and is never altered.
 
 If changing Level 4 alters Level 1, the split is in the wrong place.
 
-### Starting physics values (not settled)
+### Open-space bounds and recovery
 
-These are named Level 4 open-space values for implementation and playtesting.
-They are starting points, not contracts, until a real playtest locks them.
+Space feels open, but the authored route is a **bounded play volume**. A child
+must never drift forever into an empty void or become permanently stranded.
+
+- **Soft route envelope:** invisible or softly visible tether fields, star-lane
+  buoys, and gentle nudge volumes keep Pling near meaningful content. Crossing
+  the outer envelope applies a slow push back toward the nearest route marker,
+  not instant death.
+- **Vertical and lateral limits:** flying too far above, below, or sideways
+  triggers the same gentle return force or teleports Pling to the last
+  checkpoint facing the next landmark. Recovery must take seconds, not minutes.
+- **Knockback cap:** asteroid and saucer knockback cannot eject Pling beyond
+  the recoverable envelope in one hit. I-frames always allow steering input.
+- **Missed landing:** missing a planet pad costs time, not a run. Checkpoints
+  and buoy lines make re-approach obvious. Dying returns to the last checkpoint
+  with full hearts, keeping Snoozles and notes already collected (same as
+  Levels 1–3).
+- **No instant void death.** No fail state harsher than losing a heart.
+
+### Starting physics values (playtest tuning)
+
+These are named Level 4 open-space values for implementation and first
+playtest. Behavioral invariants above are the contract; numbers below are
+starting points until a real playtest locks them.
 
 ```
 openSpace:
   grav: 0
-  maxFall: -4          // gentle coast cap when not thrusting
-  jumpV: 8.5           // puff thrust
+  coastCap: ~4         // max drift speed when jet released (not "fall")
+  jumpV: 8.5           // initial puff thrust
   puffV: 7.5           // second stroke
   thrustHold: 5.5      // sustained hold-jet acceleration
   thrustCap: 9.0       // max fly speed while holding jump
+  steerResponse: high  // child can correct overshoot quickly
   coyote/buffer/hover: same keys as Level 1 unless playtest says otherwise
 
 surface/interior:
@@ -130,7 +177,9 @@ The gust already works in space: it blows glitter dust, spins little antennas,
 and pushes light debris.
 
 With Star Beam, the same gust also fires a bright laser beam forward from
-Pling’s whistle-spout.
+Pling’s whistle-spout. The gust puff still happens — dust, crystals, jellyfish,
+and dishes react exactly as without power. Only forward combat/door interactions
+gain the beam.
 
 Same button, same move, upgraded. Nothing new to relearn.
 
@@ -140,18 +189,25 @@ Jump and gust must never fight each other:
 
 | Situation | Jump (A) | B / gust |
 |---|---|---|
-| Open space, no power | Foot-jet puff; hold to keep flying | Space gust |
-| Open space, Star Beam | Foot-jet puff; hold to keep flying | **Star Beam** laser |
+| Open space, no power | Hold to fly; tap for puff stroke | Space gust |
+| Open space, Star Beam | Hold to fly; tap for puff stroke | Gust **plus** Star Beam |
 | Planet surface, no power | Normal jump / puff / float | Normal gust |
-| Planet surface, Star Beam | Normal jump / puff / float | **Star Beam** laser |
-| Planet interior | Normal jump / puff / float | **Star Beam** laser |
+| Planet surface, Star Beam | Normal jump / puff / float | Gust **plus** Star Beam |
+| Planet interior | Normal jump / puff / float | Gust **plus** Star Beam |
 
-Jump is for moving. B is for shooting. A child can hold jump with one finger
-and tap B with another on a tablet.
+Jump is for moving. B is for breath and zapping. A child can hold jump with one
+finger and tap B with another on a tablet.
+
+Star Beam can be fired while flying. Holding jump does not block B.
 
 The beam travels straight forward from Pling’s facing direction, about 18–22
 units, for roughly 0.35 s. It pierces one saucer or breaks one cracked asteroid
 shield. It makes a sharp twinkle sound every time.
+
+**What Star Beam replaces:** forward attack power on B (saucer damage, cracked
+shields, the one mandatory beam gate). It does **not** remove gust utility on
+environmental props. Spin, slam (on surfaces), and jump-jet still defeat
+saucers without Star Beam.
 
 Star Beam is **not** spent on use. Like fire, bubble, and Sky Blast, it is kept
 until an enemy or hazard hit removes it.
@@ -191,9 +247,15 @@ Any mandatory obstacle requiring a losable power must have a renewable source
 of that power nearby.
 
 For Space, a **star crate** (mystery box with a star emblem) can repeatedly
-provide Star Beam near a mandatory shielded saucer or beam-only barrier.
+provide Star Beam near a mandatory shielded gate.
 
-A child who loses Star Beam immediately before a required beam door must never
+**Mandatory Star Beam use:** exactly one — the Saucer Belt **shielded gate**
+(beam-only barrier, not a saucer). Spin and gust cannot open it. A renewable
+star crate sits beside this gate. No other main-route obstacle requires Star
+Beam; cracked asteroids and saucers always offer spin, slam, or jump-jet
+alternatives.
+
+A child who loses Star Beam immediately before the required gate must never
 be forced into long backtracking or become stuck.
 
 ## Enemies and hazards
@@ -203,11 +265,14 @@ be forced into long backtracking or become stuck.
 Flying saucers are the main hostile creatures. They are simple and readable:
 
 - shiny disc body, glowing dome, gentle wobble
-- they patrol a small area or slowly chase Pling when he comes close
+- they patrol a small **leashed** area; they do not chase forever across the
+  whole sky
 - they wind up for half a second with a pulsing dome light, then shoot one
-  green spark ball in a lazy arc
+  green spark ball in a lazy arc — always telegraphed, never a bullet hose
+- sparks and body contact are visible before they arrive; no off-screen sniping
+  from behind planets
 - getting hit by the ship body or the spark costs **one heart**, applies
-  knockback, and grants i-frames like every other enemy
+  moderate knockback, and grants i-frames like every other enemy
 
 **How to beat them (child rule: saucers are for spinning, slamming, or
 zapping):**
@@ -215,13 +280,14 @@ zapping):**
 | Attack | Effect |
 |---|---|
 | Spin | Defeats saucer |
-| Air-slam (on a surface) | Defeats saucer |
+| Air-slam (on a surface only) | Defeats saucer |
 | Jump-jet from below | Defeats saucer |
 | Star Beam | Defeats saucer |
 | Gust (no power) | Stuns briefly, no damage |
 | Spark ball hits saucer | Bounces back; reflected spark defeats saucer |
 
 Placed saucers may hold music notes. Any valid defeat reveals the held note.
+Ambient or respawning saucers never hold counted notes.
 
 Three sizes for variety, mirroring Gloop readability:
 
@@ -231,13 +297,25 @@ Three sizes for variety, mirroring Gloop readability:
 
 ### Asteroids (hazard)
 
-Asteroids drift slowly. They are grey-brown rocks with soft rotation.
+**Roles (visual language must differ):**
 
-Touching one costs **one heart**, knockback, and i-frames. They are not instant
-death.
+| Role | Look | Interaction |
+|---|---|---|
+| Backdrop | Small, dim, parallax | No collision |
+| Hazard rock | Solid grey-brown, soft spin | Touch = one heart + knockback + i-frames |
+| Cracked rock | Same body plus glowing crack | Breakable; may hold a note |
+| Landable body | Bright pad, rim light, tether buoys | Surface/interior zone; normal gravity |
 
-Spin and slam do **not** destroy ordinary asteroids. The child learns to fly
-around them.
+Ordinary hazard asteroids drift slowly. Touching one costs **one heart**,
+moderate knockback, and i-frames. They are not instant death.
+
+**Anti-pinball contract:** authored lanes keep minimum spacing so one hit
+cannot chain into immediate second hits during i-frames. Knockback pushes
+*away* from the rock face, not deeper into a cluster. If a belt feels tight,
+provide a parallel wait lane or wider gap — never luck-only threading.
+
+Spin and slam do **not** destroy ordinary hazard asteroids. The child learns to
+fly around them.
 
 Some larger asteroids have a glowing crack. These are **cracked asteroids**:
 
@@ -246,6 +324,10 @@ Some larger asteroids have a glowing crack. These are **cracked asteroids**:
 - a placed cracked asteroid may hold a hidden note revealed when it breaks
 
 Ordinary unlimited drifting rocks never award counted notes.
+
+**Moving asteroids:** motion is slow and lane-based. Openings stay readable; a
+child can wait, steer around, or choose another line. No random walls of rock,
+no timer dependency, no unavoidable collision from bad spawn timing.
 
 ### Harmless space life
 
@@ -259,10 +341,41 @@ Optional ambient creatures keep the sky alive:
 
 These exist for wonder and gust play, not farming.
 
+## Camera, occlusion, and mobile readability
+
+Level 4 does **not** retune the global landscape-camera experiment from Level 3
+Stage 4.8A. Instead, authored volumes own local readability rules.
+
+**Open space:** default follow camera with slightly longer boom when far from
+landmarks so Pling stays readable against starfields. Important interactables
+(Pling, real asteroids, saucers, landable pads, Snoozles, black hole) stay
+**hero-sized** — never pin-dot scale for drama.
+
+**Large bodies:** planet entrance shells and thick asteroid walls use the Geode
+Hollow lessons from Level 3:
+
+- no unexplained box doorways; entrances read as cave mouths, cracks, or docks
+- visible geometry and collision agree; no fake walls Pling can clip through
+- no unsupported floor seams at transitions
+- shell occluders **fade or clip** when Pling enters so the camera never loses
+  him behind opaque planet crust
+- mandatory interior content (Snoozle 3, main exit) visible from the main
+  chamber line without pixel hunting
+
+**Interiors:** tighter boom, higher look target if ceilings are low; sky dome
+windows keep exterior context.
+
+**Mobile (phone landscape):** saucers, hazard asteroids, landable pads, and
+Snoozles must read at phone scale without zooming. Star Beam and foot-jet VFX
+stay bright and large. The black hole stays an unmistakable silhouette even at
+distance.
+
 ## The route
 
-Seven areas. The black hole is visible from Area 1 as a distant swirling disc
-with faint sparkles. The route bends toward it like following a river of stars.
+Seven named beats. Areas 3 and 4 are one planet fantasy (Candy exterior →
+Crystal interior) but stay separate beats for pacing and teaching. The black
+hole is visible from Area 1 as a distant swirling disc with faint sparkles. The
+route bends toward it like following a river of stars.
 
 Overall play time target: 10–14 minutes. Something interesting every 20–30
 seconds.
@@ -275,12 +388,13 @@ Opening moment.
 
 A tiny wooden-and-brass dock with Pling’s rocket pad, bunting, and a view of
 the whole star field. The black hole glimmers far ahead. A ringed planet and a
-pink moon hang to the left and right.
+pink moon hang to the left and right as **backdrop** bodies (no landing pads).
 
-Safe teaching space with no enemies.
+Safe teaching space with no enemies and no hazard asteroids.
 
 Wide zero-G lanes with glowing tether buoys show where to fly. The first gap is
-forgiving — hold jump, drift through, land on the next pad.
+forgiving — hold jump from the pad, drift through, land on the next pad. No
+combat, no damage, no Star Beam yet: sell **“I can fly forever!”** first.
 
 Snoozle 1 sleeps in a glass dome on the dock in plain sight.
 
@@ -297,55 +411,63 @@ Teach dodging before combat:
 - cracked asteroid optional tutorial: one cracked rock blocks a shortcut; spin
   twice or any later beam breaks it — safe to skip
 
-Introduce one **small silver saucer** alone in a clear bubble after the garden.
-The child has room to spin, slam a nearby moon rock, or experiment.
+Introduce one **small silver saucer** alone in a clear bubble after the garden,
+still before the Cheese Moon landing. The child has room to spin, or jump-jet
+from below; slam is available only after landing on the moon.
 
-Snoozle 2 sleeps on a tiny **Cheese Moon** — a round yellow surface with normal
-gravity. Land, wake, launch back to zero-G.
+Snoozle 2 sleeps on a tiny **Cheese Moon** — a round yellow **landable** body
+with normal gravity, bright pad, and rim glow. Land, wake, launch back to zero-G.
 
 Checkpoint on the Cheese Moon.
 
 ### 3. The Candy Planet (surface + Star Beam)
 
-A big striped planet ahead. Rings of sugar-coloured dust. Landing pad glows
-pink and green.
+A big striped **landable** planet ahead — bright landing pad, tether buoys,
+rings of sugar-coloured dust. Backdrop planets without pads stay dimmer and
+smaller in parallax.
 
 On the surface, gravity returns. Teach the surface/interior switch honestly.
 
 Introduce **Star Beam** here:
 
-1. Star crate on a obvious pedestal before any mandatory use.
+1. Star crate on an obvious pedestal before any mandatory use.
 2. Harmless saucer target dummy (no note) that flashes when beamed.
 3. One mid saucer on the route holding a note — any defeat reveals it.
 
 The gust → beam upgrade should teach itself before anything dangerous.
 
-A cave mouth on the far side of the planet leads to Area 4. The main route
-marker is a giant lollipop antenna visible from space.
+The **main route** cave mouth on the far side leads into Area 4. A giant
+lollipop antenna marks the planet from space.
 
 Checkpoint at the cave mouth.
 
-### 4. The Crystal Planet (interior)
+### 4. The Crystal Cavern (Candy Planet interior)
 
-Enter the planet through the candy-planet cave or a visible crack on a nearby
-**Crystal Planet** — a geode world with glowing purple insides (Level 2 geode
-energy, but space themed).
+The interior of the Candy Planet — a geode world with glowing purple insides
+(Level 3 Geode Hollow energy, but space themed). Not a separate mandatory
+planet landing; the cave mouth from Area 3 is the primary entrance.
+
+Optional shortcut: a visible glowing crack on a nearby **decorative crystal
+moon** (same interior, re-entry only — not required for first visit).
 
 Interior is a cave network with normal gravity:
 
 - crystal bridges
 - low ceilings so jump/float still matter
 - one mid saucer in a chamber
-- gust blows stardust off crystals and reveals hidden glitter paths
+- gust (with or without Star Beam) blows stardust off crystals and reveals
+  hidden glitter paths
 
-Snoozle 3 sleeps inside a cracked crystal geode.
+Snoozle 3 sleeps inside a cracked crystal geode on the **main route** — visible
+from the primary chamber approach (Level 3 Snoozle 3 readability lesson).
 
 Optional side tunnel with two cracked asteroids embedded in the walls (notes
 inside if placed).
 
 Checkpoint at the interior midpoint.
 
-Exit through a top opening back to open space toward the black hole.
+Exit through a top opening back to open space toward the black hole. Crossing
+the exit threshold returns to open-space hold-A flight immediately.
 
 ### 5. The Saucer Belt
 
@@ -358,8 +480,8 @@ Teaching order:
 3. Two saucers with room to spin or beam
 
 Place a **renewable star crate** beside the one mandatory **shielded gate** —
-a saucer shield wall that only Star Beam opens. Losing power here must not soft
-lock the run.
+a beam-only energy barrier (not a saucer). Spin and gust alone cannot open it.
+Losing power here must not soft-lock the run.
 
 Big gold saucer optional mini-boss in a wide arena; holds a note if placed.
 
@@ -367,10 +489,16 @@ Checkpoint after the gate.
 
 ### 6. The Star Observatory
 
-Calm area before the end. Floating glass platforms, telescopes, slow jellyfish.
+Calm register break before the end. Floating glass platforms, telescopes, slow
+jellyfish — no new mechanics, no mandatory combat.
 
-Snoozle 4 sleeps on a observatory catwalk with a direct view of the black hole,
-now much closer and slowly spinning.
+Functions:
+
+- **Snoozle 4** on an observatory catwalk with a direct view of the black hole,
+  now much closer and slowly spinning
+- **Black-hole foreshadow** — telescopes and window framing point at the finish
+  landmark; the child sees where the adventure ends
+- **Rest after Saucer Belt** before the final approach
 
 Ambient notes placed in plain sight reward exploration without combat pressure.
 
@@ -415,12 +543,18 @@ Only crossing into the active portal triggers the finish sequence.
 
 When Pling enters the active portal:
 
-1. Camera locks behind him; controls soften but not fully removed.
+1. Camera locks behind him; movement input softens but jump/gust remain
+   responsive enough that the child feels in control. No damage, no enemies.
 2. He is pulled along a **warp tunnel** — a tube of streaking stars, rainbow
-   rings, and passing planets for 6–8 seconds. No fail state in the tunnel.
-3. Gentle whoosh and twinkle SFX; music swells.
+   rings, and passing planets for **6–8 seconds**. No fail state in the tunnel.
+3. Gentle whoosh and twinkle SFX; music swells with the win layer (see below).
 4. Pling bursts out into a **finish void** — calm starfield, all four Snoozles
    orbiting him, notes and confetti as stars.
+5. `CONGRATULATIONS YOU WIN!` appears in the finish void, not at Snoozle 4.
+6. Return-to-picker (soft return) becomes available after the celebration beat,
+   same as Levels 1–3. Hazards are inert once win triggers.
+
+Generic post-win hazard safety applies throughout the tunnel and finish void.
 
 ### Celebration
 
@@ -453,7 +587,7 @@ Side route in the Saucer Belt: **The Comet Run**
 
 - marked by a red buoy — flying past it commits to a narrow zig-zag lane
 - dense fast asteroids and two mid saucers
-- three music notes at the end on a floating trophy pad
+- three **pre-placed** music notes at the end on a floating trophy pad
 - rejoins the main route before the observatory
 
 Ignoring it never blocks completion.
@@ -495,22 +629,34 @@ Follow the existing pattern in `tests/`.
 
 - Open-space zones have `grav === 0` (or level equivalent).
 - Pling does not fall when jump is released in open space; he coasts below
-  `thrustCap`.
-- Holding jump after a puff applies sustained thrust in open space.
+  `thrustCap` / coast cap.
+- Holding jump from standstill in open space applies sustained thrust.
+- Holding jump after initial press continues thrust without requiring release.
 - Air-puff second stroke still works once per flight in open space.
+- Move input steers thrust and coast direction.
 - B in open space performs gust, not slam.
 - Surface and interior zones use Level 1 jump apex (~1.75) and gravity.
 - Level 1 movement and controls remain unchanged when Level 1 is loaded.
+- Crossing outer route envelope applies recovery (nudge or checkpoint snap); no
+  void death.
+- Knockback from asteroids/saucers cannot eject Pling beyond recoverable bounds
+  in one hit.
 
 ### Star Beam
 
 - Star crate grants `hasStarBeam` (or equivalent).
-- With Star Beam, B fires a beam; without it, B performs gust.
+- With Star Beam, B performs gust **and** fires beam forward; without it, B
+  performs gust only.
+- Environmental gust interactions (dust, crystals, dishes, jellyfish) still work
+  with Star Beam active.
 - Jump/hold flight still works while Star Beam is active.
+- Beam can be fired while holding jump.
 - Enemy hit removes Star Beam; asteroid hazard hit removes Star Beam.
 - Beam defeat reveals an existing held note, not a new note.
 - Renewable star crate restores Star Beam after loss.
 - Mandatory shielded gate always has renewable Star Beam nearby.
+- Shielded gate cannot be opened by spin or gust alone.
+- No main-route soft-lock when Star Beam is lost before the gate.
 
 ### Saucers and asteroids
 
@@ -521,32 +667,46 @@ Follow the existing pattern in `tests/`.
 - Gust stuns but does not defeat.
 - Reflected spark defeats a saucer.
 - Ordinary asteroid contact costs one heart.
+- Two asteroid hits cannot chain during i-frames in authored lanes.
 - Spin does not destroy ordinary asteroids.
 - Cracked asteroid breaks from beam or two spins.
 - Ambient jellyfish contact costs nothing.
 - Ambient entities never increase counted note total.
+- Backdrop asteroids have no collision.
 
 ### Counted notes
 
 - Note-bearing saucer reveals pre-existing hidden note on any valid defeat.
 - Counted-note total is fixed at build/load time.
 - Respawned saucer after note collected does not create another note.
+- Comet Run and secret-hollow notes exist at build time (not spawned on entry).
+
+### Snoozles
+
+- Exactly four Snoozles; `snoozleGoal === 4`.
+- All four reachable on the main route or obvious landings; none require the
+  optional secret or Comet Run.
+- Snoozle 3 reachable without optional side tunnel.
+- Waking fourth Snoozle does not trigger win.
 
 ### Finish
 
 - Black hole stays inactive at three Snoozles.
 - Black hole activates at four Snoozles (`FINISH.onAllAwake`).
-- Touching inactive hole does not trigger win.
+- Touching inactive hole does not trigger win (gentle bounce only).
 - Waking fourth Snoozle alone does not trigger win.
-- Entering active portal triggers warp tunnel then win.
+- Entering active portal triggers warp tunnel then win exactly once.
 - Win subtitle reads `The stars are singing!` (or authored FINISH string).
+- Hazards inert after win; return-to-picker works.
 - Level 1–3 FINISH flows unchanged.
 
 ### Level traversal
 
 - Launch Dock → Asteroid Garden → Candy Planet route is completable without
   soft-lock.
-- Crystal Planet interior enter/exit works; gravity restores inside.
+- Crystal Cavern interior enter/exit works; gravity restores inside; exit
+  restores open-space flight.
+- Planet entrance shells fade/occlude correctly (Geode-style visibility).
 - Saucer Belt mandatory gate is passable with beam; renewable crate reachable.
 - Black hole visible from spawn direction (authored landmark present).
 - Sample points through open-space lanes using the same approach as
@@ -562,10 +722,17 @@ No Level 1–3 gameplay expectation or expected value may change because of Leve
 - not the 1.75 jump apex on land levels
 - not underwater buoyancy in Level 2
 - not Sky Blast tuning in Level 3
+- not Level 3 Geode Hollow layout or finish
 - not enemy behaviour in earlier levels
 - not note counts in earlier levels
+- not Snoozle counts in earlier levels (each level keeps `snoozleGoal = 4` on
+  its own level, unchanged)
 - not controls in earlier levels
 - not layouts or win logic in earlier levels
+- not Stage 4.8A camera diagnostic unless separately authorized
+
+Shared infrastructure may become more generic only if existing expected behavior
+does not move.
 
 Test infrastructure may be extended as much as needed.
 
