@@ -6,7 +6,7 @@ addEventListener('keydown',e=>{
   if(!started){
     if(e.code==='ArrowLeft'||e.code==='KeyA'){setPickerIdx(pickerIdx-1);return;}
     if(e.code==='ArrowRight'||e.code==='KeyD'){setPickerIdx(pickerIdx+1);return;}
-    if(e.code==='Space'||e.code==='Enter'){startGame();return;}
+    if(e.code==='Space'||e.code==='Enter'){startGame();keys.Space=false;keys.Enter=false;return;}
     return;
   }
   if(e.code==='Space')IN.jump=true;
@@ -66,6 +66,8 @@ function bindBtn(id,down,up){const el=$(id);el.addEventListener('pointerdown',e=
 bindBtn('bA',()=>{IN.jump=true;HELD.a=true;},()=>{HELD.a=false;});
 bindBtn('bB',()=>{IN.b=true;HELD.b=true;},()=>{HELD.b=false;});
 bindBtn('bY',()=>{IN.y=true;},null);
+window.__setTouchStick=(x,z)=>{T.stickId=1;T.jx=x;T.jy=z;};
+window.__clearTouchStick=()=>{T.stickId=null;T.jx=0;T.jy=0;};
 document.addEventListener('touchmove',e=>{e.preventDefault();},{passive:false});
 document.addEventListener('gesturestart',e=>{e.preventDefault();});
 document.addEventListener('contextmenu',e=>{e.preventDefault();});

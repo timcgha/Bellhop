@@ -76,10 +76,24 @@ function peakVoice(i,sib,s,chord,t){
     tone(hz(chord[0]+mel+12,196),0.55,{at:t,type:'sine',gain:0.045,attack:0.03});
   }
 }
+function spaceBed(sib,chord,t){
+  if(sib===0)tone(hz(chord[0],55),0.6,{at:t,type:'sine',gain:0.08,attack:0.05});
+  if(sib===4)tone(hz(chord[2],82.41),0.45,{at:t,type:'triangle',gain:0.05,attack:0.04});
+  if(sib%4===2)noise(0.06,{at:t,type:'highpass',freq:4200,gain:0.025,attack:0.02});
+}
+function spaceVoice(i,sib,s,chord,t){
+  const pats=[[0,4],[2,6],[1,5],[0,3,7]];
+  if(pats[i%4].indexOf(sib)<0)return;
+  if(i===0)tone(hz(chord[sib%3]+12,329.63),0.5,{at:t,type:'sine',gain:0.045,attack:0.02});
+  else if(i===1)tone(hz(chord[(s+sib)%3]+7,196),0.38,{at:t,type:'triangle',gain:0.035,attack:0.015});
+  else if(i===2)tone(hz(chord[0],110),0.65,{at:t,type:'sine',gain:0.04,attack:0.05});
+  else tone(hz(chord[0]+[0,3,7,10][s%4]+12,261.63),0.45,{at:t,type:'sine',gain:0.035,attack:0.03});
+}
 const SONGS={
   meadow:{id:'meadow',bpm:112,chords:[[0,4,7],[-3,0,4],[-7,-3,0],[-5,-1,2]],bed:meadowBed,voice:meadowVoice},
   deep:{id:'deep',bpm:84,chords:[[0,3,7],[-2,2,5],[-5,0,3],[2,5,9]],bed:deepBed,voice:deepVoice},
-  peak:{id:'peak',bpm:96,chords:[[0,4,7],[-2,2,5],[-5,0,4],[3,7,10]],bed:peakBed,voice:peakVoice}
+  peak:{id:'peak',bpm:96,chords:[[0,4,7],[-2,2,5],[-5,0,4],[3,7,10]],bed:peakBed,voice:peakVoice},
+  space:{id:'space',bpm:78,chords:[[0,3,7],[-3,0,5],[-5,2,7],[2,5,9]],bed:spaceBed,voice:spaceVoice}
 };
 AU.song=SONGS.meadow;
 // Kept as aliases so older call sites / mental model still match meadow.
@@ -158,6 +172,8 @@ const SFX={
   heal(){if(!AU.ctx)return;const c=chordNow();[0,1,2].forEach(i=>tone(hz(c[i]+12,523.25),0.35,{at:AU.ctx.currentTime+i*0.08,gain:0.12}));tone(hz(c[0]+24,523.25),0.5,{at:AU.ctx.currentTime+0.24,gain:0.1});},
   deflate(){tone(600,1.2,{type:'triangle',gain:0.12,slide:90,attack:0.02});noise(1.0,{type:'lowpass',freq:1200,fslide:200,gain:0.12,attack:0.02});},
   hoverStop(h){if(!h||!AU.ctx)return;const t=AU.ctx.currentTime;try{h.g.gain.cancelScheduledValues(t);h.g.gain.setValueAtTime(Math.max(h.g.gain.value,0.0001),t);h.g.gain.exponentialRampToValueAtTime(0.0001,t+0.08);h.o.stop(t+0.1);}catch(e){}},
+  spaceThrustStart(){const c=AU.ctx;if(!c)return null;const t=c.currentTime;const o=c.createOscillator(),g=c.createGain();o.type='sine';const f=hz(0,220);o.frequency.setValueAtTime(f,t);o.frequency.exponentialRampToValueAtTime(f*1.08,t+0.4);g.gain.setValueAtTime(0.0001,t);g.gain.exponentialRampToValueAtTime(0.045,t+0.06);o.connect(g);g.connect(AU.master);o.start(t);noise(0.18,{type:'bandpass',freq:1800,fslide:2400,gain:0.05,attack:0.02});return {o,g};},
+  spaceThrustStop(h){if(!h||!AU.ctx)return;const t=AU.ctx.currentTime;try{h.g.gain.cancelScheduledValues(t);h.g.gain.setValueAtTime(Math.max(h.g.gain.value,0.0001),t);h.g.gain.exponentialRampToValueAtTime(0.0001,t+0.12);h.o.stop(t+0.15);}catch(e){}},
   tick(){tone(rand(700,1000),0.03,{type:'square',gain:0.02});},
   bubbleShot(){noise(0.18,{type:'bandpass',freq:1400,fslide:900,gain:0.12});tone(620,0.12,{type:'sine',gain:0.08,slide:880});},
   bubbleTrap(){tone(280,0.2,{type:'sine',gain:0.1,slide:420});noise(0.15,{type:'lowpass',freq:1200,gain:0.1});},

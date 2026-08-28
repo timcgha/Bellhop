@@ -81,8 +81,8 @@ function boot(opts){return require('./harness.js')(Object.assign({autostart:fals
 // ---- three cards always present ----
 {
   const H=boot();
-  ok(!!H.el('lvl0')&&!!H.el('lvl1')&&!!H.el('lvl2'),'picker has three level cards');
-  ok(!!H.el('art0')&&!!H.el('art1')&&!!H.el('art2'),'picker has three art canvases');
+  ok(!!H.el('lvl0')&&!!H.el('lvl1')&&!!H.el('lvl2')&&!!H.el('lvl3'),'picker has four level cards');
+  ok(!!H.el('art0')&&!!H.el('art1')&&!!H.el('art2')&&!!H.el('art3'),'picker has four art canvases');
 }
 
 // ---- touch picker: tap card selects, A confirms, other buttons do not start ----
@@ -232,10 +232,11 @@ function boot(opts){return require('./harness.js')(Object.assign({autostart:fals
   ok(/\.tbtn\{[^}]*z-index\s*:\s*6/.test(css),'touch buttons stack above the start overlay');
   ok(/lvlPulse/.test(css),'selected level card has a pulse animation for touch feedback');
   ok(/id="lvl2"/.test(css),'Peak card is present in the start overlay');
+  ok(/id="lvl3"/.test(css),'Space card is present in the start overlay');
   const hud=require('fs').readFileSync(require('path').join(__dirname,'..','src','hud.js'),'utf8');
   ok(/tap it again to play/.test(hud),'touch pick hint no longer requires pressing A');
   ok(/function tapLevelCard/.test(hud),'level cards use tapLevelCard for select-or-start');
-  ok(/peak/.test(hud),'picker draws Peak card art');
+  ok(/space/.test(hud),'picker draws Space card art');
 }
 
 report();

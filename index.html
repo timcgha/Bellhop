@@ -58,11 +58,12 @@ body.touch .tbtn{display:flex}
 <div id="hint"></div>
 <div id="start"><div class="card">
 <h1>BELLHOP</h1>
-<div class="sub" id="ver">v38 · Peak playtest readability</div>
+<div class="sub" id="ver">v40 · Launch Dock</div>
 <div class="level-pick">
 <div class="lvl-card sel" id="lvl0"><canvas class="lvl-art" id="art0" width="160" height="100"></canvas><span class="lvl-label">Meadow</span></div>
 <div class="lvl-card" id="lvl1"><canvas class="lvl-art" id="art1" width="160" height="100"></canvas><span class="lvl-label">The Deep</span></div>
 <div class="lvl-card" id="lvl2"><canvas class="lvl-art" id="art2" width="160" height="100"></canvas><span class="lvl-label">The Peak</span></div>
+<div class="lvl-card" id="lvl3"><canvas class="lvl-art" id="art3" width="160" height="100"></canvas><span class="lvl-label">Space</span></div>
 </div>
 <p class="pick-hint" id="pickHint"></p>
 <p class="keys" id="ctlText"></p>
@@ -950,6 +951,60 @@ steps:[
 };
 
 
+// ===== levels/level4.js =====
+const LEVEL4={
+id:'level4',
+music:'space',
+spaceAtmosphere:true,
+spawn:{x:0,y:0.45,z:0},
+physics:{
+  speed:6.8,acc:44,dec:60,airAcc:20,
+  grav:-30,maxFall:-32,jumpV:10.5,puffV:9.4,
+  coyote:0.12,buffer:0.15,step:0.42,r:0.36,h:1.15,
+  hoverHeld:1.0,hoverReleased:0.5,hoverDrift:-1.6,
+  slamHang:0.14,slamFall:-34,slamRebound:8,
+  jetTime:0.38,bonkR:2.05,bonkCD:0.5
+},
+openSpace:{
+  grav:0,
+  thrustHold:5.5,
+  thrustCap:9.0,
+  coastCap:4.0,
+  coastDecay:2.8,
+  steerThrust:38,
+  steerCoast:22,
+  brake:52,
+  jumpV:8.5,
+  puffV:7.5,
+  pitchNeutral:0.42,
+  takeoffBias:0.32
+},
+openSpaceZones:[{x0:-45,y0:-8,x1:45,y1:55,z0:-45,z1:45}],
+playVolume:{cx:8,cy:16,cz:-4,soft:58,hard:78,recoverDur:0.5,recoverTo:{x:0,y:0.45,z:0}},
+voidY:-20,
+voidFloor:-40,
+snoozleGoal:4,
+fence:0x2a3040,
+fenceSolids:[],
+pathTiles:[],
+hedges:[],
+checks:[[0,0.45,0]],
+tower:{tx:0,tz:0},
+snoozleHomes:[],
+snoozles:[],
+trees:[],
+steps:[
+  ['launchDock',0,0,0,14,14],
+  ['practicePad',22,0,-10,5.5],
+  ['spaceBuoy',-18,2,14],['spaceBuoy',28,4,-22],['spaceBuoy',-8,6,32],['spaceBuoy',36,3,18],
+  ['backdropPlanet',-55,18,-70,6,0x6a4a9a,true],
+  ['backdropPlanet',48,12,-85,5,0xc45a78,false],
+  ['backdropPlanet',-30,8,95,4.5,0x4a8a6a,false],
+  ['blackHoleLandmark',8,28,-115],
+  ['unfinishedFinish',0,0,0]
+]};
+
+
 // ===== src/util.js =====
 const clamp=(v,a,b)=>Math.max(a,Math.min(b,v));
 const lerp=(a,b,t)=>a+(b-a)*t;
@@ -1042,10 +1097,24 @@ function peakVoice(i,sib,s,chord,t){
     tone(hz(chord[0]+mel+12,196),0.55,{at:t,type:'sine',gain:0.045,attack:0.03});
   }
 }
+function spaceBed(sib,chord,t){
+  if(sib===0)tone(hz(chord[0],55),0.6,{at:t,type:'sine',gain:0.08,attack:0.05});
+  if(sib===4)tone(hz(chord[2],82.41),0.45,{at:t,type:'triangle',gain:0.05,attack:0.04});
+  if(sib%4===2)noise(0.06,{at:t,type:'highpass',freq:4200,gain:0.025,attack:0.02});
+}
+function spaceVoice(i,sib,s,chord,t){
+  const pats=[[0,4],[2,6],[1,5],[0,3,7]];
+  if(pats[i%4].indexOf(sib)<0)return;
+  if(i===0)tone(hz(chord[sib%3]+12,329.63),0.5,{at:t,type:'sine',gain:0.045,attack:0.02});
+  else if(i===1)tone(hz(chord[(s+sib)%3]+7,196),0.38,{at:t,type:'triangle',gain:0.035,attack:0.015});
+  else if(i===2)tone(hz(chord[0],110),0.65,{at:t,type:'sine',gain:0.04,attack:0.05});
+  else tone(hz(chord[0]+[0,3,7,10][s%4]+12,261.63),0.45,{at:t,type:'sine',gain:0.035,attack:0.03});
+}
 const SONGS={
   meadow:{id:'meadow',bpm:112,chords:[[0,4,7],[-3,0,4],[-7,-3,0],[-5,-1,2]],bed:meadowBed,voice:meadowVoice},
   deep:{id:'deep',bpm:84,chords:[[0,3,7],[-2,2,5],[-5,0,3],[2,5,9]],bed:deepBed,voice:deepVoice},
-  peak:{id:'peak',bpm:96,chords:[[0,4,7],[-2,2,5],[-5,0,4],[3,7,10]],bed:peakBed,voice:peakVoice}
+  peak:{id:'peak',bpm:96,chords:[[0,4,7],[-2,2,5],[-5,0,4],[3,7,10]],bed:peakBed,voice:peakVoice},
+  space:{id:'space',bpm:78,chords:[[0,3,7],[-3,0,5],[-5,2,7],[2,5,9]],bed:spaceBed,voice:spaceVoice}
 };
 AU.song=SONGS.meadow;
 // Kept as aliases so older call sites / mental model still match meadow.
@@ -1124,6 +1193,8 @@ const SFX={
   heal(){if(!AU.ctx)return;const c=chordNow();[0,1,2].forEach(i=>tone(hz(c[i]+12,523.25),0.35,{at:AU.ctx.currentTime+i*0.08,gain:0.12}));tone(hz(c[0]+24,523.25),0.5,{at:AU.ctx.currentTime+0.24,gain:0.1});},
   deflate(){tone(600,1.2,{type:'triangle',gain:0.12,slide:90,attack:0.02});noise(1.0,{type:'lowpass',freq:1200,fslide:200,gain:0.12,attack:0.02});},
   hoverStop(h){if(!h||!AU.ctx)return;const t=AU.ctx.currentTime;try{h.g.gain.cancelScheduledValues(t);h.g.gain.setValueAtTime(Math.max(h.g.gain.value,0.0001),t);h.g.gain.exponentialRampToValueAtTime(0.0001,t+0.08);h.o.stop(t+0.1);}catch(e){}},
+  spaceThrustStart(){const c=AU.ctx;if(!c)return null;const t=c.currentTime;const o=c.createOscillator(),g=c.createGain();o.type='sine';const f=hz(0,220);o.frequency.setValueAtTime(f,t);o.frequency.exponentialRampToValueAtTime(f*1.08,t+0.4);g.gain.setValueAtTime(0.0001,t);g.gain.exponentialRampToValueAtTime(0.045,t+0.06);o.connect(g);g.connect(AU.master);o.start(t);noise(0.18,{type:'bandpass',freq:1800,fslide:2400,gain:0.05,attack:0.02});return {o,g};},
+  spaceThrustStop(h){if(!h||!AU.ctx)return;const t=AU.ctx.currentTime;try{h.g.gain.cancelScheduledValues(t);h.g.gain.setValueAtTime(Math.max(h.g.gain.value,0.0001),t);h.g.gain.exponentialRampToValueAtTime(0.0001,t+0.12);h.o.stop(t+0.15);}catch(e){}},
   tick(){tone(rand(700,1000),0.03,{type:'square',gain:0.02});},
   bubbleShot(){noise(0.18,{type:'bandpass',freq:1400,fslide:900,gain:0.12});tone(620,0.12,{type:'sine',gain:0.08,slide:880});},
   bubbleTrap(){tone(280,0.2,{type:'sine',gain:0.1,slide:420});noise(0.15,{type:'lowpass',freq:1200,gain:0.1});},
@@ -1159,7 +1230,7 @@ addEventListener('keydown',e=>{
   if(!started){
     if(e.code==='ArrowLeft'||e.code==='KeyA'){setPickerIdx(pickerIdx-1);return;}
     if(e.code==='ArrowRight'||e.code==='KeyD'){setPickerIdx(pickerIdx+1);return;}
-    if(e.code==='Space'||e.code==='Enter'){startGame();return;}
+    if(e.code==='Space'||e.code==='Enter'){startGame();keys.Space=false;keys.Enter=false;return;}
     return;
   }
   if(e.code==='Space')IN.jump=true;
@@ -1219,6 +1290,8 @@ function bindBtn(id,down,up){const el=$(id);el.addEventListener('pointerdown',e=
 bindBtn('bA',()=>{IN.jump=true;HELD.a=true;},()=>{HELD.a=false;});
 bindBtn('bB',()=>{IN.b=true;HELD.b=true;},()=>{HELD.b=false;});
 bindBtn('bY',()=>{IN.y=true;},null);
+window.__setTouchStick=(x,z)=>{T.stickId=1;T.jx=x;T.jy=z;};
+window.__clearTouchStick=()=>{T.stickId=null;T.jx=0;T.jy=0;};
 document.addEventListener('touchmove',e=>{e.preventDefault();},{passive:false});
 document.addEventListener('gesturestart',e=>{e.preventDefault();});
 document.addEventListener('contextmenu',e=>{e.preventDefault();});
@@ -1271,13 +1344,15 @@ let SNOOZLE_GOAL=0;
 function snoozleGoalCount(){return SNOOZLE_GOAL>0?SNOOZLE_GOAL:snoozles.length;}
 window.__snoozleGoal=()=>snoozleGoalCount();
 const checks=[];let won=false,winT=0,confT=0;
-const LEVELS=[LEVEL1,LEVEL2,LEVEL3];
+const LEVELS=[LEVEL1,LEVEL2,LEVEL3,LEVEL4];
 let CURRENT_LEVEL=null;
 function isUnderwater(){return !!(CURRENT_LEVEL&&CURRENT_LEVEL.underwater);}
 const POND={x0:-6,x1:6,z0:-33,z1:-25};
 function inPond(x,z){return x>POND.x0&&x<POND.x1&&z>POND.z0&&z<POND.z1;}
 function groundHeightAt(x,z){
   if(isUnderwater())return 0;
+  if(CURRENT_LEVEL&&CURRENT_LEVEL.spaceAtmosphere)
+    return CURRENT_LEVEL.voidFloor!=null?CURRENT_LEVEL.voidFloor:-40;
   // Peak has no infinite meadow floor. Gaps without authored solids fall into the void
   // (Level 3 voidY recovery). Levels 1–2 keep the old y=0 / pond floor.
   if(CURRENT_LEVEL&&CURRENT_LEVEL.peakAtmosphere)
@@ -1435,6 +1510,7 @@ function clearLevelWorld(){
   for(const o of steamVents)rem(o.g);steamVents.length=0;
   for(const o of lavas){rem(o.g);if(o.edge)rem(o.edge);}lavas.length=0;
   clearPeakWorld();
+  clearSpaceWorld();
   for(const o of clouds)rem(o.g);clouds.length=0;
   for(const o of gloops)rem(o.g);gloops.length=0;
   for(const o of hearts)rem(o.g);hearts.length=0;
@@ -1645,12 +1721,17 @@ function loadLevel(L){
   if(L.physics)applyPhysics(L.physics);
   applySkyBlastTuning(L.skyBlast);
   applyLavaTuning(L);
+  applySpaceTuning(L.openSpace);
   CURRENT_LEVEL=L;
   SNOOZLE_GOAL=L.snoozleGoal||0;
   setSong(L.music||'meadow');
-  if(L.underwater)beginUnderwaterLevel(L);else if(L.peakAtmosphere)beginPeakLevel();else beginLandLevel();
-  P.fire=false;P.bubble=false;P.hasSkyBlast=false;clearLeapBoost();clearGlide();P.puff=true;P.puffAir=0;endHover();P.slam=0;P.lavaRecT=0;P.anchorSettleT=0;
-  if(L.spawn){P.spawn.x=L.spawn.x;P.spawn.y=L.spawn.y;P.spawn.z=L.spawn.z;P.pos.set(L.spawn.x,L.spawn.y,L.spawn.z);P.vel.set(0,0,0);initSafeAnchor(L.spawn.x,L.spawn.y,L.spawn.z);}
+  if(L.underwater)beginUnderwaterLevel(L);
+  else if(L.peakAtmosphere)beginPeakLevel();
+  else if(L.spaceAtmosphere)beginSpaceLevel(L);
+  else beginLandLevel();
+  P.fire=false;P.bubble=false;P.hasSkyBlast=false;clearLeapBoost();clearGlide();endSpaceThrust();P.puff=true;P.puffAir=0;endHover();P.slam=0;P.lavaRecT=0;P.anchorSettleT=0;P.moveZone='grounded';P.spaceThrust=false;
+  if(L.spawn){P.spawn.x=L.spawn.x;P.spawn.y=L.spawn.y;P.spawn.z=L.spawn.z;P.pos.set(L.spawn.x,L.spawn.y,L.spawn.z);P.vel.set(0,0,0);initSafeAnchor(L.spawn.x,L.spawn.y,L.spawn.z);
+    if(L.spaceAtmosphere&&typeof landableSurfaceAt==='function'){const land=landableSurfaceAt(L.spawn.x,L.spawn.z);if(land&&L.spawn.y<=land.y+STEP+0.3){P.pos.y=land.y;P.grounded=true;P.moveZone='grounded';P.surf=land.surf||'pad';P.lastGround=time;}}}
   const fence=L.fence;
   for(const s of L.fenceSolids)addSolid(s[0],s[1],s[2],s[3],s[4],s[5],fence);
   for(const p of L.pathTiles)pathTile(p[0],p[1],p[2],p[3]);
@@ -1719,6 +1800,11 @@ function loadLevel(L){
     else if(k==='wreckDeck')wreckDeck(step[1],step[2],step[3],step[4],step[5],step[6]||0,step[7]||0,step[8]||0);
     else if(k==='wreckLedge')wreckLedge(step[1],step[2],step[3],step[4],step[5],step[6]||'');
     else if(k==='unfinishedFinish')registerUnfinishedFinish(step[1],step[2],step[3]);
+    else if(k==='launchDock')addLaunchDock(step[1],step[2],step[3],step[4],step[5]);
+    else if(k==='practicePad')addPracticePad(step[1],step[2],step[3],step[4]);
+    else if(k==='spaceBuoy')addSpaceBuoy(step[1],step[2],step[3]);
+    else if(k==='backdropPlanet')addBackdropPlanet(step[1],step[2],step[3],step[4],step[5],step[6]);
+    else if(k==='blackHoleLandmark')addBlackHoleLandmark(step[1],step[2],step[3]);
     else if(k==='conch')buildConch(step[1],step[2]);
     else if(k==='steamOrgan')buildSteamOrgan(step[1],step[2],step[3]);
   }
@@ -1814,7 +1900,7 @@ function shadowOpacityForHeight(h){
 }
 function shadowScaleForHeight(h){return clamp(1-h*SHADOW_SCALE_RATE,SHADOW_SCALE_MIN,1);}
 
-const P=window.__P={spawn:{x:0,y:0,z:10},pos:new THREE.Vector3(0,0,10),vel:new THREE.Vector3(),yaw:Math.PI,grounded:false,wasGrounded:false,lastGround:-9,jumpBuf:-9,jumping:false,puff:true,slam:0,hangT:0,gustCD:0,bonkCD:0,bonkT:0,sq:1,sqV:0,sqT:1,footT:0,surf:'grass',run:0,mouthT:0,blinkT:2,blinkAnim:0,inFan:false,splT:0,puffAir:0,hover:false,hovT:0,hoverS:null,hp:4,maxHp:4,inv:0,dead:false,deadT:0,inGoo:false,fire:false,bubble:false,hasSkyBlast:false,leapBoost:new THREE.Vector3(),glideT:0,glideArmed:false,wingsOut:false,lavaRecT:0,lavaRecMax:0,anchorSettleT:0,safeAnchor:new THREE.Vector3(0,0,10),lavaRecFrom:new THREE.Vector3(),jetT:0,jetP:0,jetHits:[]};
+const P=window.__P={spawn:{x:0,y:0,z:10},pos:new THREE.Vector3(0,0,10),vel:new THREE.Vector3(),yaw:Math.PI,grounded:false,wasGrounded:false,lastGround:-9,jumpBuf:-9,jumping:false,puff:true,slam:0,hangT:0,gustCD:0,bonkCD:0,bonkT:0,sq:1,sqV:0,sqT:1,footT:0,surf:'grass',run:0,mouthT:0,blinkT:2,blinkAnim:0,inFan:false,splT:0,puffAir:0,hover:false,hovT:0,hoverS:null,hp:4,maxHp:4,inv:0,dead:false,deadT:0,inGoo:false,fire:false,bubble:false,hasSkyBlast:false,leapBoost:new THREE.Vector3(),glideT:0,glideArmed:false,wingsOut:false,lavaRecT:0,lavaRecMax:0,anchorSettleT:0,safeAnchor:new THREE.Vector3(0,0,10),lavaRecFrom:new THREE.Vector3(),jetT:0,jetP:0,jetHits:[],moveZone:'grounded',spaceThrust:false,spaceThrustS:null,spaceThrustY:0};
 let R=0.36,H=1.15,SPEED=6.8,ACC=44,DEC=60,AIRACC=20,GRAV=-30,JUMPV=10.5,PUFFV=9.4,MAXFALL=-32,COYOTE=0.12,BUFFER=0.15,STEP=0.42;
 let HOVER_HELD=1.0,HOVER_REL=0.5,HOVER_DRIFT=-1.6,SLAM_HANG=0.14,SLAM_FALL=-34,SLAM_REBOUND=8,JET_T=0.38,BONKR=2.05,BONK_CD=0.5;
 // Sky Blast tuning — inactive until a level supplies skyBlast (Level 3). Separate from ordinary SPEED/PUFFV.
@@ -1846,7 +1932,36 @@ function applyLavaTuning(L){
   LAVA_ANCHOR_CLEAR=(L&&L.anchorClear!=null)?L.anchorClear:0.85;
   LAVA_RECOVERY=(L&&L.lavaRecovery!=null)?L.lavaRecovery:0.42;
 }
+// Level 4 open-space flight — inactive unless level supplies openSpace config.
+let SPACE_THRUST=5.5,SPACE_CAP=9,SPACE_COAST=4,SPACE_COAST_DEC=2.8,SPACE_STEER_T=38,SPACE_STEER_C=22,SPACE_BRAKE=52,SPACE_PITCH_NEUTRAL=0.42,SPACE_TAKEOFF_BIAS=0.32,SPACE_JUMP=8.5,SPACE_PUFF=7.5;
+function applySpaceTuning(cfg){
+  if(!cfg){SPACE_THRUST=5.5;SPACE_CAP=9;SPACE_COAST=4;SPACE_COAST_DEC=2.8;SPACE_STEER_T=38;SPACE_STEER_C=22;SPACE_BRAKE=52;SPACE_PITCH_NEUTRAL=0.42;SPACE_TAKEOFF_BIAS=0.32;SPACE_JUMP=8.5;SPACE_PUFF=7.5;return;}
+  SPACE_THRUST=cfg.thrustHold;SPACE_CAP=cfg.thrustCap;SPACE_COAST=cfg.coastCap;SPACE_COAST_DEC=cfg.coastDecay;
+  SPACE_STEER_T=cfg.steerThrust;SPACE_STEER_C=cfg.steerCoast;SPACE_BRAKE=cfg.brake;
+  SPACE_PITCH_NEUTRAL=cfg.pitchNeutral!=null?cfg.pitchNeutral:0.42;
+  SPACE_TAKEOFF_BIAS=cfg.takeoffBias!=null?cfg.takeoffBias:0.32;
+  SPACE_JUMP=cfg.jumpV;SPACE_PUFF=cfg.puffV;
+}
+function spaceThrustDir(wx,wz,wl,cfg){
+  const neutral=cfg.pitchNeutral!=null?cfg.pitchNeutral:SPACE_PITCH_NEUTRAL;
+  const takeoff=cfg.takeoffBias!=null?cfg.takeoffBias:SPACE_TAKEOFF_BIAS;
+  let tx,tz,ty;
+  if(wl>0.05){
+    tx=wx;tz=wz;
+    // Camera pitch relative to neutral outdoor boom: look up -> climb, look down -> descend.
+    ty=-Math.sin(CAM.pitch-neutral)*wl;
+  }else{
+    tx=Math.sin(P.yaw)*0.25;tz=Math.cos(P.yaw)*0.25;
+    ty=takeoff;
+  }
+  const len=Math.hypot(tx,ty,tz)||1;
+  return {x:tx/len,y:ty/len,z:tz/len,tyRaw:ty};
+}
+function endSpaceThrust(){P.spaceThrust=false;P.spaceThrustY=0;if(P.spaceThrustS){SFX.spaceThrustStop(P.spaceThrustS);P.spaceThrustS=null;}}
+function capSpaceVel(v,cap){const sp=Math.hypot(v.x,v.y,v.z);if(sp>cap){const k=cap/sp;v.x*=k;v.y*=k;v.z*=k;}}
 window.__PHYS=()=>({speed:SPEED,acc:ACC,dec:DEC,airAcc:AIRACC,grav:GRAV,jumpV:JUMPV,puffV:PUFFV,maxFall:MAXFALL,coyote:COYOTE,buffer:BUFFER,step:STEP,r:R,h:H});
+window.__SPACEPHYS=()=>({thrustHold:SPACE_THRUST,thrustCap:SPACE_CAP,coastCap:SPACE_COAST,coastDecay:SPACE_COAST_DEC,steerThrust:SPACE_STEER_T,steerCoast:SPACE_STEER_C,brake:SPACE_BRAKE,pitchNeutral:SPACE_PITCH_NEUTRAL,takeoffBias:SPACE_TAKEOFF_BIAS,jumpV:SPACE_JUMP,puffV:SPACE_PUFF});
+window.__MOVEMENT=()=>({zone:P.moveZone,spaceThrust:!!P.spaceThrust,grounded:!!P.grounded,speed:Math.hypot(P.vel.x,P.vel.y,P.vel.z),horiz:Math.hypot(P.vel.x,P.vel.z),vy:P.vel.y,pitch:CAM.pitch,thrustY:P.spaceThrustY||0});
 window.__SKY=()=>({puffVMul:SKY.puffVMul,boostMax:SKY.boostMax,boostDecay:SKY.boostDecay,glideDur:SKY.glideDur,glideFallCap:SKY.glideFallCap,glideStartVy:SKY.glideStartVy});
 window.__LAVA=()=>({anchorSettle:LAVA_ANCHOR_SETTLE,anchorClear:LAVA_ANCHOR_CLEAR,recovery:LAVA_RECOVERY,hurtInv:HURT_INV});
 window.__VOID=()=>({y:CURRENT_LEVEL&&CURRENT_LEVEL.voidY!=null?CURRENT_LEVEL.voidY:null,floor:CURRENT_LEVEL&&CURRENT_LEVEL.voidFloor!=null?CURRENT_LEVEL.voidFloor:null});
@@ -2038,7 +2153,9 @@ function onLand(fall,surf){if(!P.puff){P.puff=true;refillFX();}P.sq=clamp(1-fall
   if(surf==='water'){SFX.splash();for(let i=0;i<10;i++)spawnP(P.pos.x,-0.05,P.pos.z,rand(-2,2),rand(1.5,4),rand(-2,2),rand(0.06,0.14),0xdff6ff,rand(0.3,0.5),0.5,-7,0.9);}
   else if(fall>7){spawnRing(P.pos.x,P.pos.y+0.03,P.pos.z,0xe9dcc0,0.35,4,0.35);for(let i=0;i<8;i++){const a=rand(0,TAU);spawnP(P.pos.x,P.pos.y+0.05,P.pos.z,Math.cos(a)*rand(1,3),rand(0.5,1.5),Math.sin(a)*rand(1,3),rand(0.08,0.14),0xffffff,rand(0.3,0.5),1.0,-2,0.7);}}
   CAM.fovKick=-3*clamp(fall/20,0,1);if(fall>14)rumble(80,0.4,0.2);}
-function landOn(surf){const v=P.vel;const fall=-v.y;if(v.y<0)v.y=0;P.puffAir=0;endHover();clearLeapBoost();clearGlide();P.grounded=true;P.lastGround=time;P.surf=surf;if(P.slam!==0){slamImpact();return;}if(!P.wasGrounded)onLand(fall,surf);}
+function landOn(surf){const v=P.vel;const fall=-v.y;if(v.y<0)v.y=0;P.puffAir=0;endHover();clearLeapBoost();clearGlide();endSpaceThrust();P.grounded=true;P.lastGround=time;P.surf=surf;P.moveZone='grounded';
+  if(isSpaceLevel()){v.x*=0.18;v.z*=0.18;v.y=0;}
+  if(P.slam!==0){slamImpact();return;}if(!P.wasGrounded)onLand(fall,surf);}
 function doGust(){const yaw=P.yaw,fx=Math.sin(yaw),fz=Math.cos(yaw);const mx=P.pos.x+fx*0.35,my=P.pos.y+0.85,mz=P.pos.z+fz*0.35;
   SFX.gust();P.sq=Math.min(P.sq,0.72);P.mouthT=0.35;
   for(let i=0;i<14;i++){const sp=rand(5,9),a=rand(-0.35,0.35);spawnP(mx,my+rand(-0.1,0.1),mz,Math.sin(yaw+a)*sp,rand(-0.5,1),Math.cos(yaw+a)*sp,rand(0.08,0.16),0xffffff,rand(0.3,0.5),1.6,0,0.7);}
@@ -2115,12 +2232,81 @@ function spit(e){const ox=e.x+Math.sin(e.face)*0.55*e.size,oz=e.z+Math.cos(e.fac
   let q=null;for(const g2 of goos){if(!g2.alive){q=g2;break;}}if(!q)return;q.alive=true;q.ref=false;q.life=4;q.trailT=0;q.pos.set(ox,oy,oz);q.vel.set(vx,vy,vz);q.m.visible=true;q.m.position.copy(q.pos);q.col=e.col;q.r=0.15+e.size*0.1;q.m.scale.setScalar(q.r);q.m.material.color.setHex(e.col);
   e.vx-=Math.sin(e.face)*1.5;e.vz-=Math.cos(e.face)*1.5;SFX.spit();for(let i=0;i<4;i++)spawnP(ox,oy,oz,vx*0.2+rand(-1,1),rand(0,2),vz*0.2+rand(-1,1),0.06,e.col,0.3,0.4,-6,0.8);}
 function killGoo(q){q.alive=false;q.m.visible=false;}
+function updateOpenSpacePlayer(dt,wx,wz,wl){
+  const p=P.pos,v=P.vel,cfg=spaceCfg()||{};
+  const thrustCap=cfg.thrustCap||SPACE_CAP,coastCap=cfg.coastCap||SPACE_COAST;
+  P.grounded=false;P.moveZone='openSpace';
+  decayLeapBoost(dt);
+  if(IN.jump)P.jumpBuf=time;
+  const thrusting=IN.jumpHeld&&!P.dead;
+  if(thrusting){
+    if(!P.spaceThrust){P.spaceThrust=true;if(!P.spaceThrustS)P.spaceThrustS=SFX.spaceThrustStart();}
+    if(IN.jump){fireJet();SFX.jump();}
+    P.sqT=1.08;
+  }else if(P.spaceThrust)endSpaceThrust();
+  if(!P.dead&&IN.jump&&!P.puff&&P.slam===0&&time-P.jumpBuf<BUFFER){
+    v.y=Math.max(v.y,0)*0.35+(cfg.puffV||SPACE_PUFF);P.puff=false;P.jumping=true;P.jumpBuf=-9;P.sq=1.25;
+    puffJumpFX();SFX.puff();fireJet();CAM.fovKick=4;
+  }
+  const dir=spaceThrustDir(wx,wz,wl,cfg);
+  const tx=dir.x,ty=dir.y,tz=dir.z;
+  P.spaceThrustY=dir.tyRaw;
+  const steer=thrusting?(cfg.steerThrust||SPACE_STEER_T):(cfg.steerCoast||SPACE_STEER_C);
+  const hold=cfg.thrustHold||SPACE_THRUST;
+  if(thrusting){
+    v.x+=tx*hold*dt;v.y+=ty*hold*dt;v.z+=tz*hold*dt;
+    if(wl>0.05){
+      v.x=moveTo(v.x,wx*thrustCap,steer*dt);
+      v.z=moveTo(v.z,wz*thrustCap,steer*dt);
+      v.y=moveTo(v.y,dir.tyRaw*thrustCap,steer*dt);
+    }
+    capSpaceVel(v,thrustCap);
+  }else{
+    const k=Math.exp(-(cfg.coastDecay||SPACE_COAST_DEC)*dt);
+    v.x*=k;v.y*=k;v.z*=k;
+    if(wl>0.05){
+      v.x=moveTo(v.x,wx*coastCap,steer*dt);v.z=moveTo(v.z,wz*coastCap,steer*dt);
+      const dot=v.x*wx+v.z*wz;
+      if(dot<-0.05){v.x=moveTo(v.x,0,(cfg.brake||SPACE_BRAKE)*dt);v.z=moveTo(v.z,0,(cfg.brake||SPACE_BRAKE)*dt);}
+    }
+    capSpaceVel(v,coastCap);
+  }
+  if(wl>0.05)P.yaw=angDamp(P.yaw,Math.atan2(wx,wz),14,dt);
+  else P.sqT=0.92;
+  capSpaceVel(v,thrusting?thrustCap:coastCap);
+  P.gustCD-=dt;P.bonkCD-=dt;
+  if(!P.dead&&IN.b&&P.gustCD<=0){doGust();P.gustCD=0.45;}
+  if(!P.dead&&IN.y&&P.bonkCD<=0){doBonk();P.bonkCD=BONK_CD;P.bonkT=0.45;}
+  applySpaceRecovery(dt);
+  capSpaceVel(v,thrustCap);
+  p.x+=v.x*dt;collideAxis('x');p.z+=v.z*dt;collideAxis('z');
+  const prevY=p.y;p.y+=v.y*dt;
+  let landY=-Infinity,landSurf=null,bump=false,bumpY=Infinity;
+  for(const s of solids){
+    if(!solidIsLandable(s))continue;
+    if(!hOverlap(s))continue;
+    if(p.y+H<=s.min.y||p.y>=s.max.y)continue;
+    if(v.y<=0&&prevY>=s.max.y-0.08){if(s.max.y>landY){landY=s.max.y;landSurf=s.surf||'pad';}}
+    else if(v.y>0&&prevY+H<=s.min.y+0.06){if(s.min.y<bumpY){bumpY=s.min.y;bump=true;}}
+    else{if(s.max.y-p.y<STEP+0.06){if(s.max.y>landY){landY=s.max.y;landSurf=s.surf||'pad';}}else pushOutXZ(s);}
+  }
+  if(landY>-Infinity){p.y=landY;landOn(landSurf||'pad');}
+  else if(bump){p.y=bumpY-H-0.001;if(v.y>0)v.y=0;}
+  if(P.spaceThrust){P.jetT=Math.max(P.jetT,0.06);P.jetP-=dt;if(P.jetP<=0){P.jetP=0.028;const cy=Math.cos(P.yaw),sy=Math.sin(P.yaw);
+    for(let sg=-1;sg<=1;sg+=2)spawnP(p.x+sg*0.12*cy,p.y-0.04,p.z-sg*0.12*sy,rand(-0.8,0.8),rand(-4,-1.8),rand(-0.8,0.8),rand(0.07,0.13),Math.random()<0.5?0x5ec8ff:0xe4f8ff,rand(0.25,0.42),1.1,0,0.85);}}
+  updateSafeAnchor(dt);
+}
 function updatePlayer(dt){const p=P.pos,v=P.vel;
   P.inv-=dt;if(P.dead){P.deadT-=dt;if(P.deadT<=0)respawn();}
   // Lava recovery owns motion briefly — skip normal move/input so a live boost cannot fight the fling.
   if(updateLavaRecovery(dt))return;
   const cy=CAM.yaw,fx=-Math.sin(cy),fz=-Math.cos(cy),rx=Math.cos(cy),rz=-Math.sin(cy);
   let wx=fx*(-IN.mz)+rx*IN.mx,wz=fz*(-IN.mz)+rz*IN.mx;let wl=Math.hypot(wx,wz);if(wl>1){wx/=wl;wz/=wl;wl=1;}if(P.dead){wx=0;wz=0;wl=0;}
+  if(isSpaceLevel()){
+    P.moveZone=queryMoveZone();
+    if(P.moveZone==='openSpace'){updateOpenSpacePlayer(dt,wx,wz,wl);return;}
+    P.moveZone='grounded';
+  }else P.moveZone='grounded';
   // Ordinary movement stays SPEED-capped. leapBoost is applied separately so stick reverse cannot cancel it.
   if(P.slam===0){const a=P.grounded?(wl>0.05?ACC:DEC):(wl>0.05?AIRACC:3);v.x=moveTo(v.x,wx*SPEED,a*dt);v.z=moveTo(v.z,wz*SPEED,a*dt);if(wl>0.05)P.yaw=angDamp(P.yaw,Math.atan2(wx,wz),14,dt);}
   decayLeapBoost(dt);
@@ -2139,7 +2325,7 @@ function updatePlayer(dt){const p=P.pos,v=P.vel;
   const uw=isUnderwater();
   if(!P.dead&&IN.b&&P.slam===0&&!P.inFan){
     if(uw){if(P.gustCD<=0){doGust();P.gustCD=0.45;}}
-    else if(!P.grounded){P.slam=1;P.hangT=SLAM_HANG;v.x*=0.25;v.z*=0.25;v.y=Math.max(v.y,0)*0.2;P.puffAir=0;endHover();clearLeapBoost();clearGlide();SFX.slamCharge();}
+    else if(!P.grounded&&!isSpaceLevel()){P.slam=1;P.hangT=SLAM_HANG;v.x*=0.25;v.z*=0.25;v.y=Math.max(v.y,0)*0.2;P.puffAir=0;endHover();clearLeapBoost();clearGlide();SFX.slamCharge();}
     else if(P.gustCD<=0){doGust();P.gustCD=0.45;}
   }
   if(!P.dead&&IN.y&&P.bonkCD<=0){doBonk();P.bonkCD=BONK_CD;P.bonkT=0.45;}
@@ -2200,7 +2386,7 @@ function updatePlayer(dt){const p=P.pos,v=P.vel;
   if(!P.dead&&!won&&playerInLava())lavaContact();
   updateSafeAnchor(dt);
   const sp=Math.hypot(v.x,v.z);
-  if(P.grounded&&sp>1.5){P.footT+=dt*sp;if(P.footT>2.6){P.footT=0;SFX.step(P.surf);if(P.surf==='grass')spawnP(p.x,p.y+0.05,p.z,rand(-0.5,0.5),rand(0.5,1.2),rand(-0.5,0.5),0.09,0xffffff,0.35,0.6,0,0.35);}}else P.footT=1.5;
+  if(P.grounded&&sp>1.5){P.footT+=dt*sp;if(P.footT>2.6){P.footT=0;SFX.step(P.surf==='pad'?'stone':P.surf);if(P.surf==='grass')spawnP(p.x,p.y+0.05,p.z,rand(-0.5,0.5),rand(0.5,1.2),rand(-0.5,0.5),0.09,0xffffff,0.35,0.6,0,0.35);}}else P.footT=1.5;
   if(P.grounded&&P.surf==='water'&&sp>1){P.splT-=dt;if(P.splT<=0){P.splT=0.09;spawnP(p.x+rand(-0.3,0.3),-0.05,p.z+rand(-0.3,0.3),rand(-1,1),rand(1.5,3.5),rand(-1,1),rand(0.06,0.12),0xdff6ff,rand(0.3,0.5),0.5,-6,0.9);}}
 }
 function updatePlayerVisual(dt){const u=player.userData;if(P.dead)P.sqT=0.45;
@@ -2215,7 +2401,7 @@ function updatePlayerVisual(dt){const u=player.userData;if(P.dead)P.sqT=0.45;
     u.armL.rotation.x=0;u.armR.rotation.x=0;u.armL.rotation.z=-1.6*out;u.armR.rotation.z=1.6*out;u.armL.scale.y=1+out*0.85;u.armR.scale.y=1+out*0.85;
     u.head.rotation.x=-0.12*out;player.rotation.y=P.yaw+bk*TAU;}
   else{u.armL.rotation.z=0;u.armR.rotation.z=0;u.armL.scale.y=1;u.armR.scale.y=1;}
-  if(P.jetT>0){const jk=clamp(P.jetT/JET_T,0,1);u.jet.visible=true;
+  if(P.spaceThrust||P.jetT>0){const jk=P.spaceThrust?0.85:clamp(P.jetT/JET_T,0,1);u.jet.visible=true;
     u.jet.scale.set(0.85+Math.sin(time*42)*0.16,0.3+jk*1.1,0.85+Math.sin(time*49)*0.16);
     u.jet.children.forEach(c=>{c.material.opacity=(c.material.color?0.5:0.5)+jk*0.45;});}
   else u.jet.visible=false;
@@ -4210,6 +4396,192 @@ window.__TEST={
 };
 
 
+// ===== src/space.js =====
+// Level 4 — open-space zones, Launch Dock builders, recovery, backdrop.
+let spaceGroup=null,blackHoleLandmark=null,spaceStars=[];
+let spaceOpenZones=[],spacePlayVolume=null,spaceDecorPlanets=[];
+let spaceRecoveryT=0,spaceRecoveryFrom=null;
+
+function isSpaceLevel(){return !!(CURRENT_LEVEL&&CURRENT_LEVEL.spaceAtmosphere);}
+function spaceCfg(){return CURRENT_LEVEL&&CURRENT_LEVEL.openSpace;}
+
+function clearSpaceWorld(){
+  const rem=m=>{if(!m)return;if(m.parent&&m.parent.remove)m.parent.remove(m);else if(scene.remove)scene.remove(m);else if(m.visible!=null)m.visible=false;};
+  if(spaceGroup){while(spaceGroup.children.length)spaceGroup.remove(spaceGroup.children[0]);spaceGroup.visible=false;}
+  blackHoleLandmark=null;spaceStars.length=0;spaceDecorPlanets.length=0;
+  spaceOpenZones=[];spacePlayVolume=null;spaceRecoveryT=0;spaceRecoveryFrom=null;
+}
+
+function beginSpaceLevel(L){
+  if(landGround)landGround.visible=false;
+  if(peakGround)peakGround.visible=false;
+  if(underwaterGroup)underwaterGroup.visible=false;
+  scene.background=new THREE.Color(0x050812);
+  scene.fog=new THREE.Fog(0x0a1020,85,220);
+  if(!spaceGroup){spaceGroup=new THREE.Group();scene.add(spaceGroup);}
+  spaceGroup.visible=true;
+  while(spaceGroup.children.length)spaceGroup.remove(spaceGroup.children[0]);
+  spaceOpenZones=(L&&L.openSpaceZones)||[];
+  spacePlayVolume=(L&&L.playVolume)||null;
+  // Distant star shell
+  for(let i=0;i<140;i++){
+    const r=rand(55,180),a=rand(0,TAU),el=rand(-0.35,0.55);
+    const sx=Math.cos(a)*Math.cos(el)*r,sy=Math.sin(el)*r+rand(-8,18),sz=Math.sin(a)*Math.cos(el)*r;
+    const s=mesh(SPH,new THREE.MeshBasicMaterial({color:Math.random()<0.15?0xfff8e8:0xffffff,transparent:true,opacity:rand(0.35,0.95)}),sx,sy,sz,rand(0.04,0.18));
+    spaceGroup.add(s);spaceStars.push(s);
+  }
+}
+
+function addBackdropPlanet(x,y,z,r,col,ring){
+  const g=new THREE.Group();g.position.set(x,y,z);
+  g.add(mesh(SPH,lam(col),0,0,0,r,r*0.92,r));
+  if(ring){
+    const tor=new THREE.Mesh(new THREE.TorusGeometry(r*1.35,r*0.08,8,32),new THREE.MeshBasicMaterial({color:0xc8d0e8,transparent:true,opacity:0.55}));
+    tor.rotation.x=Math.PI/2;g.add(tor);
+  }
+  g.userData.decor=true;
+  scene.add(g);spaceDecorPlanets.push(g);levelDecor.push(g);return g;
+}
+
+function addBlackHoleLandmark(x,y,z){
+  const g=new THREE.Group();g.position.set(x,y,z);
+  const core=mesh(SPH,new THREE.MeshBasicMaterial({color:0x020208}),0,0,0,2.8,2.8,2.8);g.add(core);
+  const ring=new THREE.Mesh(new THREE.TorusGeometry(5.2,0.55,10,48),new THREE.MeshBasicMaterial({color:0x3a2858,transparent:true,opacity:0.82}));
+  ring.rotation.x=Math.PI/2;g.add(ring);
+  const ring2=new THREE.Mesh(new THREE.TorusGeometry(6.4,0.22,8,40),new THREE.MeshBasicMaterial({color:0x8878c8,transparent:true,opacity:0.45}));
+  ring2.rotation.x=Math.PI/2;ring2.rotation.z=0.4;g.add(ring2);
+  for(let i=0;i<12;i++){
+    const a=i/12*TAU;
+    g.add(mesh(SPH,new THREE.MeshBasicMaterial({color:0xffffff,transparent:true,opacity:0.7}),Math.cos(a)*6.8,Math.sin(a*2)*0.4,Math.sin(a)*6.8,0.12));
+  }
+  g.userData.landmark=true;g.userData.interactive=false;
+  scene.add(g);blackHoleLandmark=g;levelDecor.push(g);
+  return g;
+}
+
+function addSpaceBuoy(x,y,z){
+  const g=new THREE.Group();g.position.set(x,y,z);
+  g.add(mesh(CYL,lam(0x5a6a78),0,0,0,0.08,1.6,0.08));
+  g.add(mesh(SPH,new THREE.MeshBasicMaterial({color:0x5ec8ff}),0,0.9,0,0.22));
+  g.add(mesh(SPH,new THREE.MeshBasicMaterial({color:0xffe078,transparent:true,opacity:0.55}),0,0.9,0,0.38));
+  scene.add(g);levelDecor.push(g);return g;
+}
+
+function addLaunchDock(x,y,z,w,d){
+  const g=new THREE.Group();g.position.set(x,y,z);
+  const plate=addSolid(x,y,z,w,0.45,d,0x4a5260,{surf:'pad',role:'landable'});
+  plate.mesh.visible=true;
+  if(plate.mesh.material&&plate.mesh.material.color)plate.mesh.material.color.setHex(0x5a6470);
+  // Rim glow / tether markers
+  const rim=mesh(BOXG,new THREE.MeshBasicMaterial({color:0x5ec8ff,transparent:true,opacity:0.55}),0,0.24,0,w+0.6,0.06,d+0.6);
+  scene.add(rim);levelDecor.push(rim);
+  [[-1,-1],[1,-1],[-1,1],[1,1]].forEach(([sx,sz])=>{
+    addSpaceBuoy(x+sx*(w*0.42),y+0.5,z+sz*(d*0.42));
+  });
+  // Metallic deck detail
+  for(let i=0;i<6;i++){
+    const px=rand(-w*0.35,w*0.35),pz=rand(-d*0.35,d*0.35);
+    addDecor(mesh(BOXG,lam(0x788898),x+px,y+0.24,z+pz,rand(0.4,1.2),0.04,rand(0.4,1.2)));
+  }
+  return plate;
+}
+
+function addPracticePad(x,y,z,r){
+  const w=r*2;
+  const sol=addSolid(x,y,z,w,0.38,w,0x3a4868,{surf:'pad',role:'landable'});
+  sol.mesh.visible=true;
+  const rim=mesh(BOXG,new THREE.MeshBasicMaterial({color:0xffe078,transparent:true,opacity:0.65}),x,y+0.22,z,w+0.5,0.05,w+0.5);
+  scene.add(rim);levelDecor.push(rim);
+  addSpaceBuoy(x+r*0.7,y+0.4,z);
+  addSpaceBuoy(x-r*0.7,y+0.4,z+r*0.5);
+  return sol;
+}
+
+function solidIsLandable(s){
+  return !!(s&&(s.role==='landable'||s.surf==='pad'));
+}
+
+function landableSurfaceAt(x,z){
+  let h=groundHeightAt(x,z),found=null;
+  for(const s of solids){
+    if(!solidIsLandable(s))continue;
+    if(x+R<=s.min.x||x-R>=s.max.x||z+R<=s.min.z||z-R>=s.max.z)continue;
+    if(s.max.y>h){h=s.max.y;found=s;}
+  }
+  return found?{y:h,surf:found.surf||'pad',solid:found}:null;
+}
+
+function pointInOpenZone(x,y,z){
+  for(const zc of spaceOpenZones){
+    if(x>=zc.x0&&x<=zc.x1&&y>=zc.y0&&y<=zc.y1&&z>=zc.z0&&z<=zc.z1)return true;
+  }
+  return false;
+}
+
+function queryMoveZone(){
+  if(!isSpaceLevel())return 'grounded';
+  if(P.grounded&&P.surf&&P.surf!=='void')return 'grounded';
+  const land=landableSurfaceAt(P.pos.x,P.pos.z);
+  if(land&&P.pos.y<=land.y+STEP+0.28&&P.vel.y<=2.5)return 'grounded';
+  if(spaceOpenZones.length&&pointInOpenZone(P.pos.x,P.pos.y,P.pos.z))return 'openSpace';
+  if(!land||P.pos.y>land.y+0.35)return 'openSpace';
+  return 'grounded';
+}
+
+function applySpaceRecovery(dt){
+  if(!isSpaceLevel()||!spacePlayVolume||spaceRecoveryT>0||P.dead||won)return false;
+  const pv=spacePlayVolume,cx=pv.cx!=null?pv.cx:0,cy=pv.cy!=null?pv.cy:8,cz=pv.cz!=null?pv.cz:0;
+  const dx=P.pos.x-cx,dz=P.pos.z-cz,dy=P.pos.y-cy;
+  const horiz=Math.hypot(dx,dz),dist=Math.hypot(horiz,Math.abs(dy));
+  const soft= pv.soft||55,hard=pv.hard||82;
+  if(dist<=soft)return false;
+  if(dist>hard){
+    spaceRecoveryT=pv.recoverDur||0.55;
+    spaceRecoveryFrom={x:P.pos.x,y:P.pos.y,z:P.pos.z};
+    const tgt=pv.recoverTo||P.spawn;
+    P.pos.set(tgt.x,tgt.y,tgt.z);
+    P.vel.set(0,0,0);
+    P.grounded=false;P.moveZone='grounded';
+    endSpaceThrust();clearLeapBoost();clearGlide();
+    initSafeAnchor(tgt.x,tgt.y,tgt.z);
+    SFX.refill();showToast('Whoops — back to the dock!');
+    return true;
+  }
+  // Soft nudge toward center
+  const nx=dx/(horiz||1),nz=dz/(horiz||1);
+  const push=clamp((dist-soft)/(hard-soft),0,1)*18*dt;
+  P.vel.x-=nx*push;P.vel.z-=nz*push;
+  if(dy>12&&!P.spaceThrust)P.vel.y-=Math.sign(dy)*push*0.35;
+  else if(dy<-12&&!P.spaceThrust)P.vel.y-=Math.sign(dy)*push*0.35;
+  return false;
+}
+
+function updateSpaceDecor(dt){
+  if(!isSpaceLevel())return;
+  if(blackHoleLandmark){
+    blackHoleLandmark.rotation.y+=dt*0.08;
+    const ch=blackHoleLandmark.children;
+    if(ch[1])ch[1].rotation.z+=dt*0.25;
+    if(ch[2])ch[2].rotation.z-=dt*0.18;
+  }
+  for(const p of spaceDecorPlanets)p.rotation.y+=dt*0.015;
+}
+
+function beginSpaceOutOfRouteRecovery(){
+  if(spaceRecoveryT>0)return;
+  applySpaceRecovery(999);
+}
+
+window.__SPACE={
+  isSpaceLevel,spaceCfg,queryMoveZone,landableSurfaceAt,solidIsLandable,pointInOpenZone,
+  get blackHole(){return blackHoleLandmark;},
+  get decorPlanets(){return spaceDecorPlanets;},
+  get openZones(){return spaceOpenZones;},
+  get playVolume(){return spacePlayVolume;},
+  get recoveryT(){return spaceRecoveryT;}
+};
+
+
 // ===== src/hud.js =====
 function updateHUD(){$('hp').textContent='❤️'.repeat(Math.max(P.hp,0))+'🤍'.repeat(P.maxHp-Math.max(P.hp,0));$('snz').textContent='😴 '+rescued+'/'+((typeof snoozleGoalCount==='function')?snoozleGoalCount():snoozles.length);$('nts').textContent='♪ '+gotNotes+'/'+notes.length;
   const f=$('fire');f.style.display=P.fire?'':'none';f.textContent='🔥';
@@ -4256,7 +4628,7 @@ window.__touchArmed=()=>touchArmed;
 window.__setPickerIdx=setPickerIdx;
 
 function drawLevelArt(){
-  [[$('art0'),'meadow'],[$('art1'),'deep'],[$('art2'),'peak']].forEach(([cv,kind])=>{
+  [[$('art0'),'meadow'],[$('art1'),'deep'],[$('art2'),'peak'],[$('art3'),'space']].forEach(([cv,kind])=>{
     if(!cv||typeof cv.getContext!=='function')return;
     const w=160,h=100;
     const g=cv.getContext('2d');if(!g)return;
@@ -4277,7 +4649,7 @@ function drawLevelArt(){
       g.fillStyle='#f5d0a8';g.beginPath();g.moveTo(w*0.55,h*0.78);g.quadraticCurveTo(w*0.62,h*0.35,w*0.78,h*0.78);g.lineTo(w*0.52,h*0.78);g.closePath();g.fill();
       g.strokeStyle='#e8b890';g.lineWidth=2;g.stroke();
       g.fillStyle='#fff8ee';g.beginPath();g.arc(w*0.6,h*0.52,11,0,TAU);g.fill();g.strokeStyle='#e8b890';g.stroke();
-    }else{
+    }else if(kind==='peak'){
       const sky=g.createLinearGradient(0,0,0,h);sky.addColorStop(0,'#5a7ea8');sky.addColorStop(0.55,'#c45a28');sky.addColorStop(1,'#2a1810');g.fillStyle=sky;g.fillRect(0,0,w,h);
       g.fillStyle='#3a2218';g.fillRect(0,h*0.72,w,h*0.28);
       g.fillStyle='#e07a3a';g.beginPath();g.moveTo(w*0.18,h*0.78);g.lineTo(w*0.5,h*0.22);g.lineTo(w*0.82,h*0.78);g.closePath();g.fill();
@@ -4285,6 +4657,14 @@ function drawLevelArt(){
       g.fillStyle='rgba(80,80,90,0.55)';g.beginPath();g.ellipse(w*0.5,h*0.2,10,5,0,0,TAU);g.fill();
       g.fillStyle='rgba(60,60,70,0.4)';g.beginPath();g.ellipse(w*0.48,h*0.12,7,4,0,0,TAU);g.fill();
       g.fillStyle='#ff9a3c';g.beginPath();g.arc(w*0.5,h*0.28,4,0,TAU);g.fill();
+    }else if(kind==='space'){
+      const sky=g.createLinearGradient(0,0,0,h);sky.addColorStop(0,'#050812');sky.addColorStop(0.55,'#121a30');sky.addColorStop(1,'#0a1020');g.fillStyle=sky;g.fillRect(0,0,w,h);
+      for(let i=0;i<28;i++)g.fillStyle='rgba(255,255,255,'+(0.35+Math.random()*0.55)+')',g.fillRect(rand(0,w),rand(0,h*0.75),rand(1,2.5),rand(1,2.5));
+      g.fillStyle='#6a4a9a';g.beginPath();g.arc(w*0.72,h*0.28,11,0,TAU);g.fill();
+      g.fillStyle='#c45a78';g.beginPath();g.arc(w*0.28,h*0.42,8,0,TAU);g.fill();
+      g.fillStyle='#020208';g.beginPath();g.arc(w*0.55,h*0.18,7,0,TAU);g.fill();
+      g.strokeStyle='rgba(136,120,200,0.7)';g.lineWidth=2;g.beginPath();g.ellipse(w*0.55,h*0.18,12,4,0,0,TAU);g.stroke();
+      g.fillStyle='#5ec8ff';g.fillRect(w*0.46,h*0.62,w*0.08,h*0.06);
     }
   });
 }
@@ -4294,7 +4674,7 @@ for(let i=0;i<LEVELS.length;i++){
 }
 
 function startGame(){if(started)return;loadLevel(LEVELS[pickerIdx]);started=true;$('start').style.display='none';initAudio();IN.jump=false;IN.b=false;IN.y=false;updateHUD();
-  const msg=pickerIdx===0?'Follow the path. Wake all four Snoozles!':(pickerIdx===1?'Dive in. Wake four Snoozles on the ocean floor!':'Try the long leap. Jump, then puff again!');
+  const msg=pickerIdx===0?'Follow the path. Wake all four Snoozles!':(pickerIdx===1?'Dive in. Wake four Snoozles on the ocean floor!':(pickerIdx===2?'Try the long leap. Jump, then puff again!':'Hold jump to fly. Let go to glide.'));
   setTimeout(()=>showToast(msg),600);setTimeout(()=>{$('hint').style.opacity=0;},12000);}
 window.__startGame=startGame;
 updatePickerUI();
@@ -4309,7 +4689,7 @@ window.__started=()=>started;
 // ---------- camera ----------
 const CAM=window.__CAM={yaw:0,pitch:0.42,dist:8.5,pos:new THREE.Vector3(0,5,19),look:new THREE.Vector3(0,1,10),shake:0,fovKick:0,lastManual:-9,boomDist:8.5,targetDist:8.5,effectiveDist:8.5,collisionPulled:false,mode:'outdoor'};
 // Stage 4.8A — temporary Level 3 landscape camera-distance diagnostic (not a shipping profile).
-const VERSION_BASE='v38 · Peak playtest readability';
+const VERSION_BASE='v40 · Launch Dock';
 const CAMDIST_ALLOW={'8.5':8.5,'8.50':8.5,'6.8':6.8,'6.80':6.8,'6.07':6.07,'5':5,'5.0':5,'5.00':5,'3.93':3.93};
 const CAMDIST_STEPS=[8.5,6.8,6.07,5,3.93];
 function parseCamDistQuery(search){
@@ -4466,6 +4846,7 @@ function frame(now){requestAnimationFrame(frame);let dt=(now-last)/1000;last=now
   readKeys(dt);if(T.stickId!==null){IN.mx=T.jx;IN.mz=T.jy;}if(HELD.a)IN.jumpHeld=true;if(HELD.b)IN.bHeld=true;
   updatePlayer(dt);updateWobblers(dt);updatePinwheels(dt);updateToss(dt);updateNotes(dt);updateSnoozles(dt);updateBoat(dt);updateWindmill(dt);updateFans(dt);updateSteamVents(dt);updateLavas(dt);updateClouds(dt);updateGloops(dt);updateGoos(dt);updatePuddles(dt);updateFires(dt);updateCrates(dt);updatePowers(dt);updateHearts(dt);updateChecks(dt);
   updatePeak(dt);
+  updateSpaceDecor(dt);
   updateSharks(dt);updateFish(dt);updateSpikefish(dt);updateBubbleShots(dt);updateClams(dt);updateKelp(dt);
   updateWin(dt);if(FINISH)FINISH.update(dt,won?winT:-1);
   updateParticles(dt);updateRings(dt);updateZ(dt);updateCamera(dt);updatePlayerVisual(dt);
