@@ -81,6 +81,7 @@ const THREE = new Proxy({}, {
 const HOOKS = [];
 
 function resolveLevelIdx(level) {
+  if (level === 'LEVEL4' || level === 3 || level === 'level4') return 3;
   if (level === 'LEVEL3' || level === 2 || level === 'level3') return 2;
   if (level === 'LEVEL2' || level === 1 || level === 'level2') return 1;
   return 0;
@@ -109,7 +110,7 @@ module.exports = function boot(opts = {}) {
   }
   function el(id) {
     if (!els[id]) {
-      const isCanvas = id === 'art0' || id === 'art1' || id === 'art2';
+      const isCanvas = id === 'art0' || id === 'art1' || id === 'art2' || id === 'art3';
       els[id] = isCanvas ? canvasStub() : {
         id, listeners: {}, style: {}, textContent: '',
         classList: { add() {}, remove() {}, toggle() {} },
@@ -231,6 +232,9 @@ module.exports = function boot(opts = {}) {
     getPhys: () => window.__PHYS && window.__PHYS(),
     getSky: () => window.__SKY && window.__SKY(),
     getLava: () => window.__LAVA && window.__LAVA(),
+    getSpace: () => window.__SPACE,
+    getSpacePhys: () => window.__SPACEPHYS && window.__SPACEPHYS(),
+    getMovement: () => window.__MOVEMENT && window.__MOVEMENT(),
     getVoid: () => window.__VOID && window.__VOID(),
     getPlayer: () => window.__PLAYER && window.__PLAYER(),
     getShadow: () => window.__SHADOW,
@@ -240,6 +244,9 @@ module.exports = function boot(opts = {}) {
     isStarted: () => window.__started && window.__started(),
     pickerIdx: () => window.__pickerIdx && window.__pickerIdx(),
     touchArmed: () => !!(window.__touchArmed && window.__touchArmed()),
+    setCamPitch(p) { CAM.pitch = p; },
+    setTouchStick(x, z) { window.__setTouchStick && window.__setTouchStick(x, z); },
+    clearTouchStick() { window.__clearTouchStick && window.__clearTouchStick(); },
     AU: () => window.__AU,
     SONGS: () => window.__SONGS,
     test: window.__TEST

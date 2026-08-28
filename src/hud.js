@@ -43,7 +43,7 @@ window.__touchArmed=()=>touchArmed;
 window.__setPickerIdx=setPickerIdx;
 
 function drawLevelArt(){
-  [[$('art0'),'meadow'],[$('art1'),'deep'],[$('art2'),'peak']].forEach(([cv,kind])=>{
+  [[$('art0'),'meadow'],[$('art1'),'deep'],[$('art2'),'peak'],[$('art3'),'space']].forEach(([cv,kind])=>{
     if(!cv||typeof cv.getContext!=='function')return;
     const w=160,h=100;
     const g=cv.getContext('2d');if(!g)return;
@@ -64,7 +64,7 @@ function drawLevelArt(){
       g.fillStyle='#f5d0a8';g.beginPath();g.moveTo(w*0.55,h*0.78);g.quadraticCurveTo(w*0.62,h*0.35,w*0.78,h*0.78);g.lineTo(w*0.52,h*0.78);g.closePath();g.fill();
       g.strokeStyle='#e8b890';g.lineWidth=2;g.stroke();
       g.fillStyle='#fff8ee';g.beginPath();g.arc(w*0.6,h*0.52,11,0,TAU);g.fill();g.strokeStyle='#e8b890';g.stroke();
-    }else{
+    }else if(kind==='peak'){
       const sky=g.createLinearGradient(0,0,0,h);sky.addColorStop(0,'#5a7ea8');sky.addColorStop(0.55,'#c45a28');sky.addColorStop(1,'#2a1810');g.fillStyle=sky;g.fillRect(0,0,w,h);
       g.fillStyle='#3a2218';g.fillRect(0,h*0.72,w,h*0.28);
       g.fillStyle='#e07a3a';g.beginPath();g.moveTo(w*0.18,h*0.78);g.lineTo(w*0.5,h*0.22);g.lineTo(w*0.82,h*0.78);g.closePath();g.fill();
@@ -72,6 +72,14 @@ function drawLevelArt(){
       g.fillStyle='rgba(80,80,90,0.55)';g.beginPath();g.ellipse(w*0.5,h*0.2,10,5,0,0,TAU);g.fill();
       g.fillStyle='rgba(60,60,70,0.4)';g.beginPath();g.ellipse(w*0.48,h*0.12,7,4,0,0,TAU);g.fill();
       g.fillStyle='#ff9a3c';g.beginPath();g.arc(w*0.5,h*0.28,4,0,TAU);g.fill();
+    }else if(kind==='space'){
+      const sky=g.createLinearGradient(0,0,0,h);sky.addColorStop(0,'#050812');sky.addColorStop(0.55,'#121a30');sky.addColorStop(1,'#0a1020');g.fillStyle=sky;g.fillRect(0,0,w,h);
+      for(let i=0;i<28;i++)g.fillStyle='rgba(255,255,255,'+(0.35+Math.random()*0.55)+')',g.fillRect(rand(0,w),rand(0,h*0.75),rand(1,2.5),rand(1,2.5));
+      g.fillStyle='#6a4a9a';g.beginPath();g.arc(w*0.72,h*0.28,11,0,TAU);g.fill();
+      g.fillStyle='#c45a78';g.beginPath();g.arc(w*0.28,h*0.42,8,0,TAU);g.fill();
+      g.fillStyle='#020208';g.beginPath();g.arc(w*0.55,h*0.18,7,0,TAU);g.fill();
+      g.strokeStyle='rgba(136,120,200,0.7)';g.lineWidth=2;g.beginPath();g.ellipse(w*0.55,h*0.18,12,4,0,0,TAU);g.stroke();
+      g.fillStyle='#5ec8ff';g.fillRect(w*0.46,h*0.62,w*0.08,h*0.06);
     }
   });
 }
@@ -81,7 +89,7 @@ for(let i=0;i<LEVELS.length;i++){
 }
 
 function startGame(){if(started)return;loadLevel(LEVELS[pickerIdx]);started=true;$('start').style.display='none';initAudio();IN.jump=false;IN.b=false;IN.y=false;updateHUD();
-  const msg=pickerIdx===0?'Follow the path. Wake all four Snoozles!':(pickerIdx===1?'Dive in. Wake four Snoozles on the ocean floor!':'Try the long leap. Jump, then puff again!');
+  const msg=pickerIdx===0?'Follow the path. Wake all four Snoozles!':(pickerIdx===1?'Dive in. Wake four Snoozles on the ocean floor!':(pickerIdx===2?'Try the long leap. Jump, then puff again!':'Hold jump to fly. Let go to glide.'));
   setTimeout(()=>showToast(msg),600);setTimeout(()=>{$('hint').style.opacity=0;},12000);}
 window.__startGame=startGame;
 updatePickerUI();
