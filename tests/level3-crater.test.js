@@ -18,7 +18,7 @@ ok(!L.steps.some(s=>s[0]==='protoEndpoint'),'no protoEndpoint in level data');
 ok(!L.steps.some(s=>s[0]==='unfinishedFinish'),'unfinishedFinish replaced by steamOrgan');
 ok(H.getSky().puffVMul===1.4&&H.getSky().boostMax===12.5&&H.getSky().boostDecay===1.6,'Sky Blast unchanged');
 ok(H.getSky().glideDur===0.55&&H.getSky().glideFallCap===-2.2&&H.getSky().glideStartVy===0.2,'glide unchanged');
-ok(H.getCamDiag().VERSION_BASE==='v37 · Peak playtest fixes','version stamp');
+ok(H.getCamDiag().VERSION_BASE==='v38 · Peak playtest readability','version stamp');
 ok(H.AU().song&&H.AU().song.id==='peak','Level 3 uses peak song');
 
 function release(){
@@ -97,7 +97,7 @@ ok(fanfares===1,'repeated keyboard overlap does not retrigger win');
 
 // ---- Fireworks are not hazards ----
 ok(!W.lavas.some(l=>W.organFireworks.some(f=>f.m===l.g)),'fireworks not in lava array');
-ok(W.organFireworks.every(f=>f.kind==='fw'&&!f.damage),'firework particles have no damage callback');
+ok(W.organFireworks.every(f=>(f.kind==='fw'||f.kind==='erupt')&&!f.damage),'firework/eruption particles have no damage callback');
 const hpFw=P.hp;P.inv=0;
 for(const f of W.organFireworks){f.m.position.set(P.pos.x,P.pos.y+0.5,P.pos.z);}
 frames(10);

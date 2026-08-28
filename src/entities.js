@@ -64,7 +64,9 @@ function shadowReceiveAt(x,z,belowY,r){
 window.__shadowReceiveAt=(x,z,belowY,r)=>shadowReceiveAt(x,z,belowY,r);
 function insideSolid(x,y,z,m){for(const s of solids){if(x>s.min.x-m&&x<s.max.x+m&&y>s.min.y-m&&y<s.max.y+m&&z>s.min.z-m&&z<s.max.z+m)return true;}return false;}
 function addSolid(x,y,z,w,h,d,color,opts){const m=new THREE.Mesh(BOXG,lam(color));m.scale.set(w,h,d);m.position.set(x,y+h/2,z);if(opts&&opts.invisible)m.visible=false;scene.add(m);
-  const s={min:new THREE.Vector3(x-w/2,y,z-d/2),max:new THREE.Vector3(x+w/2,y+h,z+d/2),mesh:m,surf:(opts&&opts.surf)||'wood',role:(opts&&opts.role)||null,color:color|0};solids.push(s);return s;}
+  // Peak Geode mouth corridor walls may opt into shell fade (collision stays; readability only).
+  if(opts&&opts.geodeShell&&typeof registerGeodeShellMesh==='function')registerGeodeShellMesh(m);
+  const s={min:new THREE.Vector3(x-w/2,y,z-d/2),max:new THREE.Vector3(x+w/2,y+h,z+d/2),mesh:m,surf:(opts&&opts.surf)||'wood',role:(opts&&opts.role)||null,color:color|0,geodeShell:!!(opts&&opts.geodeShell)};solids.push(s);return s;}
 
 // ground with a hole for the pond
 function grassTex(){const cv=document.createElement('canvas');cv.width=cv.height=256;const g=cv.getContext('2d');g.fillStyle='#78c65a';g.fillRect(0,0,256,256);

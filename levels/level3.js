@@ -156,6 +156,9 @@ snoozles:[[-5,0.55,6,0,false],[-9,8.55,-78,1,false],[3.2,20.55,-330,2,false],[-5
 trees:[],
 steps:[
   ['volcanoLandmark',0,0,-290,1.35],
+  // Late-route volcano silhouette visible from Climb / Crater approach.
+  ['volcanoLandmark',-14,28,-560,0.85],
+  ['volcanoLandmark',12,26,-600,0.7],
   ['driftSparks',22],
   // World bounds — ceiling clears Organ pipes; far face past Crater; sides cover full route.
   ['solid',0,72,-320,38,2,700,0xffc48a,{invisible:true}],
@@ -329,10 +332,10 @@ steps:[
   // Hollow floor pulled forward so it overlaps the mouth sill / approach pad.
   ['solid',0,20.0,-276,12,0.4,22,0x2a1e38,{surf:'stone',role:'safeRock'}],
   ['solid',0,20.15,-278,6,0.06,14,0x3a2e55,{surf:'stone',role:'safeRock'}],
-  // Entrance corridor walls / ceiling
-  ['solid',-8.5,20.0,-278,3.5,6.5,16,0x1a1228,{surf:'stone',role:'safeRock'}],
-  ['solid',8.5,20.0,-278,3.5,6.5,16,0x1a1228,{surf:'stone',role:'safeRock'}],
-  ['solid',0,26.2,-278,20,1.2,18,0x1a1228,{surf:'stone',role:'safeRock'}],
+  // Entrance corridor walls / ceiling — fade with the mouth shell so the camera stays clear.
+  ['solid',-8.5,20.0,-278,3.5,6.5,16,0x1a1228,{surf:'stone',role:'safeRock',geodeShell:true}],
+  ['solid',8.5,20.0,-278,3.5,6.5,16,0x1a1228,{surf:'stone',role:'safeRock',geodeShell:true}],
+  ['solid',0,26.2,-278,20,1.2,18,0x1a1228,{surf:'stone',role:'safeRock',geodeShell:true}],
   ['crystalCluster',-5.5,20.0,-274,1.1,true],
   ['crystalCluster',5.8,20.0,-280,0.95,true],
   ['crystalCluster',-4.2,20.0,-288,0.55,false],
@@ -529,10 +532,14 @@ steps:[
   ['solid',-5,44.0,-590,4.2,0.45,4.2,0xc45a28,{surf:'stone'}],
   ['solid',-5,44.45,-590,3.0,0.08,3.0,0xe07a3a,{surf:'stone'}],
   ['basaltRock',-9,44.0,-588,1.1],['basaltRock',6,44.0,-594,1.0],
-  // Caldera walls + distant molten glow (deep decorative lava — not on the victory walk).
-  ['solid',-14,44.0,-620,4,8,40,0x1a1614,{surf:'stone'}],
-  ['solid',14,44.0,-620,4,8,40,0x1a1614,{surf:'stone'}],
+  // Warm crater bowl walls (volcanic rock + glow, not plain black corridor slabs).
+  ['solid',-14,44.0,-620,4,10,40,0x3a2a22,{surf:'stone'}],
+  ['solid',14,44.0,-620,4,10,40,0x3a2a22,{surf:'stone'}],
+  ['solid',-13.2,46.0,-620,0.35,0.2,30,0xff6a20,{surf:'stone'}],
+  ['solid',13.2,48.0,-620,0.35,0.2,30,0xff6a20,{surf:'stone'}],
+  ['solid',0,42.0,-655,28,8,8,0x2a1e18,{surf:'stone'}],
   ['lava',0,28.0,-640,22,0.5,28],
+  ['lava',0,36.0,-652,14,0.45,10],
   // Short forgiving victory walk from Snoozle 4 to the keyboard.
   ['solid',0,44.0,-608,14,0.4,12,0x3a3538,{surf:'stone'}],
   ['solid',0,44.0,-620,14,0.4,10,0x4a3a32,{surf:'stone'}],
