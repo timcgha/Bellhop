@@ -54,11 +54,13 @@ down. This is Level 4 only; Levels 1–3 are unchanged.
 - **Air-puff** (jump again while already thrusting, before the second stroke
   cooldown) still works once per flight. Same two-stroke rhythm as Level 1,
   just with no sinking between strokes.
-- **Move (stick / WASD / arrows)** steers thrust and coast direction. This is
-  not realistic inertia — Pling turns and corrects quickly enough that a child
-  can recover from overshoots without fighting the controls.
-- **No downward gravity** in open-space zones. Vertical aim comes from facing
-  plus move input, not from falling.
+- **Move (stick / WASD / arrows)** steers thrust and coast direction. Push
+  forward/up on the primary movement control to climb; pull back/down to descend;
+  left/right to steer. Camera look is optional — basic altitude does not require
+  camera pitch. This is not realistic inertia — Pling turns and corrects quickly
+  enough that a child can recover from overshoots without fighting the controls.
+- **No downward gravity** in open-space zones. Vertical aim comes from primary
+  move input, not from falling or camera pitch.
 - **Soft speed cap** while thrusting and while coasting so he never blasts out
   of control. Exact numbers are for playtest; the invariant is *freedom +
   controllability*, not orbital simulation.

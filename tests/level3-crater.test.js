@@ -18,7 +18,7 @@ ok(!L.steps.some(s=>s[0]==='protoEndpoint'),'no protoEndpoint in level data');
 ok(!L.steps.some(s=>s[0]==='unfinishedFinish'),'unfinishedFinish replaced by steamOrgan');
 ok(H.getSky().puffVMul===1.4&&H.getSky().boostMax===12.5&&H.getSky().boostDecay===1.6,'Sky Blast unchanged');
 ok(H.getSky().glideDur===0.55&&H.getSky().glideFallCap===-2.2&&H.getSky().glideStartVy===0.2,'glide unchanged');
-ok(H.getCamDiag().VERSION_BASE==='v40 · Launch Dock','version stamp');
+ok(H.getCamDiag().VERSION_BASE==='v42 · Asteroid Garden','version stamp');
 ok(H.AU().song&&H.AU().song.id==='peak','Level 3 uses peak song');
 
 function release(){
