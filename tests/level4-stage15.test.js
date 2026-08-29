@@ -9,7 +9,7 @@ function releaseJump(H){H.ku({code:'Space'});}
 // ---- version ----
 {
   const H=boot();
-  ok(H.getCamDiag().VERSION_BASE==='v41 · Space Navigation','version stamp v41');
+  ok(H.getCamDiag().VERSION_BASE==='v42 · Asteroid Garden','version stamp v42');
 }
 
 // ---- flight without camera input (keyboard) ----
@@ -212,10 +212,11 @@ function flyNoCam(H, keys, frames){
   ok(H3.getLevel().id==='level3','Level 3 boot unchanged');
 }
 
-// ---- no Stage 2 content ----
+// ---- no Stage 3+ deferred content ----
 {
-  const src=require('fs').readFileSync(require('path').join(__dirname,'..','levels','level4.js'),'utf8');
-  ok(!/asteroid|saucer|starBeam|warpTunnel|blackHoleFinish/i.test(src),'Stage 1.5 has no Stage 2 content');
+  const src=require('fs').readFileSync(require('path').join(__dirname,'..','levels','level4.js'),'utf8')
+    +require('fs').readFileSync(require('path').join(__dirname,'..','src','space.js'),'utf8');
+  ok(!/starBeam|StarBeam|hasStarBeam|shieldedGate|warpTunnel|blackHoleFinish/i.test(src),'Stage 2 build has no Stage 3+ deferred systems');
 }
 
 report();

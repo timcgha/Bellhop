@@ -1,8 +1,12 @@
-// Level 4 — open-space zones, Launch Dock builders, recovery, backdrop, landing assist.
-let spaceGroup=null,blackHoleLandmark=null,spaceStars=[];
+// Level 4 — open-space zones, Launch Dock, Asteroid Garden, saucers, recovery.
+let spaceGroup=null,blackHoleLandmark=null,cheeseMoonLandmark=null,spaceStars=[];
 let spaceOpenZones=[],spacePlayVolume=null,spaceDecorPlanets=[];
 let spaceRecoveryT=0,spaceRecoveryFrom=null;
 let spaceLandingTargets=[],spaceRouteTrail=[],spaceFirstDest=null,spaceRouteBeacons=[];
+const asteroids=[],saucers=[],spaceSparks=[],spaceStage2Ends=[];
+const ASTEROID_KB=5.2,ASTEROID_INV=1.4,SAUCER_AGGRO=11,SAUCER_LEASH=13,SAUCER_WIND=0.5,SAUCER_CD=2.6;
+const SPARK_GEO=new THREE.SphereGeometry(1,8,6);
+for(let i=0;i<12;i++){const m=new THREE.Mesh(SPARK_GEO,new THREE.MeshBasicMaterial({color:0x7dff6a}));m.scale.setScalar(0.22);m.visible=false;scene.add(m);spaceSparks.push({m,pos:new THREE.Vector3(),vel:new THREE.Vector3(),life:0,alive:false,trailT:0});}
 
 function isSpaceLevel(){return !!(CURRENT_LEVEL&&CURRENT_LEVEL.spaceAtmosphere);}
 function spaceCfg(){return CURRENT_LEVEL&&CURRENT_LEVEL.openSpace;}
@@ -10,9 +14,13 @@ function spaceCfg(){return CURRENT_LEVEL&&CURRENT_LEVEL.openSpace;}
 function clearSpaceWorld(){
   const rem=m=>{if(!m)return;if(m.parent&&m.parent.remove)m.parent.remove(m);else if(scene.remove)scene.remove(m);else if(m.visible!=null)m.visible=false;};
   if(spaceGroup){while(spaceGroup.children.length)spaceGroup.remove(spaceGroup.children[0]);spaceGroup.visible=false;}
-  blackHoleLandmark=null;spaceStars.length=0;spaceDecorPlanets.length=0;
+  blackHoleLandmark=null;cheeseMoonLandmark=null;spaceStars.length=0;spaceDecorPlanets.length=0;
   spaceOpenZones=[];spacePlayVolume=null;spaceRecoveryT=0;spaceRecoveryFrom=null;
   spaceLandingTargets.length=0;spaceRouteTrail.length=0;spaceFirstDest=null;spaceRouteBeacons.length=0;
+  for(const a of asteroids)rem(a.g);asteroids.length=0;
+  for(const s of saucers)rem(s.g);saucers.length=0;
+  for(const e of spaceStage2Ends)rem(e.g);spaceStage2Ends.length=0;
+  for(const q of spaceSparks){q.alive=false;q.m.visible=false;}
 }
 
 function beginSpaceLevel(L){
@@ -255,9 +263,315 @@ function applySpaceRecovery(dt){
   return false;
 }
 
+function addSpaceRestPad(x,y,z,r){
+  r=r||3;
+  const w=r*1.6;
+  const sol=addSolid(x,y,z,w,0.32,w,0x3a4868,{surf:'pad',role:'landable',landingPad:true});
+  sol.mesh.visible=true;
+  if(sol.mesh.material&&sol.mesh.material.color)sol.mesh.material.color.setHex(0x4a6080);
+  addLandingBeacon(x,y,z,r*0.85,{approachR:14,nearR:6,primary:false});
+  return sol;
+}
+
+function addBackdropAsteroid(x,y,z,r){
+  r=r||0.5;
+  const g=new THREE.Group();g.position.set(x,y,z);
+  const col=0x3a4250;
+  g.add(mesh(SPH,new THREE.MeshBasicMaterial({color:col,transparent:true,opacity:0.38}),0,0,0,r,r*0.88,r*0.95));
+  g.userData.role='backdrop';g.userData.hazard=false;g.userData.decor=true;
+  scene.add(g);levelDecor.push(g);
+  asteroids.push({g,x,y,z,r,role:'backdrop',hazard:false,moving:false,spin:rand(0.05,0.15),ph:rand(0,TAU)});
+  return asteroids[asteroids.length-1];
+}
+
+function buildHazardRock(r,role){
+  const g=new THREE.Group();
+  const bodyCol=role==='teach'?0x8a7a68:0x6e6254;
+  const body=new THREE.Mesh(SPH,pho(bodyCol,35,0x2a2218));body.scale.set(r,r*0.88,r*0.94);g.add(body);
+  g.add(mesh(SPH,lam(0x4a4038),r*0.35,r*0.15,-r*0.2,r*0.35,r*0.28,r*0.3));
+  g.add(mesh(SPH,lam(0x9a8a78),-r*0.25,r*0.2,r*0.25,r*0.22));
+  // Rim light so hazard reads against starfield on phone
+  g.add(mesh(SPH,new THREE.MeshBasicMaterial({color:0xffd8a0,transparent:true,opacity:0.22}),0,0,0,r*1.08,r*0.95,r*1.02));
+  g.userData={body,role};return g;
+}
+
+function addHazardAsteroid(x,y,z,r,role){
+  r=r||1.6;role=role||'static';
+  const g=buildHazardRock(r,role);g.position.set(x,y,z);scene.add(g);levelDecor.push(g);
+  asteroids.push({g,x,y,z,hx:x,hy:y,hz:z,r,role,hazard:true,moving:false,spin:rand(0.2,0.45),ph:rand(0,TAU)});
+  return asteroids[asteroids.length-1];
+}
+
+function addMovingAsteroid(x0,y0,z0,x1,y1,z1,r,period){
+  r=r||1.5;period=period||10;
+  const g=buildHazardRock(r,'moving');
+  g.add(mesh(SPH,new THREE.MeshBasicMaterial({color:0xffc878,transparent:true,opacity:0.35}),0,0,0,r*0.2));
+  g.position.set(x0,y0,z0);scene.add(g);levelDecor.push(g);
+  // Dust path markers (telegraph)
+  for(let i=1;i<5;i++){
+    const t=i/5;
+    const mx=lerp(x0,x1,t),my=lerp(y0,y1,t),mz=lerp(z0,z1,t);
+    const dust=mesh(SPH,new THREE.MeshBasicMaterial({color:0xc8b090,transparent:true,opacity:0.28}),mx,my,mz,0.12);
+    dust.userData.pathDust=true;scene.add(dust);levelDecor.push(dust);spaceRouteBeacons.push(dust);
+  }
+  asteroids.push({g,x:x0,y:y0,z:z0,r,role:'moving',hazard:true,moving:true,
+    p0:{x:x0,y:y0,z:z0},p1:{x:x1,y:y1,z:z1},period,phase:0,spin:0.55,ph:rand(0,TAU),trailT:0});
+  return asteroids[asteroids.length-1];
+}
+
+function asteroidPos(a){
+  if(!a.moving)return {x:a.x,y:a.y,z:a.z};
+  const t=(Math.sin(a.phase*TAU)+1)*0.5;
+  return {x:lerp(a.p0.x,a.p1.x,t),y:lerp(a.p0.y,a.p1.y,t),z:lerp(a.p0.z,a.p1.z,t)};
+}
+
+function hurtFromAsteroid(a,px,py,pz){
+  if(won||P.inv>0||P.dead)return false;
+  const dx=px-a.x,dy=(py+0.55)-a.y,dz=pz-a.z;
+  const len=Math.hypot(dx,dy,dz)||1;
+  // Moderate knockback AWAY from rock face; keep flight usable
+  const k=ASTEROID_KB;
+  P.hp--;P.inv=ASTEROID_INV;
+  P.vel.x=dx/len*k;P.vel.y=dy/len*k*0.85;P.vel.z=dz/len*k;
+  P.grounded=false;P.slam=0;P.puffAir=0;endHover();clearLeapBoost();clearGlide();
+  // Keep space thrust available — do not endSpaceThrust permanently; brief interrupt only
+  if(P.spaceThrust&&!IN.jumpHeld)endSpaceThrust();
+  P.sq=0.65;SFX.hurt();CAM.shake=0.4;rumble(140,0.65,0.28);
+  for(let i=0;i<10;i++)spawnP(px,py+0.5,pz,rand(-3,3),rand(-2,3),rand(-3,3),rand(0.07,0.13),0xc4a882,rand(0.3,0.5),0.3,-4,0.85);
+  updateHUD();
+  if(P.hp<=0){P.dead=true;P.deadT=1.8;SFX.deflate();showToast('Out of puff! Back to the last checkpoint…');}
+  return true;
+}
+
+function updateAsteroids(dt){
+  if(!isSpaceLevel())return;
+  for(const a of asteroids){
+    if(a.moving){
+      a.phase=(a.phase+dt/a.period)%1;
+      const p=asteroidPos(a);a.x=p.x;a.y=p.y;a.z=p.z;
+      a.g.position.set(a.x,a.y,a.z);
+      a.trailT=(a.trailT||0)-dt;
+      if(a.trailT<=0){a.trailT=0.12;spawnP(a.x+rand(-0.3,0.3),a.y,a.z+rand(-0.3,0.3),rand(-0.4,0.4),rand(-0.3,0.3),rand(-0.4,0.4),0.08,0xc8b090,0.4,0.5,0,0.7);}
+    }else{a.g.position.set(a.x,a.y,a.z);}
+    a.g.rotation.y+=a.spin*dt;a.g.rotation.x+=a.spin*0.35*dt;
+    if(!a.hazard||P.dead||won)continue;
+    const dx=P.pos.x-a.x,dy=(P.pos.y+0.55)-a.y,dz=P.pos.z-a.z;
+    const dist=Math.hypot(dx,dy,dz);
+    const hitR=a.r+R*0.95;
+    if(dist<hitR)hurtFromAsteroid(a,P.pos.x,P.pos.y,P.pos.z);
+  }
+}
+
+function buildSaucer(size){
+  size=size||1;
+  const g=new THREE.Group();
+  const disc=new THREE.Mesh(new THREE.CylinderGeometry(0.85,0.95,0.22,20),pho(0xc8d0dc,90,0xffffff));
+  disc.position.y=0.35;g.add(disc);
+  const rim=new THREE.Mesh(new THREE.TorusGeometry(0.92,0.07,8,28),pho(0x8a98a8,60,0xffffff));
+  rim.rotation.x=Math.PI/2;rim.position.y=0.35;g.add(rim);
+  const dome=new THREE.Mesh(SPH,new THREE.MeshPhongMaterial({color:0x7dff9a,shininess:120,transparent:true,opacity:0.88}));
+  dome.scale.set(0.42,0.32,0.42);dome.position.y=0.62;g.add(dome);
+  // Alien eyes — readable hostile occupant
+  [-0.12,0.12].forEach(x=>{
+    g.add(mesh(SPH,pho(0xffffff,80),x,0.68,0.28,0.08));
+    g.add(mesh(SPH,lam(0x1a3020),x,0.68,0.34,0.035));
+  });
+  g.add(mesh(SPH,new THREE.MeshBasicMaterial({color:0x5dff7a}),0,0.22,0,0.12));
+  g.userData={dome,disc};g.scale.setScalar(size);return g;
+}
+
+function addSaucer(x,y,z,type,withNote){
+  type=type||'small';
+  const size=type==='big'?1.45:type==='mid'?1.15:1.0;
+  const hp=type==='big'?3:type==='mid'?2:1;
+  const g=buildSaucer(size);g.position.set(x,y,z);scene.add(g);levelDecor.push(g);
+  let note=null;
+  if(withNote){note=addNote(x,y+0.9,z,true);note.heldBy='saucer';}
+  saucers.push({g,x,y,z,hx:x,hy:y,hz:z,type,size,hp,maxHp:hp,alive:true,state:'patrol',t:0,
+    face:rand(0,TAU),vx:0,vy:0,vz:0,stunT:0,hurtT:0,wind:0,spitT:rand(1.2,2.2),
+    note,noteReleased:false,ph:rand(0,TAU),aggro:false,bob:0});
+  return saucers[saucers.length-1];
+}
+
+function revealSaucerNote(e){
+  if(!e.note||e.noteReleased||e.note.got)return;
+  e.noteReleased=true;
+  // Pop the note slightly aside so defeat feedback is readable before collect
+  const ox=e.x+(P.pos.x>e.x?-1.2:1.2),oy=e.y+0.8,oz=e.z;
+  e.note.x=ox;e.note.y=oy;e.note.z=oz;
+  e.note.g.position.set(ox,oy,oz);
+  revealHeldNote(e.note);
+}
+
+function hitSaucer(e,dmg){
+  if(!e.alive||e.state==='dying')return;
+  e.hp-=dmg;e.hurtT=0.35;e.wind=0;SFX.blorp();
+  for(let i=0;i<10;i++)spawnP(e.x,e.y+0.4,e.z,rand(-3,3),rand(-2,3),rand(-3,3),rand(0.07,0.14),0x7dff6a,rand(0.35,0.55),0.35,-5,0.9);
+  if(e.hp<=0){
+    e.state='dying';e.t=0;e.vx=0;e.vy=0;e.vz=0;SFX.dissolve();
+    revealSaucerNote(e);
+    if(P.hp<P.maxHp)addHeart(e.x,e.y+0.5,e.z);
+    spawnRing(e.x,e.y,e.z,0xa8ff88,0.35,6,0.45);
+    for(let i=0;i<16;i++)spawnP(e.x,e.y+0.3,e.z,rand(-3,3),rand(1,4),rand(-3,3),rand(0.08,0.16),Math.random()<0.5?0xc8d0dc:0x7dff6a,rand(0.5,0.9),0.5,-3,0.9);
+    rumble(90,0.35,0.3);
+  }
+}
+
+function stunSaucer(e){
+  if(!e.alive||e.state==='dying')return;
+  e.stunT=1.1;e.wind=0;e.hurtT=Math.max(e.hurtT,0.15);
+  SFX.tick();
+  for(let i=0;i<6;i++)spawnP(e.x,e.y+0.5,e.z,rand(-1.5,1.5),rand(0.5,2),rand(-1.5,1.5),0.07,0xffffff,0.4,0.5,0,0.75);
+}
+
+function lobSaucerSpark(e){
+  let q=null;for(const b of spaceSparks){if(!b.alive){q=b;break;}}if(!q)return;
+  const ox=e.x+Math.sin(e.face)*0.7*e.size,oy=e.y+0.35,oz=e.z+Math.cos(e.face)*0.7*e.size;
+  const dx=P.pos.x-ox,dy=(P.pos.y+0.5)-oy,dz=P.pos.z-oz;
+  const dist=Math.hypot(dx,dy,dz)||1;
+  // Slow lazy spark — no homing after launch
+  const sp=4.2;
+  q.alive=true;q.life=3.2;q.trailT=0;q.pos.set(ox,oy,oz);q.vel.set(dx/dist*sp,dy/dist*sp*0.85,dz/dist*sp);
+  q.m.visible=true;q.m.position.copy(q.pos);q.m.scale.setScalar(0.24);
+  SFX.spit();
+  for(let i=0;i<4;i++)spawnP(ox,oy,oz,rand(-1,1),rand(-0.5,1.5),rand(-1,1),0.06,0x7dff6a,0.35,0.4,0,0.8);
+}
+
+function updateSaucers(dt){
+  if(!isSpaceLevel())return;
+  for(const e of saucers){
+    if(!e.alive)continue;
+    const g=e.g;
+    if(e.state==='dying'){
+      e.t+=dt;const k=Math.max(0,1-e.t/0.85);
+      g.scale.setScalar(e.size*(0.7+k*0.3));g.rotation.y+=dt*8;g.rotation.z=Math.sin(e.t*20)*0.4;
+      g.position.set(e.x,e.y+e.t*1.2,e.z);
+      if(g.userData.dome&&g.userData.dome.material)g.userData.dome.material.opacity=0.88*k;
+      if(e.t>=0.85){e.alive=false;g.visible=false;}
+      continue;
+    }
+    e.hurtT-=dt;e.stunT-=dt;
+    const dx=P.pos.x-e.x,dy=P.pos.y-e.y,dz=P.pos.z-e.z;
+    const d=Math.hypot(dx,dz),d3=Math.hypot(d,Math.abs(dy));
+    const dHome=Math.hypot(e.x-e.hx,e.y-e.hy,e.z-e.hz);
+    // Leash: return home if Pling leaves or saucer drifted far
+    const plingNearHome=Math.hypot(P.pos.x-e.hx,P.pos.y-e.hy,P.pos.z-e.hz)<SAUCER_LEASH+4;
+    e.aggro=d3<SAUCER_AGGRO&&!P.dead&&plingNearHome&&dHome<SAUCER_LEASH+2;
+    if(e.aggro&&e.stunT<=0){
+      e.face=Math.atan2(dx,dz);
+      const want=2.8;
+      if(d3>want){e.vx=moveTo(e.vx,dx/(d3||1)*2.4,6*dt);e.vy=moveTo(e.vy,dy/(d3||1)*1.6,5*dt);e.vz=moveTo(e.vz,dz/(d3||1)*2.4,6*dt);}
+      else{e.vx=moveTo(e.vx,0,4*dt);e.vy=moveTo(e.vy,0,4*dt);e.vz=moveTo(e.vz,0,4*dt);}
+    }else{
+      // Patrol bob near home
+      e.vx=moveTo(e.vx,(e.hx-e.x)*0.6,3*dt);e.vz=moveTo(e.vz,(e.hz-e.z)*0.6,3*dt);e.vy=moveTo(e.vy,(e.hy-e.y)*0.5,3*dt);
+      if(dHome>SAUCER_LEASH){e.x=damp(e.x,e.hx,2.5,dt);e.y=damp(e.y,e.hy,2.5,dt);e.z=damp(e.z,e.hz,2.5,dt);}
+    }
+    if(e.stunT>0){e.vx*=0.85;e.vy*=0.85;e.vz*=0.85;}
+    e.x+=e.vx*dt;e.y+=e.vy*dt;e.z+=e.vz*dt;
+    // Soft leash clamp
+    const dh=Math.hypot(e.x-e.hx,e.y-e.hy,e.z-e.hz);
+    if(dh>SAUCER_LEASH){const s=SAUCER_LEASH/dh;e.x=e.hx+(e.x-e.hx)*s;e.y=e.hy+(e.y-e.hy)*s;e.z=e.hz+(e.z-e.hz)*s;e.vx*=0.5;e.vy*=0.5;e.vz*=0.5;}
+    e.bob=Math.sin(time*2.4+e.ph)*0.18;
+    g.position.set(e.x,e.y+e.bob,e.z);
+    g.rotation.y=angDamp(g.rotation.y,e.face,5,dt);
+    g.rotation.z=e.stunT>0?Math.sin(time*22)*0.25:(e.hurtT>0?Math.sin(time*30)*0.12:Math.sin(time*1.6+e.ph)*0.06);
+    if(g.userData.dome){
+      const pulse=e.wind>0?0.55+Math.sin(time*28)*0.4:0.75+Math.sin(time*3+e.ph)*0.1;
+      g.userData.dome.material.opacity=e.stunT>0?0.35+Math.sin(time*18)*0.25:pulse;
+      g.userData.dome.material.color.setHex(e.wind>0?0xfff06a:0x7dff9a);
+    }
+    // Attack: wind-up then one spark; only if facing/near and not stunned
+    const canSee=e.aggro&&d3<12&&d3>2.2&&e.stunT<=0;
+    if(canSee){e.spitT-=dt;if(e.spitT<=0&&e.wind<=0)e.wind=SAUCER_WIND;}
+    else e.wind=0;
+    if(e.wind>0){e.wind-=dt;if(e.wind<=0){lobSaucerSpark(e);e.spitT=SAUCER_CD;}}
+    // Body contact
+    const CR=0.75*e.size;
+    if(!P.dead&&d3<CR+0.35){
+      if(P.bonkT>0){hitSaucer(e,1);}
+      else if(P.inv<=0){
+        const nx=dx/(d3||1),nz=dz/(d3||1);
+        hurtPlayer(nx||0.1,nz||0.1,0x7dff6a);
+        P.vel.y+=Math.sign(dy||1)*2.5;
+      }
+    }
+  }
+}
+
+function updateSpaceSparks(dt){
+  for(const q of spaceSparks){
+    if(!q.alive)continue;
+    q.life-=dt;q.pos.x+=q.vel.x*dt;q.pos.y+=q.vel.y*dt;q.pos.z+=q.vel.z*dt;q.m.position.copy(q.pos);
+    q.trailT-=dt;if(q.trailT<=0){q.trailT=0.05;spawnP(q.pos.x,q.pos.y,q.pos.z,rand(-0.3,0.3),rand(-0.3,0.3),rand(-0.3,0.3),0.07,0x7dff6a,0.35,0.4,0,0.75);}
+    if(!P.dead&&P.inv<=0&&Math.hypot(q.pos.x-P.pos.x,q.pos.y-(P.pos.y+0.55),q.pos.z-P.pos.z)<0.55){
+      hurtPlayer(q.vel.x,q.vel.z,0x7dff6a);SFX.splat();q.alive=false;q.m.visible=false;continue;
+    }
+    // Bounce spark off saucer if reflected later; Stage 2: expire
+    if(q.life<=0||Math.abs(q.pos.x)>120||Math.abs(q.pos.z)>220){q.alive=false;q.m.visible=false;}
+  }
+}
+
+function addCheeseMoonLandmark(x,y,z,r){
+  r=r||7;
+  const g=new THREE.Group();g.position.set(x,y,z);
+  g.add(mesh(SPH,new THREE.MeshBasicMaterial({color:0xf0d060,transparent:true,opacity:0.55}),0,0,0,r,r*0.92,r));
+  // Crater nubs
+  for(let i=0;i<6;i++){
+    const a=i/6*TAU,cr=r*0.55;
+    g.add(mesh(SPH,new THREE.MeshBasicMaterial({color:0xd4b048,transparent:true,opacity:0.5}),Math.cos(a)*cr,Math.sin(a*1.3)*cr*0.4,Math.sin(a)*cr,r*0.12));
+  }
+  g.userData.landmark=true;g.userData.landable=false;g.userData.decor=true;g.userData.cheeseMoon=true;
+  scene.add(g);cheeseMoonLandmark=g;spaceDecorPlanets.push(g);levelDecor.push(g);
+  return g;
+}
+
+function addSpaceStage2Endpoint(x,y,z){
+  const g=new THREE.Group();g.position.set(x,y,z);
+  // Soft lookout ring facing Cheese Moon — temporary Stage 2 rest, not a win
+  g.add(mesh(CYL,new THREE.MeshBasicMaterial({color:0x5ec8ff,transparent:true,opacity:0.35}),0,0.05,0,2.8,0.08,2.8));
+  const ring=new THREE.Mesh(new THREE.TorusGeometry(2.6,0.12,8,32),new THREE.MeshBasicMaterial({color:0xffe078,transparent:true,opacity:0.7}));
+  ring.rotation.x=Math.PI/2;g.add(ring);
+  g.add(mesh(SPH,new THREE.MeshBasicMaterial({color:0xffe078,transparent:true,opacity:0.55}),0,1.2,0,0.25));
+  for(let i=0;i<4;i++){const a=i/4*TAU;g.add(mesh(SPH,new THREE.MeshBasicMaterial({color:0x5ec8ff}),Math.cos(a)*2.2,0.4,Math.sin(a)*2.2,0.12));}
+  scene.add(g);levelDecor.push(g);
+  spaceStage2Ends.push({g,x,y,z,triggered:false,fxT:0});
+  return g;
+}
+
+function updateSpaceStage2Ends(dt){
+  for(const e of spaceStage2Ends){
+    if(e.triggered){
+      e.fxT+=dt;
+      if(e.fxT>0.08&&e.fxT<0.9){
+        e.pt=(e.pt||0)-dt;if(e.pt<=0){e.pt=0.06;
+          spawnP(e.x+rand(-1.2,1.2),e.y+rand(0.3,2),e.z+rand(-1.2,1.2),rand(-1,1),rand(1,3),rand(-1,1),0.1,Math.random()<0.5?0x5ec8ff:0xffe078,0.5,0.4,0,0.8);
+        }
+      }
+      if(e.fxT>1.2){e.triggered=false;e.fxT=0;softReturnToPicker();}
+      continue;
+    }
+    if(P.dead||won)continue;
+    if(Math.hypot(P.pos.x-e.x,P.pos.y-e.y,P.pos.z-e.z)<3.2){
+      e.triggered=true;e.fxT=0;e.pt=0;
+      CAM.shake=Math.max(CAM.shake,0.3);CAM.fovKick=Math.max(CAM.fovKick,5);
+      rumble(100,0.35,0.3);SFX.checkpoint();
+      spawnRing(e.x,e.y+0.5,e.z,0xaaccff,0.4,6,0.5);
+      showToast('Look — a cheese moon!');
+    }
+  }
+}
+
+function updateSpaceWorld(dt){
+  if(!isSpaceLevel())return;
+  updateAsteroids(dt);
+  updateSaucers(dt);
+  updateSpaceSparks(dt);
+  updateSpaceStage2Ends(dt);
+}
+
 function updateSpaceDecor(dt){
   if(!isSpaceLevel())return;
-  const pulse=0.55+Math.sin(time*3.2)*0.25;
   for(const b of spaceRouteBeacons){
     if(b.userData&&b.userData.routeStar){
       const ph=b.userData.pulseT+time*2.4;
@@ -281,7 +595,8 @@ function updateSpaceDecor(dt){
     if(ch[1])ch[1].rotation.z+=dt*0.25;
     if(ch[2])ch[2].rotation.z-=dt*0.18;
   }
-  for(const p of spaceDecorPlanets)p.rotation.y+=dt*0.015;
+  if(cheeseMoonLandmark)cheeseMoonLandmark.rotation.y+=dt*0.04;
+  for(const p of spaceDecorPlanets){if(p!==cheeseMoonLandmark)p.rotation.y+=dt*0.015;}
 }
 
 function beginSpaceOutOfRouteRecovery(){
@@ -289,10 +604,36 @@ function beginSpaceOutOfRouteRecovery(){
   applySpaceRecovery(999);
 }
 
+function gustHitSaucers(mx,mz,k){
+  for(const e of saucers){
+    if(!e.alive||e.state==='dying')continue;
+    const s=k(e.x,e.z);if(s>0&&Math.abs(e.y-P.pos.y)<3.5)stunSaucer(e);
+  }
+}
+
+function spinHitSaucers(px,py,pz){
+  let hit=false;
+  for(const e of saucers){
+    if(!e.alive||e.state==='dying')continue;
+    const d=Math.hypot(e.x-px,e.y-py,e.z-pz);
+    if(d<=BONKR+0.35*e.size){hitSaucer(e,1);hit=true;}
+  }
+  return hit;
+}
+
+function jetHitSaucers(){
+  for(const e of saucers){
+    if(!e.alive||e.state==='dying'||P.jetHits.indexOf(e)>=0)continue;
+    const dx=e.x-P.pos.x,dz=e.z-P.pos.z,d=Math.hypot(dx,dz);
+    if(d<0.55*e.size+0.35&&e.y<P.pos.y+0.2&&e.y>P.pos.y-1.1){P.jetHits.push(e);hitSaucer(e,1);}
+  }
+}
+
 window.__SPACE={
   isSpaceLevel,spaceCfg,queryMoveZone,landableSurfaceAt,solidIsLandable,pointInOpenZone,
   nearLandableAssist,nearestLandingTarget,applyLandingAssist,
   get blackHole(){return blackHoleLandmark;},
+  get cheeseMoon(){return cheeseMoonLandmark;},
   get decorPlanets(){return spaceDecorPlanets;},
   get landingTargets(){return spaceLandingTargets;},
   get routeTrail(){return spaceRouteTrail;},
@@ -300,5 +641,10 @@ window.__SPACE={
   get routeBeacons(){return spaceRouteBeacons;},
   get openZones(){return spaceOpenZones;},
   get playVolume(){return spacePlayVolume;},
-  get recoveryT(){return spaceRecoveryT;}
+  get recoveryT(){return spaceRecoveryT;},
+  get asteroids(){return asteroids;},
+  get saucers(){return saucers;},
+  get sparks(){return spaceSparks;},
+  get stage2Ends(){return spaceStage2Ends;},
+  asteroidPos,hurtFromAsteroid,hitSaucer,stunSaucer
 };

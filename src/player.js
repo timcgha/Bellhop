@@ -328,7 +328,8 @@ function jetDamage(){  for(const e of gloops){if(!e.alive||e.state==='dying')con
   for(const s of sharks){if(!s.alive||P.jetHits.indexOf(s)>=0)continue;
   const dx=s.x-P.pos.x,dz=s.z-P.pos.z,d=Math.hypot(dx,dz);if(d>0.55)continue;
   if(s.y>P.pos.y+0.15||s.y+0.5<P.pos.y-0.7)continue;
-  P.jetHits.push(s);hitSharkSpinJet(s,1);}}
+  P.jetHits.push(s);hitSharkSpinJet(s,1);}
+  if(typeof jetHitSaucers==='function')jetHitSaucers();}
 function endHover(){P.hover=false;if(P.hoverS){SFX.hoverStop(P.hoverS);P.hoverS=null;}}
 function hoverPuffFX(){const c=Math.cos(P.yaw),s=Math.sin(P.yaw);for(let sg=-1;sg<=1;sg+=2){spawnP(P.pos.x+sg*0.12*c+rand(-0.05,0.05),P.pos.y+0.04,P.pos.z-sg*0.12*s+rand(-0.05,0.05),rand(-0.4,0.4),rand(-2.5,-1.2),rand(-0.4,0.4),rand(0.07,0.11),0xffffff,rand(0.3,0.45),1.2,0,0.7);}}
 function onLand(fall,surf){if(!P.puff){P.puff=true;refillFX();}P.sq=clamp(1-fall*0.045,0.55,0.9);SFX.land(fall);
@@ -357,6 +358,7 @@ function doGust(){const yaw=P.yaw,fx=Math.sin(yaw),fz=Math.cos(yaw);const mx=P.p
   gustGeysers(mx,mz,k);
   gustSalamanders(mx,mz,k);
   gustSteamCurtains(mx,mz,k);
+  if(typeof gustHitSaucers==='function')gustHitSaucers(mx,mz,k);
   if(isUnderwater())gustHitKelp(mx,mz,k);
   rumble(60,0.2,0.4);
   if(isUnderwater()&&P.bubble)fireBubble();
@@ -374,6 +376,7 @@ function doBonk(){const px=P.pos.x,pz=P.pos.z;SFX.bonk();SFX.spin();
   for(const e of cinders){if(!e.alive||e.state==='dying'||Math.abs(e.y-P.pos.y)>1.5)continue;const s=k(e.x,e.z);if(s>0){const n=nx(e.x,e.z);hitCinder(e,1,n[0]*6,n[1]*6);hit=true;}}
   for(const s of sharks){if(!s.alive)continue;const s2=k(s.x,s.z);if(s2>0&&Math.abs(s.y-P.pos.y)<1.5){hitSharkSpinJet(s,1);hit=true;}}
   for(const c of crates){if(c.broken)continue;if(Math.hypot(c.x-px,c.z-pz)<BONKR&&Math.abs(c.y-P.pos.y)<1.4){breakCrate(c);hit=true;}}
+  if(typeof spinHitSaucers==='function'&&spinHitSaucers(px,P.pos.y+0.45,pz))hit=true;
   spawnRing(px,P.pos.y+0.45,pz,0xffe9b0,0.55,5,0.3);
   for(let i=0;i<7;i++){const a=i/7*TAU;spawnP(px+Math.cos(a)*0.7,P.pos.y+0.55,pz+Math.sin(a)*0.7,Math.cos(a)*3,rand(0.5,1.5),Math.sin(a)*3,0.09,0xfff0b8,0.3,0.8,0,0.8);}
   if(hit)rumble(60,0.35,0.15);}
