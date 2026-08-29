@@ -37,8 +37,7 @@ function releaseJump(H){H.ku({code:'Space'});}
 {
   const H=boot();H.startLevel(3);H.frames(8);
   H.P.pos.set(0,28,0);H.P.vel.set(0,0,0);H.P.grounded=false;H.P.moveZone='openSpace';
-  H.setCamPitch(0.42);
-  H.kd({code:'KeyW',preventDefault(){},repeat:false});
+  H.kd({code:'KeyD',preventDefault(){},repeat:false});
   holdJump(H,2);
   let maxSp=0,gravFall=false,lostThrust=false,y0=H.P.pos.y;
   for(let i=0;i<900;i++){
@@ -47,24 +46,24 @@ function releaseJump(H){H.ku({code:'Space'});}
     const m=H.getMovement();
     if(m.zone!=='openSpace'){H.P.pos.set(0,28,0);H.P.grounded=false;continue;}
     if(!m.spaceThrust&&i>5)lostThrust=true;
-    if(!m.spaceThrust&&i>5)lostThrust=true;
     maxSp=Math.max(maxSp,m.speed);
     if(H.P.vel.y<-8&&m.zone==='openSpace')gravFall=true;
   }
   const yDrift=H.P.pos.y-y0;
-  releaseJump(H);H.ku({code:'KeyW'});
+  releaseJump(H);H.ku({code:'KeyD'});
   ok(!lostThrust,'continuous held A keeps openSpace thrust active 15s+');
   ok(!gravFall,'no gravity fall in openSpace while holding A');
   ok(maxSp<=9.08,'thrust speed stays at cap (~9)');
   ok(maxSp>4,'thrust reaches meaningful speed');
-  ok(Math.abs(yDrift)<4,'neutral-pitch forward flight does not climb forever over 15s');
+  ok(Math.abs(yDrift)<4,'lateral-only thrust does not climb forever over 15s');
 }
 
 // ---- release / coast ----
 {
   const H=boot();H.startLevel(3);H.frames(6);
-  H.P.pos.set(0,18,0);H.P.vel.set(0,0,0);H.P.grounded=false;
-  holdJump(H,40);releaseJump(H);
+  H.P.pos.set(0,18,0);H.P.vel.set(0,0,0);H.P.grounded=false;H.P.moveZone='openSpace';
+  H.kd({code:'KeyW',preventDefault(){},repeat:false});
+  holdJump(H,40);H.ku({code:'KeyW'});releaseJump(H);
   const vy0=H.P.vel.y;
   ok(Math.abs(vy0)>0.1,'release leaves some coast velocity');
   ok(vy0>-0.5,'release does not start gravity fall');
@@ -147,10 +146,11 @@ function releaseJump(H){H.ku({code:'Space'});}
   ok(!/starBeam|StarBeam|flyingSaucer|warpTunnel|blackHoleFinish/i.test(src),'Stage 1 source has no deferred combat/finish systems');
 }
 
-// ---- 3D vertical control (camera-pitch thrust) ----
-function fly2s(H, pitch, keys){
+// ---- 3D vertical control (primary movement input, no camera pitch) ----
+function fly2s(H, keys, pitch){
   H.P.vel.set(0,0,0);
-  H.setCamPitch(pitch);
+  if(pitch!=null)H.setCamPitch(pitch);
+  else H.setCamPitch(0.42);
   for(const c of keys||['KeyW'])H.kd({code:c,preventDefault(){},repeat:false});
   H.kd({code:'Space',preventDefault(){},repeat:false});
   const y0=H.P.pos.y;
@@ -163,36 +163,37 @@ function fly2s(H, pitch, keys){
 {
   const H=boot();H.startLevel(3);H.frames(6);
   H.P.pos.set(0,20,0);H.P.grounded=false;H.P.moveZone='openSpace';
-  const up=fly2s(H,0.12);
-  ok(up.dy>1.5,'UP: look-up pitch + forward + A gains altitude');
+  const up=fly2s(H,['KeyW']);
+  ok(up.dy>1.5,'UP: forward input + A gains altitude without camera pitch');
   ok(up.m.thrustY>0.05,'UP: positive thrustY while climbing');
   H.P.pos.set(0,20,0);
-  const lvl=fly2s(H,0.42);
-  ok(Math.abs(lvl.dy)<1.2,'LEVEL: neutral pitch forward flight stays near altitude');
+  const lvl=fly2s(H,['KeyD']);
+  ok(Math.abs(lvl.dy)<1.2,'LEVEL: lateral-only input stays near altitude');
   ok(Math.abs(lvl.m.thrustY)<0.08,'LEVEL: near-zero vertical thrust component');
   H.P.pos.set(0,20,0);
-  const dn=fly2s(H,0.92);
-  ok(dn.dy<-1.5,'DOWN: look-down pitch + forward + A loses altitude');
+  const dn=fly2s(H,['KeyS']);
+  ok(dn.dy<-1.5,'DOWN: back input + A loses altitude');
   ok(dn.vy<-0.5,'DOWN: negative vertical velocity without gravity');
   ok(dn.m.thrustY<-0.05,'DOWN: negative thrustY while descending');
 }
 
-// ---- vertical correction ----
+// ---- vertical correction without camera ----
 {
   const H=boot();H.startLevel(3);H.frames(6);
   H.P.pos.set(0,24,0);H.P.grounded=false;H.P.moveZone='openSpace';
   H.kd({code:'KeyW',preventDefault(){},repeat:false});
   H.kd({code:'Space',preventDefault(){},repeat:false});
-  H.setCamPitch(0.1);
   for(let i=0;i<80;i++)H.frames(1);
   ok(H.P.vel.y>1,'correction: climbing velocity achievable');
-  H.setCamPitch(0.95);
+  H.ku({code:'KeyW'});
+  H.kd({code:'KeyS',preventDefault(){},repeat:false});
   for(let i=0;i<140;i++)H.frames(1);
-  ok(H.P.vel.y<-0.5,'correction: climb reversed into descent');
+  ok(H.P.vel.y<-0.5,'correction: climb reversed into descent via back input');
   ok(H.getMovement().speed<=9.08,'correction: velocity stays within thrust cap');
-  H.setCamPitch(0.1);
+  H.ku({code:'KeyS'});
+  H.kd({code:'KeyW',preventDefault(){},repeat:false});
   for(let i=0;i<140;i++)H.frames(1);
-  ok(H.P.vel.y>0.5,'correction: descent reversed into climb');
+  ok(H.P.vel.y>0.5,'correction: descent reversed into climb via forward input');
   H.ku({code:'Space'});H.ku({code:'KeyW'});
 }
 
@@ -201,7 +202,7 @@ function fly2s(H, pitch, keys){
   const H=boot();H.startLevel(3);H.frames(6);
   H.P.pos.set(22,3.5,-10);H.P.vel.set(0,0,0);H.P.grounded=false;H.P.moveZone='openSpace';
   ok(H.getMovement().zone==='openSpace','landing from above: starts in openSpace above pad');
-  H.setCamPitch(1.05);H.setTouchStick(0,-0.45);
+  H.setTouchStick(0,0.85);
   H.kd({code:'Space',preventDefault(){},repeat:false});
   let landed=false;
   for(let i=0;i<120;i++){
@@ -230,30 +231,30 @@ function fly2s(H, pitch, keys){
   releaseJump(H);
 }
 
-// ---- touch / phone-size vertical control ----
+// ---- touch / phone-size vertical control (no camera input) ----
 {
   const H=boot();H.startLevel(3);H.setViewport(844,390);H.frames(6);
   H.P.pos.set(0,18,0);H.P.grounded=false;H.P.moveZone='openSpace';
-  H.setCamPitch(0.12);H.setTouchStick(0,-0.85);
+  H.setTouchStick(0,-0.85);
   H.kd({code:'Space',preventDefault(){},repeat:false});
   for(let i=0;i<120;i++)H.frames(1);
   const touchUp=H.P.pos.y;
   H.ku({code:'Space'});H.clearTouchStick();
   H.P.pos.set(0,18,0);H.P.vel.set(0,0,0);
-  H.setCamPitch(0.42);H.setTouchStick(0,-0.85);
+  H.setTouchStick(0.85,0);
   H.kd({code:'Space',preventDefault(){},repeat:false});
   for(let i=0;i<120;i++)H.frames(1);
   const touchLvl=H.P.pos.y;
   H.ku({code:'Space'});H.clearTouchStick();
   H.P.pos.set(0,18,0);H.P.vel.set(0,0,0);
-  H.setCamPitch(0.92);H.setTouchStick(0,-0.85);
+  H.setTouchStick(0,0.85);
   H.kd({code:'Space',preventDefault(){},repeat:false});
   for(let i=0;i<120;i++)H.frames(1);
   const touchDn=H.P.pos.y;
   H.ku({code:'Space'});H.clearTouchStick();
-  ok(touchUp>19.5,'touch UP: drag-look up + stick forward + A climbs');
-  ok(Math.abs(touchLvl-18)<1.2,'touch LEVEL: neutral pitch holds altitude');
-  ok(touchDn<16.5,'touch DOWN: drag-look down + stick forward + A descends');
+  ok(touchUp>19.5,'touch UP: stick forward + A climbs without camera');
+  ok(Math.abs(touchLvl-18)<1.2,'touch LEVEL: lateral stick holds altitude');
+  ok(touchDn<16.5,'touch DOWN: stick back + A descends without camera');
 }
 
 report();

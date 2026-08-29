@@ -466,6 +466,7 @@ function loadLevel(L){
     else if(k==='unfinishedFinish')registerUnfinishedFinish(step[1],step[2],step[3]);
     else if(k==='launchDock')addLaunchDock(step[1],step[2],step[3],step[4],step[5]);
     else if(k==='practicePad')addPracticePad(step[1],step[2],step[3],step[4]);
+    else if(k==='routeTrail')addRouteTrail(step[1],step[2],step[3],step[4],step[5],step[6],step[7]);
     else if(k==='spaceBuoy')addSpaceBuoy(step[1],step[2],step[3]);
     else if(k==='backdropPlanet')addBackdropPlanet(step[1],step[2],step[3],step[4],step[5],step[6]);
     else if(k==='blackHoleLandmark')addBlackHoleLandmark(step[1],step[2],step[3]);
