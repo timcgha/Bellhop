@@ -53,7 +53,7 @@ checks:[
   [0,0,0.45],
   [28,-26,5],
   [28,-104,5],
-  [94,19.0,-195],
+  [94,24.0,-195],
   [102,16.5,-222]
 ],
 tower:{tx:0,tz:0},
@@ -63,7 +63,7 @@ snoozleHomes:[
 ],
 snoozles:[
   [-2.8,0.55,3.2,0,false],
-  [102,2.0,-218,1,false]
+  [102,15.5,-219,1,false]
 ],
 trees:[],
 steps:[
@@ -116,13 +116,13 @@ steps:[
   // Open space to Candy Planet approach pad (not planet center)
   ['routeTrail',58,12,-178,82,16,-192,8],
   ['spaceBuoy',82,16,-192,true],
-  ['routeTrail',82,16,-194,94,19.2,-195,5],
-  ['spaceBuoy',94,19.5,-194,true],
+  ['routeTrail',82,16,-194,94,24.0,-195,5],
+  ['spaceBuoy',94,24.8,-194,true],
   ['candyPlanet',98,18,-198,11],
   // Candy surface — Star Beam teaching
-  ['starCrate',92,19.2,-192,true],
-  ['saucerTarget',94,19,-196],
-  ['saucer',96,19,-202,'mid',true],
+  ['starCrate',92,24.1,-192,true],
+  ['saucerTarget',94,24.0,-196],
+  ['saucer',96,24.0,-202,'mid',true],
   ['candyCaveMouth',102,18.5,-204],
   ['crystalInterior',102,16.5,-204],
   // Interior mid saucer

@@ -7,7 +7,7 @@ H.startLevel(2);
 const L=H.getLevel();
 const R=L.route;
 ok(L&&L.id==='level3','boots Level 3');
-ok(H.getCamDiag().VERSION_BASE==='v45 · Candy land','version stamp');
+ok(H.getCamDiag().VERSION_BASE==='v46 · Candy readable','version stamp');
 ok(H.getSky().puffVMul===1.4&&H.getSky().boostMax===12.5&&H.getSky().boostDecay===1.6,'Sky Blast physics unchanged');
 ok(H.getSky().glideDur===0.55&&H.getSky().glideFallCap===-2.2&&H.getSky().glideStartVy===0.2,'glide physics unchanged');
 ok(L.snoozleGoal===4&&W.snoozles.length===4,'Snoozles = 4');

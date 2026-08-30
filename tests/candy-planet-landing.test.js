@@ -33,15 +33,15 @@ function boot(opts){return require('./harness.js')(Object.assign({autostart:fals
   ok(H.isStarted()&&H.getLevel().id==='level4','remain in Level 4 after candy landing');
 }
 
-// Valid approach from route height toward pad
+// Valid approach from route height toward raised pad
 {
   const H=boot();H.startLevel(3);H.frames(4);
   const cp=H.getSpace().candyPlanet;
-  H.P.pos.set(82,16,-192);H.P.vel.set(4,1,-2);H.P.grounded=false;H.P.moveZone='openSpace';
-  for(let i=0;i<160;i++){
+  H.P.pos.set(82,16,-192);H.P.vel.set(4,2,-2);H.P.grounded=false;H.P.moveZone='openSpace';
+  for(let i=0;i<200;i++){
     const dx=cp.pad.x-H.P.pos.x,dy=cp.pad.y+1-H.P.pos.y,dz=cp.pad.z-H.P.pos.z;
     const d=Math.hypot(dx,dy,dz)||1;
-    H.P.vel.set(dx/d*5.5,dy/d*4,dz/d*5.5);
+    H.P.vel.set(dx/d*5.5,dy/d*4.5,dz/d*5.5);
     H.frames(1);
     if(H.P.grounded)break;
   }

@@ -82,6 +82,7 @@ async function runJourney(page, label) {
     const cp = window.__SPACE.candyPlanet;
     const P = window.__P;
     const pad = cp.pad;
+    const padVisibleFromApproach = pad.y > cp.y + cp.r * 0.45;
     // Approach from route, then through body
     P.pos.set(82, 16, -192); P.vel.set(4, 0, -2); P.grounded = false; P.moveZone = 'openSpace';
     for (let i = 0; i < 90; i++) {
@@ -99,6 +100,21 @@ async function runJourney(page, label) {
         if (P.grounded) break;
       }
     }
+    const shellFadeWhileInside = window.__SPACE.candyPlanetShellFade;
+    let takeoffY = P.pos.y;
+    if (P.grounded) {
+      for (let i = 0; i < 60; i++) {
+        window.dispatchEvent(new KeyboardEvent('keydown', { code: 'Space', bubbles: true }));
+        await new Promise(r => requestAnimationFrame(r));
+      }
+      takeoffY = P.pos.y;
+      for (let i = 0; i < 20; i++) {
+        window.dispatchEvent(new KeyboardEvent('keyup', { code: 'Space', bubbles: true }));
+        await new Promise(r => requestAnimationFrame(r));
+      }
+    }
+    const sn3 = window.__W.snoozles[1];
+    const ci = window.__SPACE.crystalInterior;
     const mid = window.__SPACE.saucers.find(s => s.surfaceGate && !s.targetDummy);
     return {
       grounded: !!P.grounded,
@@ -106,6 +122,11 @@ async function runJourney(page, label) {
       nearPad: Math.hypot(P.pos.x - pad.x, P.pos.z - pad.z) < cp.r * 0.8,
       y: P.pos.y,
       padY: pad.y,
+      padVisibleFromApproach,
+      shellFadeWhileInside,
+      takeoffWorked: takeoffY > pad.y + 2,
+      snoozleY: sn3 && sn3.g.position.y,
+      snoozleInInterior: !!(sn3 && ci && sn3.g.position.y > ci.bounds.y0 && sn3.g.position.y < ci.bounds.y1),
       toast: (document.getElementById('toast') || {}).textContent || '',
       saucerAggroBeforeLand: mid ? !!mid.aggro && !P.grounded : null,
       started: window.__started(),
@@ -166,10 +187,12 @@ async function main() {
 
   function pass(j) {
     const fatal = (j.logs || []).filter(l => !/404|Failed to load resource|favicon/i.test(l));
-    return j.version && /v45/.test(j.version)
+    return j.version && /v46/.test(j.version)
       && j.cheese.triggered && j.cheese.cheeseLandable
       && j.afterCheese.started && j.afterCheese.level === 'level4' && j.afterCheese.startDisplay !== 'flex'
       && (j.candy.grounded || j.candy.landedFlag) && j.candy.nearPad && j.candy.started
+      && j.candy.padVisibleFromApproach && j.candy.shellFadeWhileInside < 0.55
+      && j.candy.takeoffWorked && j.candy.snoozleInInterior
       && j.stage3.triggered && /saucer belt/i.test(j.stage3.toast)
       && j.afterStage3.started && j.afterStage3.level === 'level4' && j.afterStage3.startDisplay !== 'flex'
       && !j.afterStage3.won && j.afterStage3.crystal && j.afterStage3.stage3Ends === 1

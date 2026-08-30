@@ -5,7 +5,7 @@ let spaceRecoveryT=0,spaceRecoveryFrom=null;
 let spaceLandingTargets=[],spaceRouteTrail=[],spaceFirstDest=null,spaceRouteBeacons=[];
 const asteroids=[],saucers=[],spaceSparks=[],spaceStage2Ends=[],spaceStage3Ends=[];
 const starCrates=[],starBeams=[],crystalDust=[];
-let crystalInterior=null,candyPlanet=null;
+let crystalInterior=null,candyPlanet=null,candyPlanetShellFade=1;
 const BEAM_LEN=20,BEAM_DUR=0.35,BEAM_W=0.85;
 const ASTEROID_KB=5.2,ASTEROID_INV=1.4,SAUCER_AGGRO=11,SAUCER_LEASH=13,SAUCER_WIND=0.5,SAUCER_CD=2.6;
 const SPARK_GEO=new THREE.SphereGeometry(1,8,6);
@@ -25,7 +25,7 @@ function clearSpaceWorld(){
   for(const e of spaceStage2Ends)rem(e.g);spaceStage2Ends.length=0;
   for(const e of spaceStage3Ends)rem(e.g);spaceStage3Ends.length=0;
   for(const c of starCrates)rem(c.g);starCrates.length=0;
-  starBeams.length=0;crystalDust.length=0;crystalInterior=null;candyPlanet=null;
+  starBeams.length=0;crystalDust.length=0;crystalInterior=null;candyPlanet=null;candyPlanetShellFade=1;
   for(const q of spaceSparks){q.alive=false;q.m.visible=false;}
 }
 
@@ -680,21 +680,62 @@ function addCheeseMoonBody(x,y,z,r){
   return g;
 }
 
+function candyPlanetShellMesh(m,baseOp){
+  if(!m||!m.material)return;
+  m.material.transparent=true;
+  if(m.material.opacity==null)m.material.opacity=baseOp;
+  if(m.userData.shellBaseOp==null)m.userData.shellBaseOp=baseOp;
+  return m;
+}
+
+function candyPlanetOccludesView(){
+  if(!candyPlanet)return false;
+  const cx=candyPlanet.x,cy=candyPlanet.y,cz=candyPlanet.z,r=candyPlanet.r*0.98;
+  const px=P.pos.x,py=P.pos.y+0.55,pz=P.pos.z;
+  const pd=Math.hypot(px-cx,py-cy,pz-cz);
+  if(pd<r*0.9)return true;
+  const ox=CAM.pos.x,oy=CAM.pos.y,oz=CAM.pos.z;
+  const dx=px-ox,dy=py-oy,dz=pz-oz;
+  const seg2=dx*dx+dy*dy+dz*dz;
+  if(seg2<0.04)return false;
+  const t=clamp(((cx-ox)*dx+(cy-oy)*dy+(cz-oz)*dz)/seg2,0.05,0.95);
+  const qx=ox+dx*t,qy=oy+dy*t,qz=oz+dz*t;
+  return Math.hypot(qx-cx,qy-cy,qz-cz)<r;
+}
+
+function updateCandyPlanetShellFade(dt){
+  if(!candyPlanet||!candyPlanet.shellMeshes||!candyPlanet.shellMeshes.length)return;
+  const target=candyPlanetOccludesView()?0.22:1;
+  candyPlanetShellFade=damp(candyPlanetShellFade,target,7,dt||0.016);
+  const op=candyPlanetShellFade;
+  for(const m of candyPlanet.shellMeshes){
+    if(!m.material)continue;
+    const b=m.userData&&m.userData.shellBaseOp!=null?m.userData.shellBaseOp:1;
+    m.material.opacity=b*op;
+    m.material.transparent=op<0.99||b<0.99;
+    m.material.depthWrite=op>0.82&&b>0.82;
+  }
+}
+
 function addCandyPlanet(x,y,z,r){
   r=r||11;
   const g=new THREE.Group();g.position.set(x,y,z);
+  const shellMeshes=[];
   const stripes=[0xff6eb4,0xffe078,0x7ec8ff,0xff9ad6,0xc8f0ff];
   for(let i=0;i<stripes.length;i++){
     const band=mesh(SPH,new THREE.MeshBasicMaterial({color:stripes[i]}),0,(i-stripes.length/2)*r*0.14,0,r*0.98,r*0.16,r*0.98);
-    g.add(band);
+    g.add(band);shellMeshes.push(candyPlanetShellMesh(band,1));
   }
-  g.add(mesh(SPH,new THREE.MeshBasicMaterial({color:0xffffff,transparent:true,opacity:0.25}),0,0,0,r*1.04,r*1.0,r*1.04));
+  const halo=mesh(SPH,new THREE.MeshBasicMaterial({color:0xffffff,transparent:true,opacity:0.25}),0,0,0,r*1.04,r*1.0,r*1.04);
+  g.add(halo);shellMeshes.push(candyPlanetShellMesh(halo,0.25));
   const lollipop=mesh(CYL,new THREE.MeshBasicMaterial({color:0xff4080}),0,r*0.95,0,0.35,r*0.55,0.35);g.add(lollipop);
   g.userData.landmark=true;g.userData.landable=true;g.userData.candyPlanet=true;
   scene.add(g);
-  // Approach-facing deck toward Asteroid Garden / Cheese Moon (not buried under the sphere)
-  const padX=x-5.2,padY=y+0.35,padZ=z+4.5;
+  // Approach-facing deck raised above the striped body so it reads from the flight lane
+  const padX=x-5.2,padY=y+r*0.52,padZ=z+4.5;
   const padW=r*1.15,padD=r*1.05;
+  const stem=mesh(CYL,new THREE.MeshBasicMaterial({color:0xff78b8,transparent:true,opacity:0.82}),padX,padY-r*0.2,padZ,padW*0.34,r*0.38,padW*0.34);
+  scene.add(stem);levelDecor.push(stem);
   const sol=addSolid(padX,padY,padZ,padW,0.55,padD,0xff9ad6,{surf:'pad',role:'landable',landingPad:true});
   sol.mesh.visible=true;
   if(sol.mesh.material&&sol.mesh.material.color)sol.mesh.material.color.setHex(0xff9ad6);
@@ -702,7 +743,7 @@ function addCandyPlanet(x,y,z,r){
   const rim=mesh(BOXG,new THREE.MeshBasicMaterial({color:0xffe078,transparent:true,opacity:0.7}),padX,padY+0.58,padZ,padW+0.7,0.08,padD+0.7);
   scene.add(rim);levelDecor.push(rim);
   addLandingBeacon(padX,padY,padZ,r*0.48,{approachR:26,nearR:12,primary:true});
-  candyPlanet={g,x,y,z,r,pad:{x:padX,y:padY,z:padZ,w:padW,d:padD},greeted:false,landed:false};
+  candyPlanet={g,x,y,z,r,pad:{x:padX,y:padY,z:padZ,w:padW,d:padD},shellMeshes,greeted:false,landed:false};
   spaceDecorPlanets.push(g);levelDecor.push(g);
   return candyPlanet;
 }
@@ -726,6 +767,8 @@ function updateCandyPlanetLanding(dt){
   const nearShell=dist<cp.r+2.4;
   if(!nearShell&&!overPad)return;
   if(!cp.greeted&&(dist<cp.r+1.2||overPad)){cp.greeted=true;showToast('Land on the candy planet!');}
+  // Never fight a takeoff — assist is for approach and soft landing only
+  if(IN.jumpHeld||P.spaceThrust||(!P.grounded&&P.vel.y>1.2))return;
   // Soft shell + approach assist: striped body is landable; pull to the deck
   const pull=dist<cp.r?28:(overPad?18:10);
   P.vel.x=moveTo(P.vel.x,toPadX/padDist*6,pull*dt);
@@ -963,6 +1006,7 @@ function updateSpaceWorld(dt){
   updateStarCrates(dt);
   updateCrystalTransitions(dt);
   updateCandyPlanetLanding(dt);
+  updateCandyPlanetShellFade(dt);
   updateSpaceStage2Ends(dt);
   updateSpaceStage3Ends(dt);
   for(const e of saucers){
@@ -1023,6 +1067,8 @@ window.__SPACE={
   get starBeams(){return starBeams;},
   get crystalInterior(){return crystalInterior;},
   get candyPlanet(){return candyPlanet;},
+  get candyPlanetShellFade(){return candyPlanetShellFade;},
+  candyPlanetOccludesView,updateCandyPlanetShellFade,
   get cheeseMoonBody(){return cheeseMoonBody;},
   asteroidPos,hurtFromAsteroid,hitSaucer,stunSaucer,fireStarBeam,gustCrystalDust,spinHitCracked,spinHitStarCrates,slamHitStarCrates
 };
