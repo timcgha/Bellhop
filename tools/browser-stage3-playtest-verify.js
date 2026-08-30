@@ -100,7 +100,9 @@ async function runJourney(page, label) {
         if (P.grounded) break;
       }
     }
+    for (let i = 0; i < 50; i++) await new Promise(r => requestAnimationFrame(r));
     const shellFadeWhileInside = window.__SPACE.candyPlanetShellFade;
+    const occludesWhileLanded = window.__SPACE.candyPlanetOccludesView();
     let takeoffY = P.pos.y;
     if (P.grounded) {
       for (let i = 0; i < 60; i++) {
@@ -124,6 +126,7 @@ async function runJourney(page, label) {
       padY: pad.y,
       padVisibleFromApproach,
       shellFadeWhileInside,
+      occludesWhileLanded,
       takeoffWorked: takeoffY > pad.y + 2,
       snoozleY: sn3 && sn3.g.position.y,
       snoozleInInterior: !!(sn3 && ci && sn3.g.position.y > ci.bounds.y0 && sn3.g.position.y < ci.bounds.y1),
@@ -191,7 +194,7 @@ async function main() {
       && j.cheese.triggered && j.cheese.cheeseLandable
       && j.afterCheese.started && j.afterCheese.level === 'level4' && j.afterCheese.startDisplay !== 'flex'
       && (j.candy.grounded || j.candy.landedFlag) && j.candy.nearPad && j.candy.started
-      && j.candy.padVisibleFromApproach && j.candy.shellFadeWhileInside < 0.55
+      && j.candy.padVisibleFromApproach && j.candy.occludesWhileLanded && j.candy.shellFadeWhileInside < 0.55
       && j.candy.takeoffWorked && j.candy.snoozleInInterior
       && j.stage3.triggered && /saucer belt/i.test(j.stage3.toast)
       && j.afterStage3.started && j.afterStage3.level === 'level4' && j.afterStage3.startDisplay !== 'flex'
