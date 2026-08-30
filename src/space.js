@@ -688,25 +688,23 @@ function candyPlanetShellMesh(m,baseOp){
   return m;
 }
 
-function candyPlanetOccludesView(){
+// Proximity fade (Wreck-style): opaque until the player reaches the outer shell.
+const CANDY_SHELL_ENTER_PAD=0.35,CANDY_SHELL_EXIT_PAD=2.0;
+function inCandyPlanetShellZone(){
   if(!candyPlanet)return false;
-  const cx=candyPlanet.x,cy=candyPlanet.y,cz=candyPlanet.z,r=candyPlanet.r*0.98;
-  const px=P.pos.x,py=P.pos.y+0.55,pz=P.pos.z;
-  const pd=Math.hypot(px-cx,py-cy,pz-cz);
-  if(pd<r*0.9)return true;
-  const ox=CAM.pos.x,oy=CAM.pos.y,oz=CAM.pos.z;
-  const dx=px-ox,dy=py-oy,dz=pz-oz;
-  const seg2=dx*dx+dy*dy+dz*dz;
-  if(seg2<0.04)return false;
-  const t=clamp(((cx-ox)*dx+(cy-oy)*dy+(cz-oz)*dz)/seg2,0.05,0.95);
-  const qx=ox+dx*t,qy=oy+dy*t,qz=oz+dz*t;
-  return Math.hypot(qx-cx,qy-cy,qz-cz)<r;
+  const cx=candyPlanet.x,cy=candyPlanet.y,cz=candyPlanet.z,r=candyPlanet.r;
+  const pd=Math.hypot(P.pos.x-cx,P.pos.y-cy,P.pos.z-cz);
+  const enterR=r+CANDY_SHELL_ENTER_PAD,exitR=r+CANDY_SHELL_EXIT_PAD;
+  if(candyPlanet.shellInside)return pd<exitR;
+  return pd<enterR;
 }
 
 function updateCandyPlanetShellFade(dt){
   if(!candyPlanet||!candyPlanet.shellMeshes||!candyPlanet.shellMeshes.length)return;
-  const target=candyPlanetOccludesView()?0.22:1;
+  const inside=inCandyPlanetShellZone();
+  const target=inside?0.22:1;
   candyPlanetShellFade=damp(candyPlanetShellFade,target,7,dt||0.016);
+  candyPlanet.shellInside=inside;
   const op=candyPlanetShellFade;
   for(const m of candyPlanet.shellMeshes){
     if(!m.material)continue;
@@ -743,7 +741,7 @@ function addCandyPlanet(x,y,z,r){
   const rim=mesh(BOXG,new THREE.MeshBasicMaterial({color:0xffe078,transparent:true,opacity:0.7}),padX,padY+0.58,padZ,padW+0.7,0.08,padD+0.7);
   scene.add(rim);levelDecor.push(rim);
   addLandingBeacon(padX,padY,padZ,r*0.48,{approachR:26,nearR:12,primary:true});
-  candyPlanet={g,x,y,z,r,pad:{x:padX,y:padY,z:padZ,w:padW,d:padD},shellMeshes,greeted:false,landed:false};
+  candyPlanet={g,x,y,z,r,pad:{x:padX,y:padY,z:padZ,w:padW,d:padD},shellMeshes,greeted:false,landed:false,shellInside:false};
   spaceDecorPlanets.push(g);levelDecor.push(g);
   return candyPlanet;
 }
@@ -1068,7 +1066,9 @@ window.__SPACE={
   get crystalInterior(){return crystalInterior;},
   get candyPlanet(){return candyPlanet;},
   get candyPlanetShellFade(){return candyPlanetShellFade;},
-  candyPlanetOccludesView,updateCandyPlanetShellFade,
+  inCandyPlanetShellZone,updateCandyPlanetShellFade,
+  get CANDY_SHELL_ENTER_PAD(){return CANDY_SHELL_ENTER_PAD;},
+  get CANDY_SHELL_EXIT_PAD(){return CANDY_SHELL_EXIT_PAD;},
   get cheeseMoonBody(){return cheeseMoonBody;},
   asteroidPos,hurtFromAsteroid,hitSaucer,stunSaucer,fireStarBeam,gustCrystalDust,spinHitCracked,spinHitStarCrates,slamHitStarCrates
 };

@@ -15,18 +15,22 @@ function releaseJump(H){H.ku({code:'Space'});}
   ok(cp.pad.y>cp.y+0.8,'CANDY_PLANET_PLATFORM_TARGETABLE: pad clearly above planet center');
 }
 
-// Shell fades when player would be occluded by the candy body
+// Shell fades when player reaches the candy outer shell (proximity, not camera occlusion)
 {
   const H=boot();H.startLevel(3);H.frames(4);
   const cp=H.getSpace().candyPlanet;
   ok(cp.shellMeshes&&cp.shellMeshes.length>=5,'candy shell meshes tracked');
-  H.P.pos.set(cp.x-1,cp.y,cp.z+1);H.P.vel.set(0,0,0);H.P.grounded=false;
-  H.CAM.pos.set(cp.x-18,cp.y+4,cp.z+14);H.CAM.look.set(cp.x-1,cp.y+0.5,cp.z+1);
-  H.frames(30);
-  ok(H.getSpace().candyPlanetOccludesView(),'PLAYER_VISIBLE_WHEN_PLANET_WOULD_OCCLUDE_CAMERA: occlusion detected');
-  ok(H.getSpace().candyPlanetShellFade<0.5,'PLAYER_VISIBLE_WHEN_PLANET_WOULD_OCCLUDE_CAMERA: shell fades');
+  // Far — stays opaque
+  H.P.pos.set(cp.x+40,cp.y+8,cp.z+40);H.P.vel.set(0,0,0);
+  H.frames(40);
+  ok(!cp.shellInside,'shell stays opaque far from planet');
+  ok(H.getSpace().candyPlanetShellFade>0.85,'shell opacity high when far');
+  // On pad — fades for interior readability
+  H.P.pos.set(cp.pad.x,cp.pad.y+0.55,cp.pad.z);H.P.vel.set(0,0,0);H.P.grounded=true;
+  H.frames(40);
+  ok(cp.shellInside,'PLAYER_VISIBLE_WHEN_INSIDE: shellInside on pad');
+  ok(H.getSpace().candyPlanetShellFade<0.5,'PLAYER_VISIBLE_WHEN_INSIDE: shell fades');
   H.P.pos.set(cp.x+40,cp.y+8,cp.z+40);
-  H.CAM.pos.set(cp.x+50,cp.y+12,cp.z+50);H.CAM.look.set(cp.x+40,cp.y+8,cp.z+40);
   H.frames(40);
   ok(H.getSpace().candyPlanetShellFade>0.85,'shell opacity restores away from planet');
 }

@@ -9,7 +9,7 @@ function releaseJump(H){H.ku({code:'Space'});}
 // ---- version ----
 {
   const H=boot();
-  ok(H.getCamDiag().VERSION_BASE==='v46 · Candy readable','version stamp v45');
+  ok(H.getCamDiag().VERSION_BASE==='v47 · Candy shell proximity','version stamp v45');
 }
 
 // ---- Snoozles 1 and 3 present (Snoozle 2 deferred with Cheese Moon landing) ----
