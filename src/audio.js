@@ -193,7 +193,10 @@ const SFX={
   sharkPop(){noise(0.2,{type:'lowpass',freq:600,fslide:200,gain:0.15});tone(180,0.15,{type:'sine',gain:0.1,slide:90});},
   sharkBite(){noise(0.12,{type:'bandpass',freq:500,gain:0.18});tone(120,0.1,{type:'square',gain:0.08,slide:70});},
   spikeWarn(){tone(440,0.12,{type:'triangle',gain:0.07,slide:330});tone(330,0.18,{at:AU.ctx?AU.ctx.currentTime+0.1:0,type:'triangle',gain:0.05});},
-  spikeTouch(){noise(0.14,{type:'highpass',freq:1800,gain:0.16});tone(200,0.12,{type:'square',gain:0.09,slide:120});}
+  spikeTouch(){noise(0.14,{type:'highpass',freq:1800,gain:0.16});tone(200,0.12,{type:'square',gain:0.09,slide:120});},
+  starBeam(){if(!AU.ctx)return;const c=AU.ctx.currentTime;tone(1760,0.12,{at:c,type:'sine',gain:0.1,attack:0.002});tone(2217,0.18,{at:c+0.02,type:'triangle',gain:0.08,attack:0.002});tone(2793,0.22,{at:c+0.04,type:'sine',gain:0.06,attack:0.002});noise(0.08,{at:c,type:'highpass',freq:4200,gain:0.06});},
+  starBeamOut(){noise(0.35,{type:'lowpass',freq:2400,fslide:400,gain:0.1});tone(880,0.28,{type:'triangle',gain:0.07,slide:220});},
+  starPower(){if(!AU.ctx)return;[0,4,7,12,16].forEach((n,i)=>tone(hz(n,440),0.32,{at:AU.ctx.currentTime+i*0.07,type:'sine',gain:0.11}));}
 };
 function toggleMute(){AU.muted=!AU.muted;if(AU.master)AU.master.gain.value=AU.muted?0:0.6;$('mute').textContent=AU.muted?'🔇':'🔊';}
 $('mute').addEventListener('pointerdown',e=>{e.stopPropagation();e.preventDefault();toggleMute();});

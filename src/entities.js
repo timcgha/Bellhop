@@ -224,7 +224,7 @@ function softReturnToPicker(){
   clearLevelWorld();
   won=false;winT=0;confT=0;started=false;rescued=0;gotNotes=0;time=0;
   AU.win=false;
-  P.hp=P.maxHp;P.dead=false;P.inv=0;P.fire=false;P.bubble=false;P.hasSkyBlast=false;clearLeapBoost();P.vel.set(0,0,0);
+  P.hp=P.maxHp;P.dead=false;P.inv=0;P.fire=false;P.bubble=false;P.hasSkyBlast=false;P.hasStarBeam=false;clearLeapBoost();P.vel.set(0,0,0);
   P.pos.set(P.spawn.x,P.spawn.y,P.spawn.z);
   beginLandLevel();
   const w=$('win');if(w){w.style.display='none';w.style.opacity=1;}
@@ -269,6 +269,7 @@ function breakCrate(c){if(c.broken)return;c.broken=true;c.g.visible=false;const 
   if(c.item==='fire')addPower(c.x,c.y+0.85,c.z);
   else if(c.item==='bubble')addBubblePower(c.x,c.y+0.85,c.z);
   else if(c.item==='sky')addSkyPower(c.x,c.y+0.85,c.z);
+  else if(c.item==='star')addStarPower(c.x,c.y+0.85,c.z);
   else addHeart(c.x,c.y+0.85,c.z);}
 function buildFlameItem(){const g=new THREE.Group();
   g.add(mesh(CONE,new THREE.MeshBasicMaterial({color:0xff7a1f}),0,0.06,0,0.22,0.58,0.22));
@@ -284,6 +285,12 @@ function buildSkyItem(){const g=new THREE.Group();
   g.add(mesh(CONE,new THREE.MeshBasicMaterial({color:0xffe9d0,transparent:true,opacity:0.85}),0,0.28,0,0.14,0.36,0.14));
   g.add(mesh(SPH,new THREE.MeshBasicMaterial({color:0xfff8ee,transparent:true,opacity:0.7}),0,0.42,0,0.1));return g;}
 function addSkyPower(x,y,z){const g=buildSkyItem();g.position.set(x,y,z);scene.add(g);powers.push({g,x,y,z,got:false,ph:rand(0,TAU),t:0,kind:'sky'});}
+function buildStarItem(){const g=new THREE.Group();
+  g.add(mesh(SPH,new THREE.MeshBasicMaterial({color:0xffe078}),0,0.05,0,0.22));
+  g.add(mesh(SPH,new THREE.MeshBasicMaterial({color:0xffffff,transparent:true,opacity:0.85}),0,0.22,0,0.12));
+  for(let i=0;i<4;i++){const a=i/4*TAU;g.add(mesh(SPH,new THREE.MeshBasicMaterial({color:0xffe078,transparent:true,opacity:0.75}),Math.cos(a)*0.18,0.12,Math.sin(a)*0.18,0.05));}
+  return g;}
+function addStarPower(x,y,z){const g=buildStarItem();g.position.set(x,y,z);scene.add(g);powers.push({g,x,y,z,got:false,ph:rand(0,TAU),t:0,kind:'star'});}
 function addSteamVent(x,y,z,r){r=r||1.2;const g=new THREE.Group();g.position.set(x,y,z);
   g.add(mesh(CYL,lam(0x4a3a32),0,0.08,0,r*0.95,0.16,r*0.95));
   g.add(mesh(CYL,lam(0x2e2420),0,0.14,0,r*0.55,0.08,r*0.55));
@@ -360,7 +367,7 @@ function returnToLevelSelect(){
   clearLevelWorld();
   won=false;winT=0;confT=0;started=false;rescued=0;gotNotes=0;time=0;
   AU.win=false;
-  P.hp=P.maxHp;P.dead=false;P.inv=0;P.fire=false;P.bubble=false;P.hasSkyBlast=false;clearLeapBoost();P.vel.set(0,0,0);
+  P.hp=P.maxHp;P.dead=false;P.inv=0;P.fire=false;P.bubble=false;P.hasSkyBlast=false;P.hasStarBeam=false;clearLeapBoost();P.vel.set(0,0,0);
   P.pos.set(P.spawn.x,P.spawn.y,P.spawn.z);
   beginLandLevel();
   const w=$('win');if(w){w.style.display='none';w.style.opacity=1;}
@@ -393,7 +400,7 @@ function loadLevel(L){
   else if(L.peakAtmosphere)beginPeakLevel();
   else if(L.spaceAtmosphere)beginSpaceLevel(L);
   else beginLandLevel();
-  P.fire=false;P.bubble=false;P.hasSkyBlast=false;clearLeapBoost();clearGlide();endSpaceThrust();P.puff=true;P.puffAir=0;endHover();P.slam=0;P.lavaRecT=0;P.anchorSettleT=0;P.moveZone='grounded';P.spaceThrust=false;
+  P.fire=false;P.bubble=false;P.hasSkyBlast=false;P.hasStarBeam=false;clearLeapBoost();clearGlide();endSpaceThrust();P.puff=true;P.puffAir=0;endHover();P.slam=0;P.lavaRecT=0;P.anchorSettleT=0;P.moveZone='grounded';P.spaceThrust=false;
   if(L.spawn){P.spawn.x=L.spawn.x;P.spawn.y=L.spawn.y;P.spawn.z=L.spawn.z;P.pos.set(L.spawn.x,L.spawn.y,L.spawn.z);P.vel.set(0,0,0);initSafeAnchor(L.spawn.x,L.spawn.y,L.spawn.z);
     if(L.spaceAtmosphere&&typeof landableSurfaceAt==='function'){const land=landableSurfaceAt(L.spawn.x,L.spawn.z);if(land&&L.spawn.y<=land.y+STEP+0.3){P.pos.y=land.y;P.grounded=true;P.moveZone='grounded';P.surf=land.surf||'pad';P.lastGround=time;}}}
   const fence=L.fence;
@@ -475,7 +482,15 @@ function loadLevel(L){
     else if(k==='movingAsteroid')addMovingAsteroid(step[1],step[2],step[3],step[4],step[5],step[6],step[7],step[8]);
     else if(k==='saucer')addSaucer(step[1],step[2],step[3],step[4],step[5]);
     else if(k==='cheeseMoonLandmark')addCheeseMoonLandmark(step[1],step[2],step[3],step[4]);
+    else if(k==='cheeseMoon')addCheeseMoonBody(step[1],step[2],step[3],step[4]);
+    else if(k==='candyPlanet')addCandyPlanet(step[1],step[2],step[3],step[4]);
+    else if(k==='candyCaveMouth')addCandyCaveMouth(step[1],step[2],step[3]);
+    else if(k==='crystalInterior')addCrystalInterior(step[1],step[2],step[3]);
+    else if(k==='starCrate')addStarCrate(step[1],step[2],step[3],step[4]);
+    else if(k==='saucerTarget')addSaucerTarget(step[1],step[2],step[3]);
+    else if(k==='crackedAsteroid')addCrackedAsteroid(step[1],step[2],step[3],step[4],step[5]);
     else if(k==='spaceStage2Endpoint')addSpaceStage2Endpoint(step[1],step[2],step[3]);
+    else if(k==='spaceStage3Endpoint')addSpaceStage3Endpoint(step[1],step[2],step[3]);
     else if(k==='blackHoleLandmark')addBlackHoleLandmark(step[1],step[2],step[3]);
     else if(k==='conch')buildConch(step[1],step[2]);
     else if(k==='steamOrgan')buildSteamOrgan(step[1],step[2],step[3]);

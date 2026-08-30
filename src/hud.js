@@ -1,6 +1,7 @@
 function updateHUD(){$('hp').textContent='❤️'.repeat(Math.max(P.hp,0))+'🤍'.repeat(P.maxHp-Math.max(P.hp,0));$('snz').textContent='😴 '+rescued+'/'+((typeof snoozleGoalCount==='function')?snoozleGoalCount():snoozles.length);$('nts').textContent='♪ '+gotNotes+'/'+notes.length;
   const f=$('fire');f.style.display=P.fire?'':'none';f.textContent='🔥';
   const b=$('bubble');if(b){b.style.display=(P.bubble&&isUnderwater())?'':'none';b.textContent='🫧';}
+  const sb=$('starbeam');if(sb){sb.style.display=(P.hasStarBeam&&isSpaceLevel())?'':'none';sb.textContent='⭐';}
   updateTouchLabels();}
 function updateTouchLabels(){
   const lbl=$('bBLbl');if(!lbl)return;
