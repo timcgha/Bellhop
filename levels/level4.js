@@ -53,7 +53,7 @@ checks:[
   [0,0,0.45],
   [28,-26,5],
   [28,-104,5],
-  [98,12.5,-198],
+  [94,19.0,-195],
   [102,16.5,-222]
 ],
 tower:{tx:0,tz:0},
@@ -113,10 +113,11 @@ steps:[
   ['routeTrail',30,5,-142,45,8,-168,7],
   ['spaceBuoy',45,8,-168,true],
   ['cheeseMoonLandmark',58,12,-175,7.5],
-  // Open space to Candy Planet
+  // Open space to Candy Planet approach pad (not planet center)
   ['routeTrail',58,12,-178,82,16,-192,8],
   ['spaceBuoy',82,16,-192,true],
-  ['routeTrail',82,16,-194,98,18,-198,5],
+  ['routeTrail',82,16,-194,94,19.2,-195,5],
+  ['spaceBuoy',94,19.5,-194,true],
   ['candyPlanet',98,18,-198,11],
   // Candy surface — Star Beam teaching
   ['starCrate',92,19.2,-192,true],

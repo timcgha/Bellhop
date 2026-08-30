@@ -275,6 +275,10 @@ function hOverlap(s){const p=P.pos;return p.x+R>s.min.x&&p.x-R<s.max.x&&p.z+R>s.
 function pushOutXZ(s){const p=P.pos;const px1=(p.x+R)-s.min.x,px2=s.max.x-(p.x-R),pz1=(p.z+R)-s.min.z,pz2=s.max.z-(p.z-R);const m=Math.min(px1,px2,pz1,pz2);if(m===px1)p.x=s.min.x-R-0.001;else if(m===px2)p.x=s.max.x+R+0.001;else if(m===pz1)p.z=s.min.z-R-0.001;else p.z=s.max.z+R+0.001;}
 function collideAxis(ax){const p=P.pos,v=P.vel;for(const s of solids){if(!hOverlap(s))continue;if(p.y+H<=s.min.y+0.001||p.y>=s.max.y-0.001)continue;
   if(s.max.y-p.y<=STEP&&v.y<=0.6){p.y=s.max.y;continue;}
+  // Open-space landable decks: claim the top instead of shoving sideways (not while rising off a pad)
+  if(isSpaceLevel()&&typeof solidIsLandable==='function'&&solidIsLandable(s)&&P.moveZone==='openSpace'&&!IN.jumpHeld&&v.y<=0.45&&p.y<s.max.y+1.6){
+    p.y=s.max.y;v.y=0;v.x*=0.4;v.z*=0.4;landOn(s.surf||'pad');continue;
+  }
   if(ax==='x'){if(v.x>0)p.x=s.min.x-R-0.001;else if(v.x<0)p.x=s.max.x+R+0.001;else{const c=(s.min.x+s.max.x)/2;p.x=p.x<c?s.min.x-R-0.001:s.max.x+R+0.001;}v.x=0;}
   else{if(v.z>0)p.z=s.min.z-R-0.001;else if(v.z<0)p.z=s.max.z+R+0.001;else{const c=(s.min.z+s.max.z)/2;p.z=p.z<c?s.min.z-R-0.001:s.max.z+R+0.001;}v.z=0;}}}
 function spoutWorld(out){const y=(0.3+0.57*P.sq+0.9)*0.72;out.set(P.pos.x,P.pos.y+y,P.pos.z);return out;}
@@ -491,7 +495,10 @@ function updateOpenSpacePlayer(dt,mx,mz){
     if(p.y+H<=s.min.y||p.y>=s.max.y)continue;
     if(v.y<=0&&prevY>=s.max.y-0.08){if(s.max.y>landY){landY=s.max.y;landSurf=s.surf||'pad';}}
     else if(v.y>0&&prevY+H<=s.min.y+0.06){if(s.min.y<bumpY){bumpY=s.min.y;bump=true;}}
-    else{if(s.max.y-p.y<STEP+0.06){if(s.max.y>landY){landY=s.max.y;landSurf=s.surf||'pad';}}else pushOutXZ(s);}
+    else if(s.max.y-p.y<STEP+0.06){if(s.max.y>landY){landY=s.max.y;landSurf=s.surf||'pad';}}
+    // Landable pads: intersecting the deck volume claims a landing instead of shoving sideways
+    else if(p.y<s.max.y+1.35&&p.y+H>s.max.y-0.15){if(s.max.y>landY){landY=s.max.y;landSurf=s.surf||'pad';}}
+    else pushOutXZ(s);
   }
   if(landY>-Infinity){p.y=landY;landOn(landSurf||'pad');}
   else if(bump){p.y=bumpY-H-0.001;if(v.y>0)v.y=0;}

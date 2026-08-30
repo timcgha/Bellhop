@@ -213,6 +213,11 @@ function applyLandingAssist(dt,p,v){
     v.y=moveTo(v.y,-1.2,8*dt);
     if(horiz>0.05){v.x=moveTo(v.x,-dx/(horiz||1)*1.0,5*dt);v.z=moveTo(v.z,-dz/(horiz||1)*1.0,5*dt);}
   }
+  // Soft claim while coasting down onto a pad — never while thrusting off one
+  if(!IN.jumpHeld&&near>0.55&&horiz<t.r*0.9&&dy>=0&&dy<0.65&&v.y<=0&&sp<2.8){
+    const land=landableSurfaceAt(t.x,t.z);
+    if(land){p.y=land.y;v.x*=0.35;v.y=0;v.z*=0.35;landOn(land.surf||'pad');}
+  }
 }
 
 function landableSurfaceAt(x,z){
@@ -401,9 +406,11 @@ function addSaucer(x,y,z,type,withNote){
   const g=buildSaucer(size);g.position.set(x,y,z);scene.add(g);levelDecor.push(g);
   let note=null;
   if(withNote){note=addNote(x,y+0.9,z,true);note.heldBy='saucer';}
+  // Candy-surface saucers teach after landing — do not harass open-space approach
+  const surfaceGate=!!candyPlanet;
   saucers.push({g,x,y,z,hx:x,hy:y,hz:z,type,size,hp,maxHp:hp,alive:true,state:'patrol',t:0,
     face:rand(0,TAU),vx:0,vy:0,vz:0,stunT:0,hurtT:0,wind:0,spitT:rand(1.2,2.2),
-    note,noteReleased:false,ph:rand(0,TAU),aggro:false,bob:0});
+    note,noteReleased:false,ph:rand(0,TAU),aggro:false,bob:0,surfaceGate});
   return saucers[saucers.length-1];
 }
 
@@ -470,7 +477,8 @@ function updateSaucers(dt){
     const dHome=Math.hypot(e.x-e.hx,e.y-e.hy,e.z-e.hz);
     // Leash: return home if Pling leaves or saucer drifted far
     const plingNearHome=Math.hypot(P.pos.x-e.hx,P.pos.y-e.hy,P.pos.z-e.hz)<SAUCER_LEASH+4;
-    e.aggro=d3<SAUCER_AGGRO&&!P.dead&&plingNearHome&&dHome<SAUCER_LEASH+2;
+    const surfaceReady=!e.surfaceGate||P.grounded||(crystalInterior&&crystalInterior.inside)||P.moveZone==='grounded';
+    e.aggro=!e.targetDummy&&surfaceReady&&d3<SAUCER_AGGRO&&!P.dead&&plingNearHome&&dHome<SAUCER_LEASH+2;
     if(e.aggro&&e.stunT<=0){
       e.face=Math.atan2(dx,dz);
       const want=2.8;
@@ -500,9 +508,9 @@ function updateSaucers(dt){
     if(canSee){e.spitT-=dt;if(e.spitT<=0&&e.wind<=0)e.wind=SAUCER_WIND;}
     else e.wind=0;
     if(e.wind>0){e.wind-=dt;if(e.wind<=0){lobSaucerSpark(e);e.spitT=SAUCER_CD;}}
-    // Body contact
+    // Body contact — target dummy is beam practice only
     const CR=0.75*e.size;
-    if(!P.dead&&d3<CR+0.35){
+    if(!e.targetDummy&&!P.dead&&d3<CR+0.35){
       if(P.bonkT>0){hitSaucer(e,1);}
       else if(P.inv<=0){
         const nx=dx/(d3||1),nz=dz/(d3||1);
@@ -571,7 +579,7 @@ function updateSpaceStage2Ends(dt){
       CAM.shake=Math.max(CAM.shake,0.3);CAM.fovKick=Math.max(CAM.fovKick,5);
       rumble(100,0.35,0.3);SFX.checkpoint();
       spawnRing(e.x,e.y+0.5,e.z,0xaaccff,0.4,6,0.5);
-      showToast('Look — a cheese moon!');
+      showToast('Look — a cheese moon! Candy planet ahead!');
     }
   }
 }
@@ -683,12 +691,57 @@ function addCandyPlanet(x,y,z,r){
   g.add(mesh(SPH,new THREE.MeshBasicMaterial({color:0xffffff,transparent:true,opacity:0.25}),0,0,0,r*1.04,r*1.0,r*1.04));
   const lollipop=mesh(CYL,new THREE.MeshBasicMaterial({color:0xff4080}),0,r*0.95,0,0.35,r*0.55,0.35);g.add(lollipop);
   g.userData.landmark=true;g.userData.landable=true;g.userData.candyPlanet=true;
-  scene.add(g);candyPlanet={g,x,y,z,r};spaceDecorPlanets.push(g);levelDecor.push(g);
-  const padY=y-r*0.52;
-  const sol=addSolid(x,padY,z,r*0.75,0.4,r*0.75,0xff9ad6,{surf:'pad',role:'landable',landingPad:true});
+  scene.add(g);
+  // Approach-facing deck toward Asteroid Garden / Cheese Moon (not buried under the sphere)
+  const padX=x-5.2,padY=y+0.35,padZ=z+4.5;
+  const padW=r*1.15,padD=r*1.05;
+  const sol=addSolid(padX,padY,padZ,padW,0.55,padD,0xff9ad6,{surf:'pad',role:'landable',landingPad:true});
   sol.mesh.visible=true;
-  addLandingBeacon(x,padY,z,r*0.38,{approachR:20,nearR:9,primary:true});
+  if(sol.mesh.material&&sol.mesh.material.color)sol.mesh.material.color.setHex(0xff9ad6);
+  // Soft rim so the pad reads against candy stripes
+  const rim=mesh(BOXG,new THREE.MeshBasicMaterial({color:0xffe078,transparent:true,opacity:0.7}),padX,padY+0.58,padZ,padW+0.7,0.08,padD+0.7);
+  scene.add(rim);levelDecor.push(rim);
+  addLandingBeacon(padX,padY,padZ,r*0.48,{approachR:26,nearR:12,primary:true});
+  candyPlanet={g,x,y,z,r,pad:{x:padX,y:padY,z:padZ,w:padW,d:padD},greeted:false,landed:false};
+  spaceDecorPlanets.push(g);levelDecor.push(g);
   return candyPlanet;
+}
+
+function updateCandyPlanetLanding(dt){
+  if(!candyPlanet||P.dead||won)return;
+  if(crystalInterior&&crystalInterior.inside)return;
+  if(P.grounded&&P.surf&&P.surf!=='void'){
+    if(!candyPlanet.landed&&Math.hypot(P.pos.x-candyPlanet.pad.x,P.pos.z-candyPlanet.pad.z)<candyPlanet.r*0.85){
+      candyPlanet.landed=true;
+      if(!candyPlanet.landToast){candyPlanet.landToast=true;candyPlanet.greeted=true;showToast('Candy planet!');}
+    }
+    return;
+  }
+  const cp=candyPlanet,pad=cp.pad;
+  const dx=P.pos.x-cp.x,dy=P.pos.y-cp.y,dz=P.pos.z-cp.z;
+  const dist=Math.hypot(dx,dy,dz);
+  const toPadX=pad.x-P.pos.x,toPadY=(pad.y+0.55)-P.pos.y,toPadZ=pad.z-P.pos.z;
+  const padDist=Math.hypot(toPadX,toPadY,toPadZ)||1;
+  const overPad=Math.abs(P.pos.x-pad.x)<pad.w*0.58&&Math.abs(P.pos.z-pad.z)<pad.d*0.58;
+  const nearShell=dist<cp.r+2.4;
+  if(!nearShell&&!overPad)return;
+  if(!cp.greeted&&(dist<cp.r+1.2||overPad)){cp.greeted=true;showToast('Land on the candy planet!');}
+  // Soft shell + approach assist: striped body is landable; pull to the deck
+  const pull=dist<cp.r?28:(overPad?18:10);
+  P.vel.x=moveTo(P.vel.x,toPadX/padDist*6,pull*dt);
+  P.vel.y=moveTo(P.vel.y,toPadY/padDist*6,pull*dt);
+  P.vel.z=moveTo(P.vel.z,toPadZ/padDist*6,pull*dt);
+  if(dist<cp.r*0.95||(overPad&&P.pos.y<pad.y+3.5)||padDist<4.5){
+    const land=landableSurfaceAt(pad.x,pad.z);
+    if(land){
+      P.pos.x=damp(P.pos.x,pad.x,10,dt);P.pos.z=damp(P.pos.z,pad.z,10,dt);
+      if(Math.hypot(P.pos.x-pad.x,P.pos.z-pad.z)<3.5||dist<cp.r*0.88||padDist<3.2){
+        P.pos.set(pad.x,land.y,pad.z);P.vel.set(0,0,0);landOn(land.surf||'pad');
+        cp.landed=true;spawnRing(pad.x,pad.y+0.6,pad.z,0xff9ad6,0.35,6,0.45);
+        if(!cp.landToast){cp.landToast=true;showToast('Candy planet!');SFX.checkpoint();}
+      }
+    }
+  }
 }
 
 function buildStarCrateMesh(){
@@ -823,7 +876,7 @@ function addCrystalInterior(ox,oy,oz){
   const mouth=mesh(BOXG,new THREE.MeshBasicMaterial({color:0xa090ff,transparent:true,opacity:0.28}),0,2.5,4.8,4.2,3.2,0.2);
   g.add(mouth);
   scene.add(g);levelDecor.push(g);
-  const padY=candyPlanet?candyPlanet.y-candyPlanet.r*0.52+0.45:oy+1.5;
+  const padY=candyPlanet&&candyPlanet.pad?candyPlanet.pad.y+0.55:(candyPlanet?candyPlanet.y-candyPlanet.r*0.52+0.45:oy+1.5);
   crystalInterior={
     g,x:ix,y:iy,z:iz,active:true,
     bounds:{x0:ix-7,x1:ix+7,y0:iy-0.5,y1:iy+5.5,z0:iz-5.5,z1:iz+5.5},
@@ -887,7 +940,7 @@ function updateSpaceStage3Ends(dt){
           spawnP(e.x+rand(-1.2,1.2),e.y+rand(0.3,2),e.z+rand(-1.2,1.2),rand(-1,1),rand(1,3),rand(-1,1),0.1,Math.random()<0.5?0xc8b0ff:0xffe078,0.5,0.4,0,0.8);
         }
       }
-      if(e.fxT>1.2){e.triggered=false;e.fxT=0;softReturnToPicker();}
+      // DEF-B-017: Stage 3 foreshadow must not soft-return to picker — Level 4 continues
       continue;
     }
     if(P.dead||won)continue;
@@ -909,6 +962,7 @@ function updateSpaceWorld(dt){
   updateStarBeams(dt);
   updateStarCrates(dt);
   updateCrystalTransitions(dt);
+  updateCandyPlanetLanding(dt);
   updateSpaceStage2Ends(dt);
   updateSpaceStage3Ends(dt);
   for(const e of saucers){

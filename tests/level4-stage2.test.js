@@ -22,7 +22,7 @@ function flyTo(H,x,y,z,frames){
 // ---- version ----
 {
   const H=boot();
-  ok(H.getCamDiag().VERSION_BASE==='v44 · Cheese Moon stay','version stamp v42');
+  ok(H.getCamDiag().VERSION_BASE==='v45 · Candy land','version stamp v42');
 }
 
 // ---- Snoozle 1 ----

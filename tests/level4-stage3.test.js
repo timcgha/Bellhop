@@ -9,7 +9,7 @@ function releaseJump(H){H.ku({code:'Space'});}
 // ---- version ----
 {
   const H=boot();
-  ok(H.getCamDiag().VERSION_BASE==='v44 · Cheese Moon stay','version stamp v43');
+  ok(H.getCamDiag().VERSION_BASE==='v45 · Candy land','version stamp v45');
 }
 
 // ---- Snoozles 1 and 3 present (Snoozle 2 deferred with Cheese Moon landing) ----
@@ -34,7 +34,9 @@ function releaseJump(H){H.ku({code:'Space'});}
   const H=boot();H.startLevel(3);
   const cp=H.getSpace().candyPlanet;
   ok(!!cp&&cp.r===11,'Candy Planet authored');
-  ok(H.getSpace().landingTargets.some(t=>Math.hypot(t.x-98,t.z+198)<8),'Candy Planet landing pad');
+  ok(H.getSpace().landingTargets.some(t=>{
+    const cp=H.getSpace().candyPlanet;return cp&&cp.pad&&Math.hypot(t.x-cp.pad.x,t.z-cp.pad.z)<3;
+  }),'Candy Planet landing pad');
 }
 
 // ---- Star crate grants hasStarBeam ----
