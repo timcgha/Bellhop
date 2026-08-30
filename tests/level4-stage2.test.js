@@ -257,7 +257,8 @@ function hitSaucerAgain(H,e){
   ok(S.firstDestination.x===22,'Launch Dock first destination preserved');
   ok(S.routeTrail.length>=4,'route trails continue through Garden');
   ok(S.stage2Ends.length===1,'Stage 2 endpoint exists');
-  ok(S.cheeseMoon,'Cheese Moon body exists (Stage 3 landable)');
+  ok(S.cheeseMoon&&S.cheeseMoon.userData.landable===false,'Cheese Moon foreshadowed, not landable');
+  ok(!S.landingTargets.some(t=>Math.hypot(t.x-58,t.z+175)<5),'Cheese Moon has no landing beacon');
   const checks=H.W.checks;
   ok(checks.length>=3,'dock + garden entry + recovery checkpoints');
 }

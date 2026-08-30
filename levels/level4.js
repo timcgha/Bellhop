@@ -53,20 +53,17 @@ checks:[
   [0,0,0.45],
   [28,-26,5],
   [28,-104,5],
-  [58,5.5,-175],
   [98,12.5,-198],
   [102,16.5,-222]
 ],
 tower:{tx:0,tz:0},
 snoozleHomes:[
   {x:8,y:28,z:-200},
-  {x:10,y:28,z:-200},
   {x:102,y:28,z:-222}
 ],
 snoozles:[
   [-2.8,0.55,3.2,0,false],
-  [58,6.2,-175,1,false],
-  [102,2.0,-218,2,false]
+  [102,2.0,-218,1,false]
 ],
 trees:[],
 steps:[
@@ -112,10 +109,10 @@ steps:[
   ['routeTrail',28,6,-122,30,5,-138,4],
   ['spaceBuoy',30,5,-138,true],
   ['spaceStage2Endpoint',30,5,-140],
-  // Stage 3 — Cheese Moon
+  // Stage 3 — Cheese Moon foreshadow (visual only, not landable)
   ['routeTrail',30,5,-142,45,8,-168,7],
   ['spaceBuoy',45,8,-168,true],
-  ['cheeseMoon',58,12,-175,7.5],
+  ['cheeseMoonLandmark',58,12,-175,7.5],
   // Open space to Candy Planet
   ['routeTrail',58,12,-178,82,16,-192,8],
   ['spaceBuoy',82,16,-192,true],

@@ -12,19 +12,21 @@ function releaseJump(H){H.ku({code:'Space'});}
   ok(H.getCamDiag().VERSION_BASE==='v43 · Candy Planet','version stamp v43');
 }
 
-// ---- Snoozles 1–3 present ----
+// ---- Snoozles 1 and 3 present (Snoozle 2 deferred with Cheese Moon landing) ----
 {
   const H=boot();H.startLevel(3);H.frames(10);
-  ok(H.W.snoozles.length===3,'Stage 3: three physical Level 4 Snoozles');
+  ok(H.W.snoozles.length===2,'Stage 3: Snoozles 1 and 3 on dock and crystal route');
   ok(H.getLevel().snoozleGoal===4,'snoozleGoal remains 4');
 }
 
-// ---- Cheese Moon landable ----
+// ---- Cheese Moon foreshadow only ----
 {
   const H=boot();H.startLevel(3);H.frames(6);
   const S=H.getSpace();
-  ok(S.cheeseMoon&&S.cheeseMoon.userData.landable===true,'Cheese Moon is landable');
-  ok(S.landingTargets.some(t=>Math.hypot(t.x-58,t.z+175)<6),'Cheese Moon has landing beacon');
+  ok(S.cheeseMoon&&S.cheeseMoon.userData.landable===false,'Cheese Moon is foreshadow only, not landable');
+  ok(!S.landingTargets.some(t=>Math.hypot(t.x-58,t.z+175)<6),'Cheese Moon has no landing beacon');
+  const src=require('fs').readFileSync(require('path').join(__dirname,'..','levels','level4.js'),'utf8');
+  ok(!/\['cheeseMoon',/.test(src),'level data uses cheeseMoonLandmark not landable cheeseMoon step');
 }
 
 // ---- Candy Planet ----
