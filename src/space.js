@@ -542,7 +542,7 @@ function addCheeseMoonLandmark(x,y,z,r){
 
 function addSpaceStage2Endpoint(x,y,z){
   const g=new THREE.Group();g.position.set(x,y,z);
-  // Soft lookout ring facing Cheese Moon — temporary Stage 2 rest, not a win
+  // Soft lookout ring facing Cheese Moon — foreshadow only; Stage 3 continues beyond
   g.add(mesh(CYL,new THREE.MeshBasicMaterial({color:0x5ec8ff,transparent:true,opacity:0.35}),0,0.05,0,2.8,0.08,2.8));
   const ring=new THREE.Mesh(new THREE.TorusGeometry(2.6,0.12,8,32),new THREE.MeshBasicMaterial({color:0xffe078,transparent:true,opacity:0.7}));
   ring.rotation.x=Math.PI/2;g.add(ring);
@@ -562,7 +562,7 @@ function updateSpaceStage2Ends(dt){
           spawnP(e.x+rand(-1.2,1.2),e.y+rand(0.3,2),e.z+rand(-1.2,1.2),rand(-1,1),rand(1,3),rand(-1,1),0.1,Math.random()<0.5?0x5ec8ff:0xffe078,0.5,0.4,0,0.8);
         }
       }
-      if(e.fxT>1.2){e.triggered=false;e.fxT=0;softReturnToPicker();}
+      // DEF-B-016: stay in Level 4 — Cheese Moon foreshadow must not soft-return to picker
       continue;
     }
     if(P.dead||won)continue;

@@ -9,7 +9,7 @@ function releaseJump(H){H.ku({code:'Space'});}
 // ---- version ----
 {
   const H=boot();
-  ok(H.getCamDiag().VERSION_BASE==='v43 · Candy Planet','version stamp v42');
+  ok(H.getCamDiag().VERSION_BASE==='v44 · Cheese Moon stay','version stamp v42');
 }
 
 // ---- flight without camera input (keyboard) ----
