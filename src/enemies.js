@@ -122,6 +122,8 @@ function updatePowers(dt){for(const w of powers){if(w.got)continue;w.t+=dt;w.g.p
       for(let i=0;i<16;i++)spawnP(w.g.position.x,w.g.position.y,w.g.position.z,rand(-3,3),rand(1,4),rand(-3,3),0.07,0xc8f0ff,0.8,0.3,-4,1);}
     else if(w.kind==='sky'){P.hasSkyBlast=true;SFX.powerUp();CAM.fovKick=Math.max(CAM.fovKick,5);showToast('Sky Blast! Jump, then puff again for a long leap.');
       for(let i=0;i<16;i++)spawnP(w.g.position.x,w.g.position.y,w.g.position.z,rand(-3,3),rand(1,4),rand(-3,3),0.09,Math.random()<0.5?0xff9a3c:0xffe9d0,0.8,0.3,-4,1);}
+    else if(w.kind==='star'){P.hasStarBeam=true;SFX.starPower();CAM.fovKick=Math.max(CAM.fovKick,5);showToast('Star Beam! Gust to zap — keep it until something hits you.');
+      for(let i=0;i<16;i++)spawnP(w.g.position.x,w.g.position.y,w.g.position.z,rand(-3,3),rand(1,4),rand(-3,3),0.09,Math.random()<0.5?0xffe078:0xffffff,0.8,0.3,-4,1);}
     else{P.fire=true;SFX.powerUp();CAM.fovKick=Math.max(CAM.fovKick,5);showToast('Fire slam! Ground pound for fireballs — keep it until a Gloop hits you.');
       for(let i=0;i<16;i++)spawnP(w.g.position.x,w.g.position.y,w.g.position.z,rand(-3,3),rand(1,4),rand(-3,3),0.09,Math.random()<0.5?0xff8a2b:0xffe36b,0.8,0.3,-4,1);}
     updateHUD();}}}}

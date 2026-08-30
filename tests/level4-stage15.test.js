@@ -9,7 +9,7 @@ function releaseJump(H){H.ku({code:'Space'});}
 // ---- version ----
 {
   const H=boot();
-  ok(H.getCamDiag().VERSION_BASE==='v42 · Asteroid Garden','version stamp v42');
+  ok(H.getCamDiag().VERSION_BASE==='v43 · Candy Planet','version stamp v42');
 }
 
 // ---- flight without camera input (keyboard) ----
@@ -114,7 +114,7 @@ function flyNoCam(H, keys, frames){
   ok(S.landingTargets.some(t=>t.primary),'primary landing target exists');
   ok(S.landingTargets[0].approachR===18,'landing approach radius 18');
   ok(S.landingTargets[0].nearR===8,'landing near radius 8');
-  ok(S.decorPlanets.every(p=>p.userData.landable===false),'backdrop planets not landable');
+  ok(S.decorPlanets.filter(p=>!p.userData.cheeseMoon&&!p.userData.candyPlanet).every(p=>p.userData.landable===false),'backdrop planets not landable');
   ok(S.blackHole&&S.blackHole.userData.landable===false,'black hole noninteractive');
   ok(!S.landingTargets.some(t=>t.x===8&&t.z===-115),'black hole not a landing target');
 }
@@ -162,8 +162,8 @@ function flyNoCam(H, keys, frames){
 // ---- landing assist does not pull from far away ----
 {
   const H=boot();H.startLevel(3);H.frames(6);
-  H.P.pos.set(-30,20,30);H.P.vel.set(0,0,0);H.P.grounded=false;H.P.moveZone='openSpace';
-  const tgt=H.getSpace().landingTargets[0];
+  H.P.pos.set(28,8,-48);H.P.vel.set(0,0,0);H.P.grounded=false;H.P.moveZone='openSpace';
+  const tgt=H.getSpace().landingTargets.find(t=>t.primary)||H.getSpace().landingTargets[0];
   const d0=Math.hypot(H.P.pos.x-tgt.x,H.P.pos.y-tgt.y,H.P.pos.z-tgt.z);
   H.kd({code:'Space',preventDefault(){},repeat:false});
   for(let i=0;i<60;i++)H.frames(1);
@@ -216,7 +216,7 @@ function flyNoCam(H, keys, frames){
 {
   const src=require('fs').readFileSync(require('path').join(__dirname,'..','levels','level4.js'),'utf8')
     +require('fs').readFileSync(require('path').join(__dirname,'..','src','space.js'),'utf8');
-  ok(!/starBeam|StarBeam|hasStarBeam|shieldedGate|warpTunnel|blackHoleFinish/i.test(src),'Stage 2 build has no Stage 3+ deferred systems');
+  ok(!/shieldedGate|warpTunnel|blackHoleFinish|blackHoleActive/i.test(src),'Stage 3 build has no Stage 4+ finish systems');
 }
 
 report();

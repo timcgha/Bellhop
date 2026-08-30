@@ -143,7 +143,7 @@ function releaseJump(H){H.ku({code:'Space'});}
   const src=require('fs').readFileSync(require('path').join(__dirname,'..','src','player.js'),'utf8')
     +require('fs').readFileSync(require('path').join(__dirname,'..','src','space.js'),'utf8')
     +require('fs').readFileSync(require('path').join(__dirname,'..','levels','level4.js'),'utf8');
-  ok(!/starBeam|StarBeam|flyingSaucer|warpTunnel|blackHoleFinish/i.test(src),'Stage 1 source has no deferred combat/finish systems');
+  ok(!/shieldedGate|warpTunnel|blackHoleFinish|blackHoleActive/i.test(src),'Stage 1 source has no Stage 4+ finish systems');
 }
 
 // ---- 3D vertical control (primary movement input, no camera pitch) ----

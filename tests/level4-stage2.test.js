@@ -22,13 +22,13 @@ function flyTo(H,x,y,z,frames){
 // ---- version ----
 {
   const H=boot();
-  ok(H.getCamDiag().VERSION_BASE==='v42 · Asteroid Garden','version stamp v42');
+  ok(H.getCamDiag().VERSION_BASE==='v43 · Candy Planet','version stamp v42');
 }
 
 // ---- Snoozle 1 ----
 {
   const H=boot();H.startLevel(3);H.frames(10);
-  ok(H.W.snoozles.length===1,'Stage 2: exactly one physical Level 4 Snoozle');
+  ok(H.W.snoozles.length>=1,'Level 4 Snoozles authored');
   ok(H.getLevel().snoozleGoal===4,'snoozleGoal remains 4');
   const sn=H.W.snoozles[0];
   ok(Math.hypot(sn.g.position.x,sn.g.position.z)<8&&sn.g.position.y<2,'Snoozle 1 on Launch Dock / opening');
@@ -154,8 +154,8 @@ function flyTo(H,x,y,z,frames){
 {
   const H=boot();H.startLevel(3);H.frames(8);
   const S=H.getSpace();
-  ok(S.saucers.length===1,'exactly one hostile saucer');
-  const e=S.saucers[0];
+  ok(S.saucers.length>=1,'at least one hostile saucer in Garden');
+  const e=S.saucers.find(s=>!s.targetDummy)||S.saucers[0];
   ok(e.type==='small'&&e.hp===1,'first saucer is small silver (1 hp)');
   ok(Math.hypot(e.hx-28,e.hz+118)<1,'saucer home in arena');
   // Leash: drag far and confirm return
@@ -219,8 +219,8 @@ function flyTo(H,x,y,z,frames){
 {
   const H=boot();H.startLevel(3);H.frames(4);
   const noteCount=H.W.notes.length;
-  ok(noteCount===1,'Stage 2 counted notes.length is 1 at build');
-  const e=H.getSpace().saucers[0];
+  ok(noteCount>=1,'Level 4 counted notes at build');
+  const e=H.getSpace().saucers.find(s=>s.note&&!s.targetDummy)||H.getSpace().saucers[0];
   ok(!!e.note,'saucer holds a pre-authored note');
   ok(e.note.hidden&&!e.note.g.visible,'held note begins hidden');
   ok(H.W.notes.indexOf(e.note)>=0,'held note exists in notes[] at build');
@@ -294,8 +294,8 @@ function hitSaucerAgain(H,e){
   const src=fs.readFileSync(path.join(__dirname,'..','levels','level4.js'),'utf8')
     +fs.readFileSync(path.join(__dirname,'..','src','space.js'),'utf8')
     +fs.readFileSync(path.join(__dirname,'..','src','player.js'),'utf8');
-  ok(!/starBeam|StarBeam|hasStarBeam|shieldedGate|warpTunnel|blackHoleFinish|blackHoleActive/i.test(src),'no Star Beam / warp / black-hole finish');
-  ok(H_snoozleCount()===1,'no Snoozles 2–4 yet');
+  ok(!/shieldedGate|warpTunnel|blackHoleFinish|blackHoleActive/i.test(src),'no Stage 4+ warp / black-hole finish');
+  ok(H_snoozleCount()>=1,'Snoozle 1 on dock');
   function H_snoozleCount(){const H=boot();H.startLevel(3);return H.W.snoozles.length;}
 }
 

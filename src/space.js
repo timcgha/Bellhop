@@ -1,9 +1,12 @@
 // Level 4 — open-space zones, Launch Dock, Asteroid Garden, saucers, recovery.
-let spaceGroup=null,blackHoleLandmark=null,cheeseMoonLandmark=null,spaceStars=[];
+let spaceGroup=null,blackHoleLandmark=null,cheeseMoonLandmark=null,cheeseMoonBody=null,spaceStars=[];
 let spaceOpenZones=[],spacePlayVolume=null,spaceDecorPlanets=[];
 let spaceRecoveryT=0,spaceRecoveryFrom=null;
 let spaceLandingTargets=[],spaceRouteTrail=[],spaceFirstDest=null,spaceRouteBeacons=[];
-const asteroids=[],saucers=[],spaceSparks=[],spaceStage2Ends=[];
+const asteroids=[],saucers=[],spaceSparks=[],spaceStage2Ends=[],spaceStage3Ends=[];
+const starCrates=[],starBeams=[],crystalDust=[];
+let crystalInterior=null,candyPlanet=null;
+const BEAM_LEN=20,BEAM_DUR=0.35,BEAM_W=0.85;
 const ASTEROID_KB=5.2,ASTEROID_INV=1.4,SAUCER_AGGRO=11,SAUCER_LEASH=13,SAUCER_WIND=0.5,SAUCER_CD=2.6;
 const SPARK_GEO=new THREE.SphereGeometry(1,8,6);
 for(let i=0;i<12;i++){const m=new THREE.Mesh(SPARK_GEO,new THREE.MeshBasicMaterial({color:0x7dff6a}));m.scale.setScalar(0.22);m.visible=false;scene.add(m);spaceSparks.push({m,pos:new THREE.Vector3(),vel:new THREE.Vector3(),life:0,alive:false,trailT:0});}
@@ -14,12 +17,15 @@ function spaceCfg(){return CURRENT_LEVEL&&CURRENT_LEVEL.openSpace;}
 function clearSpaceWorld(){
   const rem=m=>{if(!m)return;if(m.parent&&m.parent.remove)m.parent.remove(m);else if(scene.remove)scene.remove(m);else if(m.visible!=null)m.visible=false;};
   if(spaceGroup){while(spaceGroup.children.length)spaceGroup.remove(spaceGroup.children[0]);spaceGroup.visible=false;}
-  blackHoleLandmark=null;cheeseMoonLandmark=null;spaceStars.length=0;spaceDecorPlanets.length=0;
+  blackHoleLandmark=null;cheeseMoonLandmark=null;cheeseMoonBody=null;spaceStars.length=0;spaceDecorPlanets.length=0;
   spaceOpenZones=[];spacePlayVolume=null;spaceRecoveryT=0;spaceRecoveryFrom=null;
   spaceLandingTargets.length=0;spaceRouteTrail.length=0;spaceFirstDest=null;spaceRouteBeacons.length=0;
   for(const a of asteroids)rem(a.g);asteroids.length=0;
   for(const s of saucers)rem(s.g);saucers.length=0;
   for(const e of spaceStage2Ends)rem(e.g);spaceStage2Ends.length=0;
+  for(const e of spaceStage3Ends)rem(e.g);spaceStage3Ends.length=0;
+  for(const c of starCrates)rem(c.g);starCrates.length=0;
+  starBeams.length=0;crystalDust.length=0;crystalInterior=null;candyPlanet=null;
   for(const q of spaceSparks){q.alive=false;q.m.visible=false;}
 }
 
@@ -226,8 +232,15 @@ function pointInOpenZone(x,y,z){
   return false;
 }
 
+function pointInInterior(x,y,z){
+  if(!crystalInterior||!crystalInterior.active)return false;
+  const b=crystalInterior.bounds;
+  return x>=b.x0&&x<=b.x1&&y>=b.y0&&y<=b.y1&&z>=b.z0&&z<=b.z1;
+}
+
 function queryMoveZone(){
   if(!isSpaceLevel())return 'grounded';
+  if(pointInInterior(P.pos.x,P.pos.y,P.pos.z))return 'grounded';
   if(P.grounded&&P.surf&&P.surf!=='void')return 'grounded';
   const land=landableSurfaceAt(P.pos.x,P.pos.z);
   if(land&&P.pos.y<=land.y+STEP+0.28&&P.vel.y<=2.5)return 'grounded';
@@ -332,6 +345,7 @@ function hurtFromAsteroid(a,px,py,pz){
   // Moderate knockback AWAY from rock face; keep flight usable
   const k=ASTEROID_KB;
   P.hp--;P.inv=ASTEROID_INV;
+  if(P.hasStarBeam){P.hasStarBeam=false;SFX.starBeamOut();}
   P.vel.x=dx/len*k;P.vel.y=dy/len*k*0.85;P.vel.z=dz/len*k;
   P.grounded=false;P.slam=0;P.puffAir=0;endHover();clearLeapBoost();clearGlide();
   // Keep space thrust available — do not endSpaceThrust permanently; brief interrupt only
@@ -562,12 +576,344 @@ function updateSpaceStage2Ends(dt){
   }
 }
 
+function beginSpaceOutOfRouteRecovery(){
+  if(spaceRecoveryT>0)return;
+  applySpaceRecovery(999);
+}
+
+function gustHitSaucers(mx,mz,k){
+  for(const e of saucers){
+    if(!e.alive||e.state==='dying')continue;
+    const s=k(e.x,e.z);if(s>0&&Math.abs(e.y-P.pos.y)<3.5)stunSaucer(e);
+  }
+}
+
+function spinHitSaucers(px,py,pz){
+  let hit=false;
+  for(const e of saucers){
+    if(!e.alive||e.state==='dying')continue;
+    const d=Math.hypot(e.x-px,e.y-py,e.z-pz);
+    if(d<=BONKR+0.35*e.size){hitSaucer(e,1);hit=true;}
+  }
+  return hit;
+}
+
+function slamHitStarCrates(px,py,pz){
+  for(const c of starCrates){
+    if(c.broken)continue;
+    if(Math.hypot(c.x-px,c.z-pz)<4.8*0.55&&Math.abs(c.y-py)<2.5)breakStarCrate(c);
+  }
+}
+
+function spinHitStarCrates(px,pz){
+  for(const c of starCrates){
+    if(c.broken)continue;
+    if(Math.hypot(c.x-px,c.z-pz)<BONKR+0.5&&Math.abs(c.y-P.pos.y)<2)breakStarCrate(c);
+  }
+}
+
+function spinHitCracked(px,py,pz){
+  let hit=false;
+  for(const a of asteroids){
+    if(!a.cracked||a.broken)continue;
+    const d=Math.hypot(a.x-px,a.y-py,a.z-pz);
+    if(d<=BONKR+a.r*0.4){hitCrackedAsteroid(a,1);hit=true;}
+  }
+  return hit;
+}
+
+function jetHitSaucers(){
+  for(const e of saucers){
+    if(!e.alive||e.state==='dying'||P.jetHits.indexOf(e)>=0)continue;
+    const dx=e.x-P.pos.x,dz=e.z-P.pos.z,d=Math.hypot(dx,dz);
+    if(d<0.55*e.size+0.35&&e.y<P.pos.y+0.2&&e.y>P.pos.y-1.1){P.jetHits.push(e);hitSaucer(e,1);}
+  }
+}
+
+function buildCrackedRock(r){
+  const g=buildHazardRock(r,'cracked');
+  g.add(mesh(SPH,new THREE.MeshBasicMaterial({color:0xffe078,transparent:true,opacity:0.65}),0,0,0,r*0.15));
+  return g;
+}
+
+function addCrackedAsteroid(x,y,z,r,withNote){
+  r=r||2.0;
+  const g=buildCrackedRock(r);g.position.set(x,y,z);scene.add(g);levelDecor.push(g);
+  let note=null;
+  if(withNote){note=addNote(x,y+0.8,z,true);note.heldBy='cracked';}
+  asteroids.push({g,x,y,z,r,role:'cracked',hazard:false,cracked:true,hp:2,moving:false,spin:0.3,ph:rand(0,TAU),note,noteReleased:false,broken:false});
+  return asteroids[asteroids.length-1];
+}
+
+function hitCrackedAsteroid(a,dmg){
+  if(a.broken||!a.cracked)return;
+  a.hp-=dmg;a.hurtT=(a.hurtT||0)+0.3;SFX.crystalChime();
+  for(let i=0;i<8;i++)spawnP(a.x,a.y,a.z,rand(-2,2),rand(0.5,2.5),rand(-2,2),rand(0.07,0.14),0xc8b0ff,rand(0.35,0.55),0.35,-4,0.85);
+  if(a.hp<=0){
+    a.broken=true;a.g.visible=false;
+    if(a.note&&!a.noteReleased&&!a.note.got){a.noteReleased=true;revealHeldNote(a.note);}
+    spawnRing(a.x,a.y,a.z,0xc8b0ff,0.35,6,0.45);
+    for(let i=0;i<12;i++)spawnP(a.x,a.y,a.z,rand(-3,3),rand(1,4),rand(-3,3),rand(0.08,0.16),0xa090ff,rand(0.5,0.9),0.5,-3,0.9);
+  }
+}
+
+function addCheeseMoonBody(x,y,z,r){
+  r=r||7.5;
+  const g=new THREE.Group();g.position.set(x,y,z);
+  g.add(mesh(SPH,new THREE.MeshBasicMaterial({color:0xf0d060}),0,0,0,r,r*0.92,r));
+  for(let i=0;i<6;i++){const a=i/6*TAU,cr=r*0.55;g.add(mesh(SPH,new THREE.MeshBasicMaterial({color:0xd4b048,transparent:true,opacity:0.55}),Math.cos(a)*cr,Math.sin(a*1.3)*cr*0.4,Math.sin(a)*cr,r*0.14));}
+  g.add(mesh(SPH,new THREE.MeshBasicMaterial({color:0xffe078,transparent:true,opacity:0.35}),0,0,0,r*1.05,r*0.98,r*1.02));
+  g.userData.landmark=true;g.userData.landable=true;g.userData.cheeseMoon=true;
+  scene.add(g);cheeseMoonBody=g;cheeseMoonLandmark=g;spaceDecorPlanets.push(g);levelDecor.push(g);
+  const padR=r*0.42;
+  const sol=addSolid(x,y-r*0.55,z,padR*2,0.35,padR*2,0xe8c848,{surf:'pad',role:'landable',landingPad:true});
+  sol.mesh.visible=true;
+  addLandingBeacon(x,y-r*0.55,z,padR,{approachR:16,nearR:7,primary:true});
+  return g;
+}
+
+function addCandyPlanet(x,y,z,r){
+  r=r||11;
+  const g=new THREE.Group();g.position.set(x,y,z);
+  const stripes=[0xff6eb4,0xffe078,0x7ec8ff,0xff9ad6,0xc8f0ff];
+  for(let i=0;i<stripes.length;i++){
+    const band=mesh(SPH,new THREE.MeshBasicMaterial({color:stripes[i]}),0,(i-stripes.length/2)*r*0.14,0,r*0.98,r*0.16,r*0.98);
+    g.add(band);
+  }
+  g.add(mesh(SPH,new THREE.MeshBasicMaterial({color:0xffffff,transparent:true,opacity:0.25}),0,0,0,r*1.04,r*1.0,r*1.04));
+  const lollipop=mesh(CYL,new THREE.MeshBasicMaterial({color:0xff4080}),0,r*0.95,0,0.35,r*0.55,0.35);g.add(lollipop);
+  g.userData.landmark=true;g.userData.landable=true;g.userData.candyPlanet=true;
+  scene.add(g);candyPlanet={g,x,y,z,r};spaceDecorPlanets.push(g);levelDecor.push(g);
+  const padY=y-r*0.52;
+  const sol=addSolid(x,padY,z,r*0.75,0.4,r*0.75,0xff9ad6,{surf:'pad',role:'landable',landingPad:true});
+  sol.mesh.visible=true;
+  addLandingBeacon(x,padY,z,r*0.38,{approachR:20,nearR:9,primary:true});
+  return candyPlanet;
+}
+
+function buildStarCrateMesh(){
+  const g=new THREE.Group();
+  g.add(mesh(BOXG,lam(0x4a4868),0,0.45,0,0.95,0.95,0.95));
+  g.add(mesh(BOXG,lam(0xffe078),0,0.45,0,1.0,0.16,1.0));
+  g.add(mesh(SPH,new THREE.MeshBasicMaterial({color:0xffffff}),0,0.95,0,0.18));
+  for(let i=0;i<5;i++){const a=i/5*TAU;g.add(mesh(SPH,new THREE.MeshBasicMaterial({color:0xffe078,transparent:true,opacity:0.8}),Math.cos(a)*0.35,0.95,Math.sin(a)*0.35,0.08));}
+  return g;
+}
+
+function addStarCrate(x,y,z,renewable){
+  const g=buildStarCrateMesh();g.position.set(x,y,z);scene.add(g);levelDecor.push(g);
+  const ped=mesh(CYL,lam(0x6a5878),x,y-0.55,z,0.55,1.1,0.55);scene.add(ped);levelDecor.push(ped);
+  const c={g,ped,x,y,z,renewable:!!renewable,broken:false,respawnT:0};
+  starCrates.push(c);return c;
+}
+
+function breakStarCrate(c){
+  if(c.broken)return;c.broken=true;c.g.visible=false;
+  SFX.crate();CAM.shake=Math.max(CAM.shake,0.3);spawnRing(c.x,c.y+0.5,c.z,0xffe078,0.35,6,0.45);
+  addStarPower(c.x,c.y+1.0,c.z);
+  if(c.renewable)c.respawnT=4.5;
+}
+
+function updateStarCrates(dt){
+  for(const c of starCrates){
+    if(c.broken&&c.renewable){
+      c.respawnT-=dt;
+      if(c.respawnT<=0&&!P.hasStarBeam){
+        c.broken=false;c.g.visible=true;c.respawnT=0;
+        spawnRing(c.x,c.y+0.5,c.z,0xffe078,0.25,4,0.35);
+      }
+    }
+    if(!c.broken&&Math.hypot(c.x-P.pos.x,c.z-P.pos.z)<2.2&&Math.abs(c.y-P.pos.y)<2.5){
+      if(P.bonkT>0||P.slam>0)breakStarCrate(c);
+    }
+  }
+}
+
+function addSaucerTarget(x,y,z){
+  const e=addSaucer(x,y,z,'small',false);
+  e.targetDummy=true;e.alive=true;e.hp=999;e.maxHp=999;
+  return e;
+}
+
+function fireStarBeam(fx,fz,mx,my,mz){
+  if(won||P.dead)return;
+  SFX.starBeam();
+  const ox=mx,oy=my,oz=mz;
+  const len=Math.hypot(fx,fz)||1;
+  const dx=fx/len,dz=fz/len;
+  starBeams.push({x:ox,y:oy,z:oz,dx,dz,t:0,life:BEAM_DUR,hit:new Set()});
+  for(let i=0;i<10;i++){
+    const t=i/9*BEAM_LEN;
+    spawnP(ox+dx*t,oy,oz+dz*t,rand(-0.2,0.2),rand(-0.2,0.2),rand(-0.2,0.2),0.07,Math.random()<0.5?0xffe078:0xffffff,0.45,0.35,0,0.85);
+  }
+  CAM.fovKick=Math.max(CAM.fovKick,3);
+}
+
+function beamHitPoint(b,px,py,pz,pr){
+  const along=(px-b.x)*b.dx+(pz-b.z)*b.dz;
+  if(along<0||along>BEAM_LEN)return false;
+  const cx=b.x+b.dx*along,cz=b.z+b.dz*along;
+  const d=Math.hypot(px-cx,py-b.y,pz-cz);
+  return d<(pr||BEAM_W);
+}
+
+function updateStarBeams(dt){
+  for(let i=starBeams.length-1;i>=0;i--){
+    const b=starBeams[i];
+    b.t+=dt;
+    if(b.t>=b.life){starBeams.splice(i,1);continue;}
+    const k=1-b.t/b.life;
+    for(let s=0;s<3;s++){
+      const t=b.t*BEAM_LEN/BEAM_DUR+s*2;
+      spawnP(b.x+b.dx*t,b.y,b.z+b.dz*t,0,0,0,0.06,0xffe078,0.35*k,0.4,0,0.7);
+    }
+    for(const e of saucers){
+      if(!e.alive||e.state==='dying'||b.hit.has(e))continue;
+      if(e.targetDummy){
+        if(beamHitPoint(b,e.x,e.y+0.3,e.z,0.9*e.size)){
+          b.hit.add(e);e.flashT=0.45;SFX.tick();
+          for(let j=0;j<8;j++)spawnP(e.x,e.y+0.5,e.z,rand(-2,2),rand(0.5,2),rand(-2,2),0.08,0xffe078,0.5,0.4,0,0.85);
+        }
+        continue;
+      }
+      if(beamHitPoint(b,e.x,e.y+0.35,e.z,0.75*e.size)){b.hit.add(e);hitSaucer(e,e.hp);}
+    }
+    for(const a of asteroids){
+      if(!a.cracked||a.broken||b.hit.has(a))continue;
+      if(beamHitPoint(b,a.x,a.y,a.z,a.r*0.85)){b.hit.add(a);hitCrackedAsteroid(a,2);}
+    }
+  }
+}
+
+function addCrystalDust(x,y,z){
+  const g=mesh(SPH,new THREE.MeshBasicMaterial({color:0xc8b0ff,transparent:true,opacity:0.55}),x,y,z,0.35);
+  g.visible=false;scene.add(g);levelDecor.push(g);
+  crystalDust.push({g,x,y,z,revealed:false,amt:1});return crystalDust[crystalDust.length-1];
+}
+
+function gustCrystalDust(mx,mz,k){
+  for(const d of crystalDust){
+    if(d.revealed)continue;
+    const s=k(d.x,d.z);
+    if(s>0.12&&Math.abs(d.y-P.pos.y)<3){
+      d.revealed=true;d.g.visible=true;SFX.reveal();SFX.crystalChime();
+      for(let i=0;i<8;i++)spawnP(d.x,d.y,d.z,rand(-1.5,1.5),rand(0.5,2),rand(-1.5,1.5),0.08,0xe8f0ff,0.5,0.4,0,0.85);
+    }
+  }
+}
+
+function addCrystalInterior(ox,oy,oz){
+  const ix=ox,iy=oy-2,iz=oz-18;
+  const g=new THREE.Group();g.position.set(ix,iy,iz);
+  const deep=lam(0x2a1848),crystal=lam(0x8868c8),glow=new THREE.MeshBasicMaterial({color:0xc8b0ff,transparent:true,opacity:0.35});
+  g.add(mesh(BOXG,deep,0,0.15,0,14,0.35,10));
+  g.add(mesh(BOXG,glow,0,2.2,0,12,4.2,0.12));
+  addSolid(ix,iy,iz,14,0.35,10,0x3a2868,{surf:'stone',role:'landable',landingPad:true});
+  addSolid(ix,iy+1.2,iz-5.2,13,2.5,0.8,0x4a3868,{surf:'stone',invisible:true});
+  addSolid(ix-6.2,iy+1.2,iz,0.8,2.8,9.5,0x4a3868,{surf:'stone',invisible:true});
+  addSolid(ix+6.2,iy+1.2,iz,0.8,2.8,9.5,0x4a3868,{surf:'stone',invisible:true});
+  for(let i=0;i<6;i++){
+    const t=(i+0.5)/6;
+    addSolid(ix-4+t*8,iy+0.8,iz-2+t*4,1.8,0.25,1.6,0x5a48a0,{surf:'stone',role:'landable'});
+  }
+  [[-4,1.5,-1],[4,1.5,1],[-2,2.2,2],[3,1.8,-2]].forEach(p=>{
+    const shard=mesh(BOXG,crystal,p[0],p[1],p[2],0.35,1.2,0.35);g.add(shard);
+    addCrystalDust(ix+p[0],iy+p[1]+0.6,iz+p[2]);
+  });
+  const mouth=mesh(BOXG,new THREE.MeshBasicMaterial({color:0xa090ff,transparent:true,opacity:0.28}),0,2.5,4.8,4.2,3.2,0.2);
+  g.add(mouth);
+  scene.add(g);levelDecor.push(g);
+  const padY=candyPlanet?candyPlanet.y-candyPlanet.r*0.52+0.45:oy+1.5;
+  crystalInterior={
+    g,x:ix,y:iy,z:iz,active:true,
+    bounds:{x0:ix-7,x1:ix+7,y0:iy-0.5,y1:iy+5.5,z0:iz-5.5,z1:iz+5.5},
+    entry:{x:ox,y:padY,z:oz+0.6},entryInterior:{x:ix,y:iy+0.5,z:iz+4.2},
+    exit:{x:ix,y:iy+3.8,z:iz-4.5},exteriorExit:{x:ox+6,y:oy+12,z:oz+10}
+  };
+  return crystalInterior;
+}
+
+function addCandyCaveMouth(x,y,z){
+  const g=new THREE.Group();g.position.set(x,y,z);
+  g.add(mesh(BOXG,lam(0xff9ad6),0,1.2,0.6,5.5,2.6,1.2));
+  g.add(mesh(SPH,new THREE.MeshBasicMaterial({color:0xc8b0ff,transparent:true,opacity:0.35}),0,1.8,0.9,0.5));
+  g.add(mesh(CYL,new THREE.MeshBasicMaterial({color:0xff4080,transparent:true,opacity:0.55}),0,3.2,0,0.25,1.8,0.25));
+  scene.add(g);levelDecor.push(g);
+  if(candyPlanet)candyPlanet.caveMouth={x,y,z,g};
+  return g;
+}
+
+function updateCrystalTransitions(dt){
+  if(!crystalInterior||!crystalInterior.active||P.dead||won)return;
+  const ci=crystalInterior;
+  if(!ci.inside){
+    const dx=P.pos.x-ci.entry.x,dz=P.pos.z-ci.entry.z,dy=P.pos.y-ci.entry.y;
+    const d=Math.hypot(Math.hypot(dx,dz),Math.abs(dy));
+    if(d<3.2&&(P.grounded||dy<2.5)){
+      ci.inside=true;
+      P.pos.set(ci.entryInterior.x,ci.entryInterior.y,ci.entryInterior.z);
+      P.vel.set(0,0,0);P.grounded=true;P.moveZone='grounded';P.surf='stone';
+      endSpaceThrust();SFX.checkpoint();showToast('Crystal cavern!');
+      spawnRing(ci.entryInterior.x,ci.entryInterior.y,ci.entryInterior.z,0xc8b0ff,0.4,6,0.45);
+    }
+  }else{
+    const d=Math.hypot(P.pos.x-ci.exit.x,P.pos.y-ci.exit.y,P.pos.z-ci.exit.z);
+    if(d<2.8){
+      ci.inside=false;
+      P.pos.set(ci.exteriorExit.x,ci.exteriorExit.y,ci.exteriorExit.z);
+      P.vel.set(0,0,0);P.grounded=false;P.moveZone='openSpace';P.surf='void';
+      endSpaceThrust();SFX.checkpoint();showToast('Back to the stars!');
+      spawnRing(ci.exteriorExit.x,ci.exteriorExit.y,ci.exteriorExit.z,0x5ec8ff,0.4,6,0.45);
+    }
+  }
+}
+
+function addSpaceStage3Endpoint(x,y,z){
+  const g=new THREE.Group();g.position.set(x,y,z);
+  g.add(mesh(CYL,new THREE.MeshBasicMaterial({color:0xc8b0ff,transparent:true,opacity:0.35}),0,0.05,0,3.2,0.08,3.2));
+  const ring=new THREE.Mesh(new THREE.TorusGeometry(2.8,0.14,8,32),new THREE.MeshBasicMaterial({color:0xffe078,transparent:true,opacity:0.75}));
+  ring.rotation.x=Math.PI/2;g.add(ring);
+  scene.add(g);levelDecor.push(g);
+  spaceStage3Ends.push({g,x,y,z,triggered:false,fxT:0});
+  return g;
+}
+
+function updateSpaceStage3Ends(dt){
+  for(const e of spaceStage3Ends){
+    if(e.triggered){
+      e.fxT+=dt;
+      if(e.fxT>0.08&&e.fxT<0.9){
+        e.pt=(e.pt||0)-dt;if(e.pt<=0){e.pt=0.06;
+          spawnP(e.x+rand(-1.2,1.2),e.y+rand(0.3,2),e.z+rand(-1.2,1.2),rand(-1,1),rand(1,3),rand(-1,1),0.1,Math.random()<0.5?0xc8b0ff:0xffe078,0.5,0.4,0,0.8);
+        }
+      }
+      if(e.fxT>1.2){e.triggered=false;e.fxT=0;softReturnToPicker();}
+      continue;
+    }
+    if(P.dead||won)continue;
+    if(Math.hypot(P.pos.x-e.x,P.pos.y-e.y,P.pos.z-e.z)<3.5){
+      e.triggered=true;e.fxT=0;e.pt=0;
+      CAM.shake=Math.max(CAM.shake,0.35);CAM.fovKick=Math.max(CAM.fovKick,5);
+      rumble(100,0.35,0.3);SFX.checkpoint();
+      spawnRing(e.x,e.y+0.5,e.z,0xc8b0ff,0.4,6,0.5);
+      showToast('The saucer belt waits ahead…');
+    }
+  }
+}
+
 function updateSpaceWorld(dt){
   if(!isSpaceLevel())return;
   updateAsteroids(dt);
   updateSaucers(dt);
   updateSpaceSparks(dt);
+  updateStarBeams(dt);
+  updateStarCrates(dt);
+  updateCrystalTransitions(dt);
   updateSpaceStage2Ends(dt);
+  updateSpaceStage3Ends(dt);
+  for(const e of saucers){
+    if(e.targetDummy&&e.flashT>0){e.flashT-=dt;if(e.g.userData&&e.g.userData.dome&&e.g.userData.dome.material)e.g.userData.dome.material.color.setHex(e.flashT>0?0xfff06a:0x7dff9a);}
+  }
 }
 
 function updateSpaceDecor(dt){
@@ -595,45 +941,17 @@ function updateSpaceDecor(dt){
     if(ch[1])ch[1].rotation.z+=dt*0.25;
     if(ch[2])ch[2].rotation.z-=dt*0.18;
   }
-  if(cheeseMoonLandmark)cheeseMoonLandmark.rotation.y+=dt*0.04;
-  for(const p of spaceDecorPlanets){if(p!==cheeseMoonLandmark)p.rotation.y+=dt*0.015;}
-}
-
-function beginSpaceOutOfRouteRecovery(){
-  if(spaceRecoveryT>0)return;
-  applySpaceRecovery(999);
-}
-
-function gustHitSaucers(mx,mz,k){
-  for(const e of saucers){
-    if(!e.alive||e.state==='dying')continue;
-    const s=k(e.x,e.z);if(s>0&&Math.abs(e.y-P.pos.y)<3.5)stunSaucer(e);
-  }
-}
-
-function spinHitSaucers(px,py,pz){
-  let hit=false;
-  for(const e of saucers){
-    if(!e.alive||e.state==='dying')continue;
-    const d=Math.hypot(e.x-px,e.y-py,e.z-pz);
-    if(d<=BONKR+0.35*e.size){hitSaucer(e,1);hit=true;}
-  }
-  return hit;
-}
-
-function jetHitSaucers(){
-  for(const e of saucers){
-    if(!e.alive||e.state==='dying'||P.jetHits.indexOf(e)>=0)continue;
-    const dx=e.x-P.pos.x,dz=e.z-P.pos.z,d=Math.hypot(dx,dz);
-    if(d<0.55*e.size+0.35&&e.y<P.pos.y+0.2&&e.y>P.pos.y-1.1){P.jetHits.push(e);hitSaucer(e,1);}
-  }
+  const moonSpin=cheeseMoonBody||cheeseMoonLandmark;
+  if(moonSpin)moonSpin.rotation.y+=dt*0.04;
+  if(candyPlanet&&candyPlanet.g)candyPlanet.g.rotation.y+=dt*0.025;
+  for(const p of spaceDecorPlanets){if(p!==cheeseMoonLandmark&&p!==(cheeseMoonBody||null)&&p!==(candyPlanet&&candyPlanet.g))p.rotation.y+=dt*0.015;}
 }
 
 window.__SPACE={
   isSpaceLevel,spaceCfg,queryMoveZone,landableSurfaceAt,solidIsLandable,pointInOpenZone,
   nearLandableAssist,nearestLandingTarget,applyLandingAssist,
   get blackHole(){return blackHoleLandmark;},
-  get cheeseMoon(){return cheeseMoonLandmark;},
+  get cheeseMoon(){return cheeseMoonBody||cheeseMoonLandmark;},
   get decorPlanets(){return spaceDecorPlanets;},
   get landingTargets(){return spaceLandingTargets;},
   get routeTrail(){return spaceRouteTrail;},
@@ -646,5 +964,11 @@ window.__SPACE={
   get saucers(){return saucers;},
   get sparks(){return spaceSparks;},
   get stage2Ends(){return spaceStage2Ends;},
-  asteroidPos,hurtFromAsteroid,hitSaucer,stunSaucer
+  get stage3Ends(){return spaceStage3Ends;},
+  get starCrates(){return starCrates;},
+  get starBeams(){return starBeams;},
+  get crystalInterior(){return crystalInterior;},
+  get candyPlanet(){return candyPlanet;},
+  get cheeseMoonBody(){return cheeseMoonBody;},
+  asteroidPos,hurtFromAsteroid,hitSaucer,stunSaucer,fireStarBeam,gustCrystalDust,spinHitCracked,spinHitStarCrates,slamHitStarCrates
 };

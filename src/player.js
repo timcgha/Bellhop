@@ -79,7 +79,7 @@ function shadowOpacityForHeight(h){
 }
 function shadowScaleForHeight(h){return clamp(1-h*SHADOW_SCALE_RATE,SHADOW_SCALE_MIN,1);}
 
-const P=window.__P={spawn:{x:0,y:0,z:10},pos:new THREE.Vector3(0,0,10),vel:new THREE.Vector3(),yaw:Math.PI,grounded:false,wasGrounded:false,lastGround:-9,jumpBuf:-9,jumping:false,puff:true,slam:0,hangT:0,gustCD:0,bonkCD:0,bonkT:0,sq:1,sqV:0,sqT:1,footT:0,surf:'grass',run:0,mouthT:0,blinkT:2,blinkAnim:0,inFan:false,splT:0,puffAir:0,hover:false,hovT:0,hoverS:null,hp:4,maxHp:4,inv:0,dead:false,deadT:0,inGoo:false,fire:false,bubble:false,hasSkyBlast:false,leapBoost:new THREE.Vector3(),glideT:0,glideArmed:false,wingsOut:false,lavaRecT:0,lavaRecMax:0,anchorSettleT:0,safeAnchor:new THREE.Vector3(0,0,10),lavaRecFrom:new THREE.Vector3(),jetT:0,jetP:0,jetHits:[],moveZone:'grounded',spaceThrust:false,spaceThrustS:null,spaceThrustY:0};
+const P=window.__P={spawn:{x:0,y:0,z:10},pos:new THREE.Vector3(0,0,10),vel:new THREE.Vector3(),yaw:Math.PI,grounded:false,wasGrounded:false,lastGround:-9,jumpBuf:-9,jumping:false,puff:true,slam:0,hangT:0,gustCD:0,bonkCD:0,bonkT:0,sq:1,sqV:0,sqT:1,footT:0,surf:'grass',run:0,mouthT:0,blinkT:2,blinkAnim:0,inFan:false,splT:0,puffAir:0,hover:false,hovT:0,hoverS:null,hp:4,maxHp:4,inv:0,dead:false,deadT:0,inGoo:false,fire:false,bubble:false,hasSkyBlast:false,hasStarBeam:false,leapBoost:new THREE.Vector3(),glideT:0,glideArmed:false,wingsOut:false,lavaRecT:0,lavaRecMax:0,anchorSettleT:0,safeAnchor:new THREE.Vector3(0,0,10),lavaRecFrom:new THREE.Vector3(),jetT:0,jetP:0,jetHits:[],moveZone:'grounded',spaceThrust:false,spaceThrustS:null,spaceThrustY:0};
 let R=0.36,H=1.15,SPEED=6.8,ACC=44,DEC=60,AIRACC=20,GRAV=-30,JUMPV=10.5,PUFFV=9.4,MAXFALL=-32,COYOTE=0.12,BUFFER=0.15,STEP=0.42;
 let HOVER_HELD=1.0,HOVER_REL=0.5,HOVER_DRIFT=-1.6,SLAM_HANG=0.14,SLAM_FALL=-34,SLAM_REBOUND=8,JET_T=0.38,BONKR=2.05,BONK_CD=0.5;
 // Sky Blast tuning — inactive until a level supplies skyBlast (Level 3). Separate from ordinary SPEED/PUFFV.
@@ -359,6 +359,8 @@ function doGust(){const yaw=P.yaw,fx=Math.sin(yaw),fz=Math.cos(yaw);const mx=P.p
   gustSalamanders(mx,mz,k);
   gustSteamCurtains(mx,mz,k);
   if(typeof gustHitSaucers==='function')gustHitSaucers(mx,mz,k);
+  if(typeof gustCrystalDust==='function')gustCrystalDust(mx,mz,k);
+  if(typeof fireStarBeam==='function'&&P.hasStarBeam)fireStarBeam(fx,fz,mx,my,mz);
   if(isUnderwater())gustHitKelp(mx,mz,k);
   rumble(60,0.2,0.4);
   if(isUnderwater()&&P.bubble)fireBubble();
@@ -376,7 +378,9 @@ function doBonk(){const px=P.pos.x,pz=P.pos.z;SFX.bonk();SFX.spin();
   for(const e of cinders){if(!e.alive||e.state==='dying'||Math.abs(e.y-P.pos.y)>1.5)continue;const s=k(e.x,e.z);if(s>0){const n=nx(e.x,e.z);hitCinder(e,1,n[0]*6,n[1]*6);hit=true;}}
   for(const s of sharks){if(!s.alive)continue;const s2=k(s.x,s.z);if(s2>0&&Math.abs(s.y-P.pos.y)<1.5){hitSharkSpinJet(s,1);hit=true;}}
   for(const c of crates){if(c.broken)continue;if(Math.hypot(c.x-px,c.z-pz)<BONKR&&Math.abs(c.y-P.pos.y)<1.4){breakCrate(c);hit=true;}}
+  if(typeof spinHitStarCrates==='function')spinHitStarCrates(px,pz);
   if(typeof spinHitSaucers==='function'&&spinHitSaucers(px,P.pos.y+0.45,pz))hit=true;
+  if(typeof spinHitCracked==='function'&&spinHitCracked(px,P.pos.y+0.45,pz))hit=true;
   spawnRing(px,P.pos.y+0.45,pz,0xffe9b0,0.55,5,0.3);
   for(let i=0;i<7;i++){const a=i/7*TAU;spawnP(px+Math.cos(a)*0.7,P.pos.y+0.55,pz+Math.sin(a)*0.7,Math.cos(a)*3,rand(0.5,1.5),Math.sin(a)*3,0.09,0xfff0b8,0.3,0.8,0,0.8);}
   if(hit)rumble(60,0.35,0.15);}
@@ -392,6 +396,7 @@ function slamImpact(){const px=P.pos.x,py=P.pos.y,pz=P.pos.z;SFX.slam();CAM.shak
   for(const e of gloops){if(!e.alive||e.state==='dying'||Math.abs(e.y-py)>3)continue;const s=kk(e.x,e.z);if(s>0.15){const d=Math.hypot(e.x-px,e.z-pz)||0.01;hitGloop(e,2,(e.x-px)/d*8,(e.z-pz)/d*8);}}
   for(const e of cinders){if(!e.alive||e.state==='dying'||Math.abs(e.y-py)>3)continue;const s=kk(e.x,e.z);if(s>0.15){const d=Math.hypot(e.x-px,e.z-pz)||0.01;hitCinder(e,2,(e.x-px)/d*8,(e.z-pz)/d*8);}}
   for(const c of crates){if(c.broken)continue;if(Math.hypot(c.x-px,c.z-pz)<RS*0.55&&Math.abs(c.y-py)<2.5)breakCrate(c);}
+  if(typeof slamHitStarCrates==='function')slamHitStarCrates(px,py,pz);
   if(P.fire)fireBurst(px,py,pz);
   {if(WM){const s=kk(WM.sailX,WM.sailZ);if(s>0)WM.spin+=s*4;}}
   {if(BOAT){const s=kk(BOAT.pos.x,BOAT.pos.z);if(s>0){const d=Math.hypot(BOAT.pos.x-px,BOAT.pos.z-pz)||0.01;BOAT.vel.x+=(BOAT.pos.x-px)/d*s*4;BOAT.vel.z+=(BOAT.pos.z-pz)/d*s*4;}}}
@@ -402,13 +407,16 @@ function hurtPlayer(kx,kz,col){if(won||P.inv>0||P.dead)return;P.hp--;P.inv=1.4;c
   const lostBubble=P.bubble&&isUnderwater();
   // Enemy hits remove Sky Blast like fire/bubbles. Future lava contact must clear leapBoost only and KEEP hasSkyBlast (see Level 3 spec).
   const lostSky=P.hasSkyBlast;
+  const lostStar=P.hasStarBeam;
   if(P.fire){P.fire=false;SFX.fireOut();spoutWorld(tmpV);for(let i=0;i<12;i++)spawnP(tmpV.x,tmpV.y,tmpV.z,rand(-1.2,1.2),rand(0.5,2.2),rand(-1.2,1.2),rand(0.08,0.15),0x8a8a8a,rand(0.5,0.9),0.9,-1,0.55);}
   if(lostBubble){P.bubble=false;SFX.bubbleOut();spoutWorld(tmpV);for(let i=0;i<10;i++)spawnP(tmpV.x,tmpV.y,tmpV.z,rand(-1,1),rand(0.5,2),rand(-1,1),0.07,0xc8f0ff,rand(0.4,0.7),0.8,-1,0.7);}
   if(lostSky){P.hasSkyBlast=false;SFX.fireOut();spoutWorld(tmpV);for(let i=0;i<10;i++)spawnP(tmpV.x,tmpV.y,tmpV.z,rand(-1,1),rand(0.8,2.4),rand(-1,1),rand(0.07,0.12),0xffc08a,rand(0.4,0.7),0.7,-1,0.65);}
+  if(lostStar){P.hasStarBeam=false;SFX.starBeamOut();spoutWorld(tmpV);for(let i=0;i<10;i++)spawnP(tmpV.x,tmpV.y,tmpV.z,rand(-1,1),rand(0.8,2.4),rand(-1,1),rand(0.07,0.12),0xffe078,rand(0.4,0.7),0.7,-1,0.65);}
   updateHUD();if(P.hp<=0){P.dead=true;P.deadT=1.8;SFX.deflate();showToast('Out of puff! Back to the last checkpoint…');spoutWorld(tmpV);for(let i=0;i<8;i++)spawnP(tmpV.x,tmpV.y,tmpV.z,rand(-0.5,0.5),rand(1,2),rand(-0.5,0.5),0.08,0xffffff,0.8,1.2,0,0.7);}
   else if(lostFire)showToast('The fire went out!');
   else if(lostBubble)showToast('The bubbles went away!');
-  else if(lostSky)showToast('The Sky Blast went out!');}
+  else if(lostSky)showToast('The Sky Blast went out!');
+  else if(lostStar)showToast('The Star Beam went out!');}
 function respawn(){P.pos.set(P.spawn.x,P.spawn.y,P.spawn.z);P.vel.set(0,0,0);P.hp=P.maxHp;P.dead=false;P.inv=1.5;P.puff=true;P.puffAir=0;endHover();clearLeapBoost();clearGlide();P.slam=0;P.lavaRecT=0;P.sq=1.3;P.yaw=Math.PI;CAM.yaw=0;CAM.pos.set(P.spawn.x,P.spawn.y+5,P.spawn.z+9);CAM.look.set(P.spawn.x,P.spawn.y+1,P.spawn.z);CAM.lastManual=-9;initSafeAnchor(P.spawn.x,P.spawn.y,P.spawn.z);SFX.refill();puffJumpFX();showToast('Back on your feet!');updateHUD();}
 function hitGloop(e,dmg,kx,kz){if(!e.alive||e.state==='dying')return;e.hp-=dmg;e.hurtT=0.3;e.vx+=kx;e.vz+=kz;e.wind=0;SFX.blorp();
   for(let i=0;i<8;i++)spawnP(e.x,e.y+0.5,e.z,rand(-3,3),rand(1,4),rand(-3,3),rand(0.06,0.12),e.col,rand(0.3,0.5),0.3,-8,0.9);
@@ -601,10 +609,11 @@ function updatePlayerVisual(dt){const u=player.userData;if(P.dead)P.sqT=0.45;
     u.jet.children.forEach(c=>{c.material.opacity=(c.material.color?0.5:0.5)+jk*0.45;});}
   else u.jet.visible=false;
   u.flame.visible=!!P.fire;if(P.fire){const fl=1+Math.sin(time*19)*0.16;u.flame.scale.set(fl,1+Math.sin(time*25)*0.24,fl);u.flame.rotation.y=time*3.4;}
-  // Idle Sky Blast tell: bellows seams glow orange. No spout flame — that stays fire-power only.
+  // Idle Sky Blast / Star Beam tell: bellows seams glow orange when powered.
   if(u.seams){const runGlow=P.grounded?clamp(Math.hypot(P.vel.x,P.vel.z)/SPEED,0,1):0;
     for(const seam of u.seams){const mat=seam.material;if(!mat||!mat.color)continue;
-      if(P.hasSkyBlast){const g=0.45+runGlow*0.35+Math.sin(time*6)*0.05;mat.color.setHex(0xff8a3a);if(mat.emissive&&mat.emissive.setHex)mat.emissive.setHex(0xff6a20);if(mat.emissiveIntensity!=null)mat.emissiveIntensity=g;}
+      if(P.hasStarBeam){const g=0.5+runGlow*0.35+Math.sin(time*7)*0.06;mat.color.setHex(0xffa040);if(mat.emissive&&mat.emissive.setHex)mat.emissive.setHex(0xff8020);if(mat.emissiveIntensity!=null)mat.emissiveIntensity=g;}
+      else if(P.hasSkyBlast){const g=0.45+runGlow*0.35+Math.sin(time*6)*0.05;mat.color.setHex(0xff8a3a);if(mat.emissive&&mat.emissive.setHex)mat.emissive.setHex(0xff6a20);if(mat.emissiveIntensity!=null)mat.emissiveIntensity=g;}
       else{mat.color.setHex(0xc9ced4);if(mat.emissive&&mat.emissive.setHex)mat.emissive.setHex(0x000000);if(mat.emissiveIntensity!=null)mat.emissiveIntensity=0;}}}
   // Mechanical glide wings: deploy on powered puff (visual), stay through glide physics, retract on clear.
   if(u.wings){

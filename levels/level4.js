@@ -9,6 +9,11 @@ garden:{
   end:{x:30,y:5,z:-140},
   saucerArena:{x:28,y:6,z:-118}
 },
+candy:{
+  planet:{x:98,y:18,z:-198,r:11},
+  caveMouth:{x:102,y:18.5,z:-204},
+  interiorOrigin:{x:102,y:16.5,z:-204}
+},
 physics:{
   speed:6.8,acc:44,dec:60,airAcc:20,
   grav:-30,maxFall:-32,jumpV:10.5,puffV:9.4,
@@ -33,8 +38,10 @@ openSpace:{
   takeoffBias:0.32,
   takeoffAssistH:3.5
 },
-openSpaceZones:[{x0:-50,y0:-12,x1:60,y1:58,z0:-155,z1:48}],
-playVolume:{cx:22,cy:14,cz:-55,soft:95,hard:118,recoverDur:0.5,recoverTo:{x:22,y:0.45,z:-10}},
+openSpaceZones:[
+  {x0:-50,y0:-12,x1:130,y1:58,z0:-230,z1:48}
+],
+playVolume:{cx:49,cy:12,cz:-110,soft:125,hard:148,recoverDur:0.5,recoverTo:{x:22,y:0.45,z:-10}},
 voidY:-20,
 voidFloor:-40,
 snoozleGoal:4,
@@ -42,10 +49,22 @@ fence:0x2a3040,
 fenceSolids:[],
 pathTiles:[],
 hedges:[],
-checks:[[0,0,0.45],[28,-26,5],[28,-104,5]],
+checks:[
+  [0,0,0.45],
+  [28,-26,5],
+  [28,-104,5],
+  [98,12.5,-198],
+  [102,16.5,-222]
+],
 tower:{tx:0,tz:0},
-snoozleHomes:[{x:8,y:28,z:-200}],
-snoozles:[[-2.8,0.55,3.2,0,false]],
+snoozleHomes:[
+  {x:8,y:28,z:-200},
+  {x:102,y:28,z:-222}
+],
+snoozles:[
+  [-2.8,0.55,3.2,0,false],
+  [102,2.0,-218,1,false]
+],
 trees:[],
 steps:[
   ['launchDock',0,0,0,14,14],
@@ -66,14 +85,14 @@ steps:[
   ['hazardAsteroid',37,6,-68,1.6,'static'],
   ['routeTrail',28,5,-40,28,5,-70,7],
   ['spaceBuoy',28,5,-56],
-  // Beat 3 — altitude variation: climb over, then dip under/around
+  // Beat 3 — altitude variation
   ['hazardAsteroid',28,1.2,-78,2.05,'climb'],
   ['spaceBuoy',28,9,-78,true],
   ['routeTrail',28,5,-72,28,8.5,-78,3],
   ['hazardAsteroid',28,11.2,-88,1.85,'dive'],
   ['spaceBuoy',28,3.5,-88,true],
   ['routeTrail',28,8.5,-80,28,3.8,-90,4],
-  // Beat 4 — one slow deterministic moving asteroid
+  // Beat 4 — one slow moving asteroid
   ['movingAsteroid',18,5,-96,40,5,-96,1.55,10],
   ['routeTrail',28,5,-92,28,5,-102,3],
   ['spaceBuoy',28,10,-96],
@@ -81,15 +100,37 @@ steps:[
   ['spaceBuoy',28,5,-104,true],
   ['spaceRestPad',28,4.6,-104,3.4],
   ['routeTrail',28,5,-104,28,6,-114,3],
-  // Beat 6 — first saucer arena (roomy, after asteroids)
+  // Beat 6 — first saucer arena
   ['saucer',28,6,-118,'small',true],
   ['spaceBuoy',22,6,-118],['spaceBuoy',34,6,-118],
-  // Stage 2 endpoint + Cheese Moon foreshadow (no landing)
+  // Optional cracked asteroid tutorial (shortcut)
+  ['crackedAsteroid',42,5,-108,1.75,false],
+  // Stage 2 endpoint
   ['routeTrail',28,6,-122,30,5,-138,4],
   ['spaceBuoy',30,5,-138,true],
   ['spaceStage2Endpoint',30,5,-140],
+  // Stage 3 — Cheese Moon foreshadow (visual only, not landable)
+  ['routeTrail',30,5,-142,45,8,-168,7],
+  ['spaceBuoy',45,8,-168,true],
   ['cheeseMoonLandmark',58,12,-175,7.5],
-  // Scenery / backdrop (no collision)
+  // Open space to Candy Planet
+  ['routeTrail',58,12,-178,82,16,-192,8],
+  ['spaceBuoy',82,16,-192,true],
+  ['routeTrail',82,16,-194,98,18,-198,5],
+  ['candyPlanet',98,18,-198,11],
+  // Candy surface — Star Beam teaching
+  ['starCrate',92,19.2,-192,true],
+  ['saucerTarget',94,19,-196],
+  ['saucer',96,19,-202,'mid',true],
+  ['candyCaveMouth',102,18.5,-204],
+  ['crystalInterior',102,16.5,-204],
+  // Interior mid saucer
+  ['saucer',102,3.2,-214,'mid',false],
+  // Stage 3 endpoint after crystal exit
+  ['routeTrail',98,22,-212,98,24,-218,3],
+  ['spaceBuoy',98,24,-218,true],
+  ['spaceStage3Endpoint',98,24,-220],
+  // Scenery / backdrop
   ['spaceBuoy',-18,2,14],['spaceBuoy',36,3,18],['spaceBuoy',-8,6,32],
   ['backdropAsteroid',12,14,-20,0.55],['backdropAsteroid',42,18,-48,0.7],
   ['backdropAsteroid',8,22,-70,0.45],['backdropAsteroid',48,10,-90,0.6],
