@@ -482,7 +482,7 @@ function loadLevel(L){
     else if(k==='backdropAsteroid')addBackdropAsteroid(step[1],step[2],step[3],step[4]);
     else if(k==='hazardAsteroid')addHazardAsteroid(step[1],step[2],step[3],step[4],step[5]);
     else if(k==='movingAsteroid')addMovingAsteroid(step[1],step[2],step[3],step[4],step[5],step[6],step[7],step[8]);
-    else if(k==='saucer')addSaucer(step[1],step[2],step[3],step[4],step[5]);
+    else if(k==='saucer')addSaucer(step[1],step[2],step[3],step[4],step[5],{openSpace:!!step[6]});
     else if(k==='cheeseMoonLandmark')addCheeseMoonLandmark(step[1],step[2],step[3],step[4]);
     else if(k==='cheeseMoon')addCheeseMoonBody(step[1],step[2],step[3],step[4]);
     else if(k==='candyPlanet')addCandyPlanet(step[1],step[2],step[3],step[4]);
@@ -493,6 +493,9 @@ function loadLevel(L){
     else if(k==='crackedAsteroid')addCrackedAsteroid(step[1],step[2],step[3],step[4],step[5]);
     else if(k==='spaceStage2Endpoint')addSpaceStage2Endpoint(step[1],step[2],step[3]);
     else if(k==='spaceStage3Endpoint')addSpaceStage3Endpoint(step[1],step[2],step[3]);
+    else if(k==='shieldedGate')addShieldedGate(step[1],step[2],step[3],step[4],step[5],step[6]);
+    else if(k==='observatoryLandmark')addObservatoryLandmark(step[1],step[2],step[3]);
+    else if(k==='spaceStage4Endpoint')addSpaceStage4Endpoint(step[1],step[2],step[3]);
     else if(k==='blackHoleLandmark')addBlackHoleLandmark(step[1],step[2],step[3]);
     else if(k==='conch')buildConch(step[1],step[2]);
     else if(k==='steamOrgan')buildSteamOrgan(step[1],step[2],step[3]);
