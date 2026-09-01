@@ -229,14 +229,22 @@ function boot(opts){return require('./harness.js')(Object.assign({autostart:fals
   const css=require('fs').readFileSync(require('path').join(__dirname,'..','index.html'),'utf8');
   ok(/#start\{[^}]*pointer-events\s*:\s*none/.test(css),'start overlay ignores pointer events outside the card');
   ok(/#start \.card\{[^}]*pointer-events\s*:\s*auto/.test(css),'start card remains tappable for level selection');
-  ok(/\.tbtn\{[^}]*z-index\s*:\s*6/.test(css),'touch buttons stack above the start overlay');
+  ok(/#start\{[^}]*overflow-y\s*:\s*auto/.test(css),'start overlay scrolls when picker exceeds viewport');
+  ok(/#start\{[^}]*100dvh/.test(css),'start overlay uses dynamic viewport height');
+  ok(/body\.touch\.playing \.tbtn\{[^}]*display\s*:\s*flex/.test(css),'touch buttons show only during gameplay');
+  ok(!/body\.touch \.tbtn\{[^}]*display\s*:\s*flex/.test(css),'touch buttons are not always visible on touch devices');
+  ok(/\.tbtn\{[^}]*z-index\s*:\s*6/.test(css),'touch buttons stack above the start overlay during gameplay');
+  ok(/@media \(max-height:520px\)/.test(css),'compact picker styles exist for short mobile viewports');
   ok(/lvlPulse/.test(css),'selected level card has a pulse animation for touch feedback');
   ok(/id="lvl2"/.test(css),'Peak card is present in the start overlay');
   ok(/id="lvl3"/.test(css),'Space card is present in the start overlay');
   ok(/class="radio-badge"[^>]*>Radio v2<\/span>/.test(css),'Radio v2 footer badge is present on the start card');
   const hud=require('fs').readFileSync(require('path').join(__dirname,'..','src','hud.js'),'utf8');
+  const input=require('fs').readFileSync(require('path').join(__dirname,'..','src','input.js'),'utf8');
   ok(/tap it again to play/.test(hud),'touch pick hint no longer requires pressing A');
   ok(/function tapLevelCard/.test(hud),'level cards use tapLevelCard for select-or-start');
+  ok(/classList\.add\('playing'\)/.test(hud),'starting gameplay adds playing class for touch UI');
+  ok(/closest\('#start'\)/.test(input),'menu allows touch scrolling inside the start overlay');
   ok(/space/.test(hud),'picker draws Space card art');
 }
 

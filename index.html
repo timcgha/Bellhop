@@ -18,8 +18,8 @@ canvas{display:block;touch-action:none}
 #win .big{font-size:min(12.5vw,72px);font-weight:900;color:#fff3c4;-webkit-text-stroke:3px #1e7f85;text-shadow:0 8px 0 rgba(30,127,133,.35);letter-spacing:2px;text-align:center;line-height:1.05;animation:pop .7s cubic-bezier(.2,1.6,.4,1)}
 #win .sm{margin-top:12px;font-size:min(5vw,23px);font-weight:800;color:#fff;text-align:center;text-shadow:0 3px 0 rgba(20,60,80,.55);animation:pop .7s .18s backwards cubic-bezier(.2,1.6,.4,1)}
 @keyframes pop{from{transform:scale(.2) rotate(-8deg);opacity:0}to{transform:scale(1) rotate(0);opacity:1}}
-#start{position:fixed;inset:0;display:flex;align-items:center;justify-content:center;background:rgba(159,220,255,.55);z-index:5;pointer-events:none}
-#start .card{background:#fff8e6;border:4px solid #1e7f85;border-radius:26px;padding:22px 26px;max-width:min(560px,96vw);text-align:center;box-shadow:0 14px 40px rgba(10,60,90,.28);pointer-events:auto}
+#start{position:fixed;inset:0;display:flex;align-items:flex-start;justify-content:center;background:rgba(159,220,255,.55);z-index:5;pointer-events:none;overflow-y:auto;-webkit-overflow-scrolling:touch;overscroll-behavior:contain;touch-action:pan-y;box-sizing:border-box;min-height:100dvh;height:100dvh;max-height:100dvh;padding:max(12px,env(safe-area-inset-top)) max(10px,env(safe-area-inset-right)) max(12px,env(safe-area-inset-bottom)) max(10px,env(safe-area-inset-left))}
+#start .card{background:#fff8e6;border:4px solid #1e7f85;border-radius:26px;padding:22px 26px;max-width:min(560px,96vw);text-align:center;box-shadow:0 14px 40px rgba(10,60,90,.28);pointer-events:auto;margin:auto 0;flex-shrink:0;touch-action:pan-y}
 #start h1{margin:0;font-size:38px;letter-spacing:2px;color:#1e7f85;font-weight:900}
 #start .sub{margin:2px 0 10px;color:#1c2b33;font-weight:700;font-size:13px;letter-spacing:.5px;text-transform:uppercase}
 #start p{margin:6px 0;line-height:1.35;color:#1c2b33;font-size:15px}
@@ -38,12 +38,27 @@ canvas{display:block;touch-action:none}
 #start .radio-badge{display:inline-block;margin-top:10px;padding:3px 10px;font-size:10px;font-weight:700;letter-spacing:.35px;color:#1e7f85;background:#e9f6f7;border:1px solid #b8d4d8;border-radius:999px}
 .tbtn{position:fixed;width:66px;height:66px;border-radius:50%;background:rgba(255,255,255,.28);border:3px solid rgba(255,255,255,.75);color:#fff;font-weight:900;font-size:22px;display:none;align-items:center;justify-content:center;flex-direction:column;line-height:1;touch-action:none;text-shadow:0 1px 0 rgba(0,0,0,.3);z-index:6}
 .tbtn small{font-size:9px;font-weight:700;opacity:.95;margin-top:2px}
-body.touch .tbtn{display:flex}
-#bA{right:22px;bottom:30px;background:rgba(70,190,120,.5)}
-#bB{right:104px;bottom:64px;background:rgba(235,85,85,.5)}
-#bY{right:44px;bottom:114px;background:rgba(245,180,0,.55)}
+body.touch.playing .tbtn{display:flex}
+body:not(.playing) #hint{opacity:0!important;pointer-events:none}
+#bA{right:max(22px,env(safe-area-inset-right));bottom:max(30px,env(safe-area-inset-bottom));background:rgba(70,190,120,.5)}
+#bB{right:max(104px,calc(22px + env(safe-area-inset-right) + 66px));bottom:max(64px,env(safe-area-inset-bottom));background:rgba(235,85,85,.5)}
+#bY{right:max(44px,calc(22px + env(safe-area-inset-right) + 22px));bottom:max(114px,env(safe-area-inset-bottom));background:rgba(245,180,0,.55)}
 #stick{position:fixed;width:120px;height:120px;border-radius:50%;border:3px solid rgba(255,255,255,.55);background:rgba(255,255,255,.12);display:none;pointer-events:none}
 #knob{position:absolute;left:35px;top:35px;width:50px;height:50px;border-radius:50%;background:rgba(255,255,255,.65)}
+@media (max-height:520px){
+#start{padding:max(6px,env(safe-area-inset-top)) max(8px,env(safe-area-inset-right)) max(8px,env(safe-area-inset-bottom)) max(8px,env(safe-area-inset-left))}
+#start .card{padding:10px 12px;border-radius:18px;border-width:3px}
+#start h1{font-size:24px;letter-spacing:1px}
+#start .sub{margin:0 0 4px;font-size:11px}
+#start p{margin:4px 0;font-size:12px;line-height:1.25}
+#start .keys{font-size:11px;padding:6px 8px}
+#start .level-pick{gap:6px;margin:6px 0 4px}
+#start .lvl-card{flex:1 1 68px;max-width:108px;padding:4px;border-radius:12px;border-width:3px}
+#start .lvl-label{margin-top:3px;font-size:10px}
+#start .pick-hint{font-size:12px;margin:2px 0 4px}
+#start small{margin-top:6px;font-size:10px}
+#start .radio-badge{margin-top:6px;font-size:9px;padding:2px 8px}
+}
 </style>
 </head>
 <body>
@@ -1391,7 +1406,13 @@ bindBtn('bB',()=>{IN.b=true;HELD.b=true;},()=>{HELD.b=false;});
 bindBtn('bY',()=>{IN.y=true;},null);
 window.__setTouchStick=(x,z)=>{T.stickId=1;T.jx=x;T.jy=z;};
 window.__clearTouchStick=()=>{T.stickId=null;T.jx=0;T.jy=0;};
-document.addEventListener('touchmove',e=>{e.preventDefault();},{passive:false});
+document.addEventListener('touchmove',e=>{
+  if(!started){
+    const menu=$('start');
+    if(menu&&menu.style.display!=='none'&&e.target.closest('#start'))return;
+  }
+  e.preventDefault();
+},{passive:false});
 document.addEventListener('gesturestart',e=>{e.preventDefault();});
 document.addEventListener('contextmenu',e=>{e.preventDefault();});
 
@@ -1664,6 +1685,7 @@ function softReturnToPicker(){
   beginLandLevel();
   const w=$('win');if(w){w.style.display='none';w.style.opacity=1;}
   $('start').style.display='flex';
+  document.body.classList.remove('playing');
   touchArmed=false;updatePickerUI();
   const hint=$('hint');if(hint){hint.textContent=CTLTEXT;hint.style.opacity=0.95;}
   updateHUD();
@@ -1807,6 +1829,7 @@ function returnToLevelSelect(){
   beginLandLevel();
   const w=$('win');if(w){w.style.display='none';w.style.opacity=1;}
   $('start').style.display='flex';
+  document.body.classList.remove('playing');
   touchArmed=false;updatePickerUI();
   const hint=$('hint');if(hint){hint.textContent=CTLTEXT;hint.style.opacity=0.95;}
   updateHUD();
@@ -5721,7 +5744,7 @@ for(let i=0;i<LEVELS.length;i++){
   $('lvl'+i).addEventListener('pointerdown',e=>{e.stopPropagation();e.preventDefault();tapLevelCard(i);});
 }
 
-function startGame(){if(started)return;loadLevel(LEVELS[pickerIdx]);started=true;$('start').style.display='none';initAudio();IN.jump=false;IN.b=false;IN.y=false;updateHUD();
+function startGame(){if(started)return;loadLevel(LEVELS[pickerIdx]);started=true;document.body.classList.add('playing');$('start').style.display='none';initAudio();IN.jump=false;IN.b=false;IN.y=false;updateHUD();
   const msg=pickerIdx===0?'Follow the path. Wake all four Snoozles!':(pickerIdx===1?'Dive in. Wake four Snoozles on the ocean floor!':(pickerIdx===2?'Try the long leap. Jump, then puff again!':'Hold jump to fly. Let go to glide.'));
   setTimeout(()=>showToast(msg),600);setTimeout(()=>{$('hint').style.opacity=0;},12000);}
 window.__startGame=startGame;

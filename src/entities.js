@@ -229,6 +229,7 @@ function softReturnToPicker(){
   beginLandLevel();
   const w=$('win');if(w){w.style.display='none';w.style.opacity=1;}
   $('start').style.display='flex';
+  document.body.classList.remove('playing');
   touchArmed=false;updatePickerUI();
   const hint=$('hint');if(hint){hint.textContent=CTLTEXT;hint.style.opacity=0.95;}
   updateHUD();
@@ -372,6 +373,7 @@ function returnToLevelSelect(){
   beginLandLevel();
   const w=$('win');if(w){w.style.display='none';w.style.opacity=1;}
   $('start').style.display='flex';
+  document.body.classList.remove('playing');
   touchArmed=false;updatePickerUI();
   const hint=$('hint');if(hint){hint.textContent=CTLTEXT;hint.style.opacity=0.95;}
   updateHUD();
