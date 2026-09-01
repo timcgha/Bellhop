@@ -233,6 +233,7 @@ function boot(opts){return require('./harness.js')(Object.assign({autostart:fals
   ok(/lvlPulse/.test(css),'selected level card has a pulse animation for touch feedback');
   ok(/id="lvl2"/.test(css),'Peak card is present in the start overlay');
   ok(/id="lvl3"/.test(css),'Space card is present in the start overlay');
+  ok(/class="radio-badge"[^>]*>Radio v2<\/span>/.test(css),'Radio v2 footer badge is present on the start card');
   const hud=require('fs').readFileSync(require('path').join(__dirname,'..','src','hud.js'),'utf8');
   ok(/tap it again to play/.test(hud),'touch pick hint no longer requires pressing A');
   ok(/function tapLevelCard/.test(hud),'level cards use tapLevelCard for select-or-start');
