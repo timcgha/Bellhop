@@ -146,7 +146,7 @@ module.exports = function boot(opts = {}) {
     addEventListener(t, f) { (winListeners[t] = winListeners[t] || []).push(f); },
     document: {
       getElementById: el,
-      body: { classList: { add() {} }, appendChild() {} },
+      body: { classList: { add() {}, remove() {}, toggle() {} }, appendChild() {} },
       createElement() { return pf(); },
       addEventListener() {}
     },
