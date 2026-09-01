@@ -3,7 +3,7 @@ let spaceGroup=null,blackHoleLandmark=null,cheeseMoonLandmark=null,cheeseMoonBod
 let spaceOpenZones=[],spacePlayVolume=null,spaceDecorPlanets=[];
 let spaceRecoveryT=0,spaceRecoveryFrom=null;
 let spaceLandingTargets=[],spaceRouteTrail=[],spaceFirstDest=null,spaceRouteBeacons=[];
-const asteroids=[],saucers=[],spaceSparks=[],spaceStage2Ends=[],spaceStage3Ends=[];
+const asteroids=[],saucers=[],spaceSparks=[],spaceStage2Ends=[],spaceStage3Ends=[],shieldedGates=[],spaceStage4Ends=[];
 const starCrates=[],starBeams=[],crystalDust=[];
 let crystalInterior=null,candyPlanet=null,candyPlanetShellFade=1;
 const BEAM_LEN=20,BEAM_DUR=0.35,BEAM_W=0.85;
@@ -24,6 +24,9 @@ function clearSpaceWorld(){
   for(const s of saucers)rem(s.g);saucers.length=0;
   for(const e of spaceStage2Ends)rem(e.g);spaceStage2Ends.length=0;
   for(const e of spaceStage3Ends)rem(e.g);spaceStage3Ends.length=0;
+  for(const g of shieldedGates){if(g.g)rem(g.g);if(g.solid&&g.solid.mesh)rem(g.solid.mesh);}
+  shieldedGates.length=0;
+  for(const e of spaceStage4Ends)rem(e.g);spaceStage4Ends.length=0;
   for(const c of starCrates)rem(c.g);starCrates.length=0;
   starBeams.length=0;crystalDust.length=0;crystalInterior=null;candyPlanet=null;candyPlanetShellFade=1;
   for(const q of spaceSparks){q.alive=false;q.m.visible=false;}
@@ -399,15 +402,16 @@ function buildSaucer(size){
   g.userData={dome,disc};g.scale.setScalar(size);return g;
 }
 
-function addSaucer(x,y,z,type,withNote){
+function addSaucer(x,y,z,type,withNote,opts){
+  opts=opts||{};
   type=type||'small';
   const size=type==='big'?1.45:type==='mid'?1.15:1.0;
   const hp=type==='big'?3:type==='mid'?2:1;
   const g=buildSaucer(size);g.position.set(x,y,z);scene.add(g);levelDecor.push(g);
   let note=null;
   if(withNote){note=addNote(x,y+0.9,z,true);note.heldBy='saucer';}
-  // Candy-surface saucers teach after landing — do not harass open-space approach
-  const surfaceGate=!!candyPlanet;
+  // Candy-surface saucers teach after landing — open-space belt saucers ignore this gate
+  const surfaceGate=opts.openSpace?false:(opts.surfaceGate!=null?!!opts.surfaceGate:!!candyPlanet);
   saucers.push({g,x,y,z,hx:x,hy:y,hz:z,type,size,hp,maxHp:hp,alive:true,state:'patrol',t:0,
     face:rand(0,TAU),vx:0,vy:0,vz:0,stunT:0,hurtT:0,wind:0,spitT:rand(1.2,2.2),
     note,noteReleased:false,ph:rand(0,TAU),aggro:false,bob:0,surfaceGate});
@@ -876,6 +880,10 @@ function updateStarBeams(dt){
       if(!a.cracked||a.broken||b.hit.has(a))continue;
       if(beamHitPoint(b,a.x,a.y,a.z,a.r*0.85)){b.hit.add(a);hitCrackedAsteroid(a,2);}
     }
+    for(const gate of shieldedGates){
+      if(gate.opened||b.hit.has(gate))continue;
+      if(beamHitPoint(b,gate.x,gate.y,gate.z,gate.hitR||2.8)){b.hit.add(gate);openShieldedGate(gate);}
+    }
   }
 }
 
@@ -972,6 +980,109 @@ function addSpaceStage3Endpoint(x,y,z){
   return g;
 }
 
+function addShieldedGate(x,y,z,w,h,d){
+  w=w||8;h=h||5;d=d||1.2;
+  const g=new THREE.Group();g.position.set(x,y,z);
+  const wall=new THREE.Mesh(new THREE.BoxGeometry(w,h,d),new THREE.MeshBasicMaterial({color:0x8868ff,transparent:true,opacity:0.72}));
+  wall.position.y=h*0.5;g.add(wall);
+  const rim=new THREE.Mesh(new THREE.BoxGeometry(w+0.4,h+0.6,d+0.3),new THREE.MeshBasicMaterial({color:0xffe078,transparent:true,opacity:0.55}));
+  rim.position.y=h*0.5;g.add(rim);
+  for(let i=0;i<6;i++){
+    const t=(i+0.5)/6;
+    g.add(mesh(SPH,new THREE.MeshBasicMaterial({color:0xc8b0ff,transparent:true,opacity:0.85}),lerp(-w*0.42,w*0.42,t),h*0.55,0,0.14));
+  }
+  const pillarL=mesh(CYL,new THREE.MeshBasicMaterial({color:0x5ec8ff,transparent:true,opacity:0.65}),-w*0.48,0,0,0.22,h*1.05,0.22);
+  const pillarR=mesh(CYL,new THREE.MeshBasicMaterial({color:0x5ec8ff,transparent:true,opacity:0.65}),w*0.48,0,0,0.22,h*1.05,0.22);
+  g.add(pillarL);g.add(pillarR);
+  g.userData.landmark=true;g.userData.shieldGate=true;
+  scene.add(g);levelDecor.push(g);
+  const solid=addSolid(x,y,z,w,h,d,0x442266,{surf:'stone',role:'shieldGate',invisible:true});
+  const gate={g,x,y,z,w,h,d,hitR:Math.max(w,h)*0.42,solid,opened:false,openT:0,fxT:0};
+  shieldedGates.push(gate);
+  return gate;
+}
+
+function openShieldedGate(gate){
+  if(!gate||gate.opened)return;
+  gate.opened=true;gate.openT=0;gate.fxT=0;
+  if(gate.solid){
+    const idx=solids.indexOf(gate.solid);
+    if(idx>=0)solids.splice(idx,1);
+    if(gate.solid.mesh&&gate.solid.mesh.parent)gate.solid.mesh.parent.remove(gate.solid.mesh);
+    else if(gate.solid.mesh&&scene.remove)scene.remove(gate.solid.mesh);
+    gate.solid=null;
+  }
+  SFX.crystalChime();CAM.shake=Math.max(CAM.shake,0.45);CAM.fovKick=Math.max(CAM.fovKick,6);
+  spawnRing(gate.x,gate.y+gate.h*0.45,gate.z,0xc8b0ff,0.45,8,0.55);
+  for(let i=0;i<18;i++)spawnP(gate.x+rand(-gate.w*0.4,gate.w*0.4),gate.y+rand(0.2,gate.h),gate.z+rand(-0.4,0.4),rand(-2,2),rand(0.5,3),rand(-1,1),rand(0.08,0.16),Math.random()<0.5?0xc8b0ff:0xffe078,rand(0.5,0.9),0.45,-3,0.9);
+  showToast('Star Beam opened the way!');
+}
+
+function updateShieldedGates(dt){
+  for(const gate of shieldedGates){
+    if(!gate.opened)continue;
+    gate.openT+=dt;gate.fxT+=dt;
+    if(gate.g){
+      const k=Math.max(0,1-gate.openT/0.85);
+      gate.g.scale.set(1,Math.max(0.05,k),1);
+      gate.g.rotation.y=gate.openT*2.4;
+      gate.g.children.forEach(c=>{if(c.material&&c.material.opacity!=null)c.material.opacity*=0.985;});
+      if(gate.openT>=0.85)gate.g.visible=false;
+    }
+  }
+}
+
+function addObservatoryLandmark(x,y,z){
+  const g=new THREE.Group();g.position.set(x,y,z);
+  const deck=mesh(CYL,new THREE.MeshBasicMaterial({color:0x88a8d8,transparent:true,opacity:0.55}),0,0.2,0,4.5,0.35,4.5);
+  g.add(deck);
+  const dome=new THREE.Mesh(SPH,new THREE.MeshBasicMaterial({color:0xa8d0ff,transparent:true,opacity:0.42}));
+  dome.scale.set(3.2,1.8,3.2);dome.position.y=1.6;g.add(dome);
+  const scope=mesh(CYL,lam(0xc8d8f0),0,2.4,-1.2,0.18,2.8,0.18);scope.rotation.x=-0.55;g.add(scope);
+  const arrow=mesh(CYL,new THREE.MeshBasicMaterial({color:0xffe078,transparent:true,opacity:0.75}),0,1.2,2.8,0.12,0.12,2.4);
+  g.add(arrow);
+  for(let i=0;i<3;i++){
+    const a=-0.35+i*0.35;
+    g.add(mesh(SPH,new THREE.MeshBasicMaterial({color:0xffe078,transparent:true,opacity:0.7}),Math.sin(a)*3.8,0.8,Math.cos(a)*3.8,0.16));
+  }
+  g.userData.landmark=true;g.userData.landable=false;g.userData.observatory=true;g.userData.interactive=false;
+  scene.add(g);levelDecor.push(g);spaceDecorPlanets.push(g);
+  return g;
+}
+
+function addSpaceStage4Endpoint(x,y,z){
+  const g=new THREE.Group();g.position.set(x,y,z);
+  g.add(mesh(CYL,new THREE.MeshBasicMaterial({color:0x88a8d8,transparent:true,opacity:0.35}),0,0.05,0,3.6,0.08,3.6));
+  const ring=new THREE.Mesh(new THREE.TorusGeometry(3.0,0.14,8,32),new THREE.MeshBasicMaterial({color:0xffe078,transparent:true,opacity:0.78}));
+  ring.rotation.x=Math.PI/2;g.add(ring);
+  g.add(mesh(SPH,new THREE.MeshBasicMaterial({color:0xa8d0ff,transparent:true,opacity:0.65}),0,1.4,0,0.28));
+  scene.add(g);levelDecor.push(g);
+  spaceStage4Ends.push({g,x,y,z,triggered:false,fxT:0});
+  return g;
+}
+
+function updateSpaceStage4Ends(dt){
+  for(const e of spaceStage4Ends){
+    if(e.triggered){
+      e.fxT+=dt;
+      if(e.fxT>0.08&&e.fxT<0.9){
+        e.pt=(e.pt||0)-dt;if(e.pt<=0){e.pt=0.06;
+          spawnP(e.x+rand(-1.2,1.2),e.y+rand(0.3,2),e.z+rand(-1.2,1.2),rand(-1,1),rand(1,3),rand(-1,1),0.1,Math.random()<0.5?0x88a8d8:0xffe078,0.5,0.4,0,0.8);
+        }
+      }
+      continue;
+    }
+    if(P.dead||won)continue;
+    if(Math.hypot(P.pos.x-e.x,P.pos.y-e.y,P.pos.z-e.z)<3.5){
+      e.triggered=true;e.fxT=0;e.pt=0;
+      CAM.shake=Math.max(CAM.shake,0.35);CAM.fovKick=Math.max(CAM.fovKick,5);
+      rumble(100,0.35,0.3);SFX.checkpoint();
+      spawnRing(e.x,e.y+0.5,e.z,0x88a8d8,0.4,6,0.5);
+      showToast('The Star Observatory waits ahead…');
+    }
+  }
+}
+
 function updateSpaceStage3Ends(dt){
   for(const e of spaceStage3Ends){
     if(e.triggered){
@@ -1007,6 +1118,8 @@ function updateSpaceWorld(dt){
   updateCandyPlanetShellFade(dt);
   updateSpaceStage2Ends(dt);
   updateSpaceStage3Ends(dt);
+  updateShieldedGates(dt);
+  updateSpaceStage4Ends(dt);
   for(const e of saucers){
     if(e.targetDummy&&e.flashT>0){e.flashT-=dt;if(e.g.userData&&e.g.userData.dome&&e.g.userData.dome.material)e.g.userData.dome.material.color.setHex(e.flashT>0?0xfff06a:0x7dff9a);}
   }
@@ -1061,6 +1174,9 @@ window.__SPACE={
   get sparks(){return spaceSparks;},
   get stage2Ends(){return spaceStage2Ends;},
   get stage3Ends(){return spaceStage3Ends;},
+  get stage4Ends(){return spaceStage4Ends;},
+  get shieldedGates(){return shieldedGates;},
+  openShieldedGate,
   get starCrates(){return starCrates;},
   get starBeams(){return starBeams;},
   get crystalInterior(){return crystalInterior;},

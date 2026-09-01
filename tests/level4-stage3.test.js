@@ -9,14 +9,19 @@ function releaseJump(H){H.ku({code:'Space'});}
 // ---- version ----
 {
   const H=boot();
-  ok(H.getCamDiag().VERSION_BASE==='v47 · Candy shell proximity','version stamp v45');
+  ok(H.getCamDiag().VERSION_BASE==='v48 · Saucer Belt gate','version stamp v48');
 }
 
-// ---- Snoozles 1 and 3 present (Snoozle 2 deferred with Cheese Moon landing) ----
+// ---- Snoozles 1, 2, and 3 present (Snoozle 4 deferred to Observatory) ----
 {
   const H=boot();H.startLevel(3);H.frames(10);
-  ok(H.W.snoozles.length===2,'Stage 3: Snoozles 1 and 3 on dock and crystal route');
+  ok(H.W.snoozles.length===3,'Stage 3 slice: three obtainable Snoozles authored');
   ok(H.getLevel().snoozleGoal===4,'snoozleGoal remains 4');
+  const cp=H.getSpace().candyPlanet;
+  const candySn=H.W.snoozles[1];
+  ok(!!cp&&Math.hypot(candySn.g.position.x-cp.pad.x,candySn.g.position.z-cp.pad.z)<8,'Snoozle 2 on Candy Planet surface');
+  const crate=H.getSpace().starCrates[0];
+  ok(Math.hypot(candySn.g.position.x-crate.x,candySn.g.position.z-crate.z)>2.5,'Candy Snoozle off Star Beam teaching line');
 }
 
 // ---- Cheese Moon foreshadow only ----
@@ -114,13 +119,14 @@ function hurtFromHarness(H){
   ok(H.getSpace().stage3Ends.length===1,'Stage 3 endpoint exists');
 }
 
-// ---- no Stage 4+ deferred ----
+// ---- Stage 3 boundary (Stage 4 authored but not Stage 5 finish) ----
 {
   const fs=require('fs'),path=require('path');
   const src=fs.readFileSync(path.join(__dirname,'..','levels','level4.js'),'utf8')
     +fs.readFileSync(path.join(__dirname,'..','src','space.js'),'utf8');
   ok(/hasStarBeam|starCrate|fireStarBeam/i.test(src),'Star Beam present in Stage 3');
-  ok(!/shieldedGate|warpTunnel|blackHoleFinish|blackHoleActive/i.test(src),'no Stage 4+ finish systems');
+  ok(/shieldedGate|spaceStage4Endpoint/i.test(src),'Stage 4 Saucer Belt authored');
+  ok(!/warpTunnel|blackHoleFinish|blackHoleActive|cometRun/i.test(src),'no Stage 5+ finish systems');
 }
 
 // ---- flight tuning preserved ----

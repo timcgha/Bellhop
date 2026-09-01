@@ -57,7 +57,7 @@ function releaseJump(H){H.ku({code:'Space'});}
 // Snoozle 3 on crystal main route, not floating in open void
 {
   const H=boot();H.startLevel(3);H.frames(6);
-  const sn=H.W.snoozles[1];
+  const sn=H.W.snoozles[2];
   const ci=H.getSpace().crystalInterior;
   ok(!!sn,'Snoozle 3 present');
   ok(sn.g.position.y>12,'SNOOZLE_POSITIONING_CORRECT: not stranded in deep void');

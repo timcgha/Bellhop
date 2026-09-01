@@ -22,7 +22,7 @@ function flyTo(H,x,y,z,frames){
 // ---- version ----
 {
   const H=boot();
-  ok(H.getCamDiag().VERSION_BASE==='v47 · Candy shell proximity','version stamp v42');
+  ok(H.getCamDiag().VERSION_BASE==='v48 · Saucer Belt gate','version stamp v42');
 }
 
 // ---- Snoozle 1 ----
@@ -49,11 +49,11 @@ function flyTo(H,x,y,z,frames){
   const S=H.getSpace();
   const hazards=S.asteroids.filter(a=>a.hazard);
   const backs=S.asteroids.filter(a=>a.role==='backdrop');
-  const moving=S.asteroids.filter(a=>a.moving);
+  const moving=S.asteroids.filter(a=>a.moving&&a.z>-145);
   ok(hazards.length>=6,'hazard asteroids authored for Garden');
   ok(backs.length>=4,'backdrop asteroids present');
   ok(backs.every(a=>!a.hazard),'backdrop asteroids are non-hazard');
-  ok(moving.length===1,'exactly one moving gameplay asteroid');
+  ok(moving.length===1,'exactly one moving gameplay asteroid in Asteroid Garden');
   ok(S.landingTargets.every(t=>!t.hazard),'landable pads are not hazard asteroids');
   const teach=hazards.find(a=>a.role==='teach');
   ok(!!teach,'first teaching asteroid exists');
@@ -294,7 +294,7 @@ function hitSaucerAgain(H,e){
   const src=fs.readFileSync(path.join(__dirname,'..','levels','level4.js'),'utf8')
     +fs.readFileSync(path.join(__dirname,'..','src','space.js'),'utf8')
     +fs.readFileSync(path.join(__dirname,'..','src','player.js'),'utf8');
-  ok(!/shieldedGate|warpTunnel|blackHoleFinish|blackHoleActive/i.test(src),'no Stage 4+ warp / black-hole finish');
+  ok(!/warpTunnel|blackHoleFinish|blackHoleActive|cometRun/i.test(src),'no Stage 5+ warp / black-hole finish');
   ok(H_snoozleCount()>=1,'Snoozle 1 on dock');
   function H_snoozleCount(){const H=boot();H.startLevel(3);return H.W.snoozles.length;}
 }

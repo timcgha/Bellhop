@@ -414,13 +414,17 @@ Teach dodging before combat:
   twice or any later beam breaks it — safe to skip
 
 Introduce one **small silver saucer** alone in a clear bubble after the garden,
-still before the Cheese Moon landing. The child has room to spin, or jump-jet
-from below; slam is available only after landing on the moon.
+still before the Candy Planet approach. The child has room to spin, or jump-jet
+from below.
 
-Snoozle 2 sleeps on a tiny **Cheese Moon** — a round yellow **landable** body
-with normal gravity, bright pad, and rim glow. Land, wake, launch back to zero-G.
+Snoozle 2 sleeps on the **Candy Planet surface** — on the bright landing pad
+area but slightly off the Star Beam teaching line so finding it feels like a
+small discovery. No obscure traversal required.
 
-Checkpoint on the Cheese Moon.
+The **Cheese Moon** remains a round yellow **backdrop** body only — visible
+foreshadow, not landable. There is no Cheese Moon checkpoint.
+
+Checkpoint at the Candy Planet cave mouth (after surface teaching).
 
 ### 3. The Candy Planet (surface + Star Beam)
 
@@ -686,8 +690,12 @@ Follow the existing pattern in `tests/`.
 ### Snoozles
 
 - Exactly four Snoozles; `snoozleGoal === 4`.
-- All four reachable on the main route or obvious landings; none require the
-  optional secret or Comet Run.
+- **Snoozle 1** — Launch Dock.
+- **Snoozle 2** — Candy Planet surface (small discovery off the Star Beam line).
+- **Snoozle 3** — Crystal Cavern interior (main route).
+- **Snoozle 4** — Star Observatory (future slice; not yet obtainable).
+- After Stage 4 implementation, exactly **three** Snoozles are obtainable before
+  the Observatory slice ships.
 - Snoozle 3 reachable without optional side tunnel.
 - Waking fourth Snoozle does not trigger win.
 

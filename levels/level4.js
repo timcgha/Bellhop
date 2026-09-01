@@ -39,9 +39,9 @@ openSpace:{
   takeoffAssistH:3.5
 },
 openSpaceZones:[
-  {x0:-50,y0:-12,x1:130,y1:58,z0:-230,z1:48}
+  {x0:-50,y0:-12,x1:130,y1:58,z0:-265,z1:48}
 ],
-playVolume:{cx:49,cy:12,cz:-110,soft:125,hard:148,recoverDur:0.5,recoverTo:{x:22,y:0.45,z:-10}},
+playVolume:{cx:25,cy:12,cz:-130,soft:140,hard:165,recoverDur:0.5,recoverTo:{x:22,y:0.45,z:-10}},
 voidY:-20,
 voidFloor:-40,
 snoozleGoal:4,
@@ -54,16 +54,19 @@ checks:[
   [28,-26,5],
   [28,-104,5],
   [94,24.0,-195],
-  [102,16.5,-222]
+  [102,16.5,-222],
+  [28,18,-254]
 ],
 tower:{tx:0,tz:0},
 snoozleHomes:[
   {x:8,y:28,z:-200},
+  {x:50,y:28,z:-228},
   {x:102,y:28,z:-222}
 ],
 snoozles:[
   [-2.8,0.55,3.2,0,false],
-  [102,15.5,-219,1,false]
+  [98,24.0,-188,1,false],
+  [102,15.5,-219,2,false]
 ],
 trees:[],
 steps:[
@@ -131,12 +134,45 @@ steps:[
   ['routeTrail',98,22,-212,98,24,-218,3],
   ['spaceBuoy',98,24,-218,true],
   ['spaceStage3Endpoint',98,24,-220],
+  // Stage 4 — Saucer Belt (crystal exit → shield gate → observatory foreshadow)
+  ['routeTrail',108,28.5,-194,96,26,-206,6],
+  ['spaceBuoy',96,26,-206,true],
+  // Beat A — readable asteroid-only lane
+  ['hazardAsteroid',90,25,-210,1.65,'static'],
+  ['hazardAsteroid',104,27,-204,1.55,'static'],
+  ['movingAsteroid',88,24,-216,100,26,-216,1.5,14],
+  ['routeTrail',96,26,-206,84,24,-220,5],
+  ['spaceBuoy',84,24,-220],
+  ['hazardAsteroid',78,23,-224,1.6,'static'],
+  ['hazardAsteroid',90,25,-228,1.5,'static'],
+  ['backdropAsteroid',72,20,-218,0.5],
+  // Beat B — one saucer weaving among rocks
+  ['saucer',74,24,-232,'small',false,true],
+  ['hazardAsteroid',68,22,-236,1.55,'static'],
+  ['hazardAsteroid',80,26,-234,1.5,'static'],
+  ['routeTrail',84,24,-220,64,22,-238,4],
+  ['spaceBuoy',64,22,-238,true],
+  // Beat C — two saucers with room to dodge
+  ['saucer',58,22,-244,'mid',false,true],
+  ['saucer',44,20,-250,'small',false,true],
+  ['hazardAsteroid',52,21,-247,1.45,'static'],
+  ['routeTrail',64,22,-238,46,20,-252,4],
+  // Beat D — mandatory shield gate + renewable star crate
+  ['starCrate',42,20,-248,true],
+  ['shieldedGate',38,20,-254,8,5.5,1.2],
+  // Beat E — post-gate relief and future-route cue
+  ['spaceRestPad',28,18,-256,3.6],
+  ['spaceBuoy',28,18,-256,true],
+  ['observatoryLandmark',14,22,-262],
+  ['routeTrail',28,18,-256,14,22,-262,4],
+  ['spaceStage4Endpoint',14,22,-264],
   // Scenery / backdrop
   ['spaceBuoy',-18,2,14],['spaceBuoy',36,3,18],['spaceBuoy',-8,6,32],
   ['backdropAsteroid',12,14,-20,0.55],['backdropAsteroid',42,18,-48,0.7],
   ['backdropAsteroid',8,22,-70,0.45],['backdropAsteroid',48,10,-90,0.6],
   ['backdropAsteroid',-6,16,-55,0.5],['backdropAsteroid',55,20,-130,0.8],
   ['backdropAsteroid',15,28,-100,0.4],['backdropAsteroid',-20,12,-40,0.55],
+  ['backdropAsteroid',60,18,-240,0.45],['backdropAsteroid',22,16,-248,0.5],
   ['backdropPlanet',-55,18,-70,6,0x6a4a9a,true],
   ['backdropPlanet',48,12,-85,5,0xc45a78,false],
   ['backdropPlanet',-30,8,95,4.5,0x4a8a6a,false],
