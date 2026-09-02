@@ -494,9 +494,11 @@ function loadLevel(L){
     else if(k==='spaceStage2Endpoint')addSpaceStage2Endpoint(step[1],step[2],step[3]);
     else if(k==='spaceStage3Endpoint')addSpaceStage3Endpoint(step[1],step[2],step[3]);
     else if(k==='shieldedGate')addShieldedGate(step[1],step[2],step[3],step[4],step[5],step[6]);
-    else if(k==='observatoryLandmark')addObservatoryLandmark(step[1],step[2],step[3]);
+    else if(k==='observatoryLandmark')buildStarObservatory(step[1],step[2],step[3]);
+    else if(k==='starObservatory')buildStarObservatory(step[1],step[2],step[3]);
     else if(k==='spaceStage4Endpoint')addSpaceStage4Endpoint(step[1],step[2],step[3]);
     else if(k==='blackHoleLandmark')addBlackHoleLandmark(step[1],step[2],step[3]);
+    else if(k==='blackHoleFinish')buildBlackHoleFinish(step[1],step[2],step[3]);
     else if(k==='conch')buildConch(step[1],step[2]);
     else if(k==='steamOrgan')buildSteamOrgan(step[1],step[2],step[3]);
   }

@@ -39,9 +39,9 @@ openSpace:{
   takeoffAssistH:3.5
 },
 openSpaceZones:[
-  {x0:-50,y0:-12,x1:130,y1:58,z0:-265,z1:48}
+  {x0:-55,y0:-14,x1:135,y1:62,z0:-345,z1:48}
 ],
-playVolume:{cx:25,cy:12,cz:-130,soft:140,hard:165,recoverDur:0.5,recoverTo:{x:22,y:0.45,z:-10}},
+playVolume:{cx:20,cy:16,cz:-160,soft:175,hard:205,recoverDur:0.5,recoverTo:{x:22,y:0.45,z:-10}},
 voidY:-20,
 voidFloor:-40,
 snoozleGoal:4,
@@ -55,18 +55,27 @@ checks:[
   [28,-104,5],
   [94,24.0,-195],
   [102,16.5,-222],
-  [28,18,-254]
+  [28,18,-254],
+  [12,-278,22]
 ],
+route:{
+  observatory:{x:12,y:22,z:-278},
+  snoozle4:{x:12,y:22.45,z:-286},
+  blackHole:{x:10,y:26,z:-318},
+  stage4End:{x:14,y:22,z:-264}
+},
 tower:{tx:0,tz:0},
 snoozleHomes:[
-  {x:8,y:28,z:-200},
-  {x:50,y:28,z:-228},
-  {x:102,y:28,z:-222}
+  {x:4,y:32,z:-314},
+  {x:16,y:32,z:-314},
+  {x:10,y:36,z:-310},
+  {x:10,y:30,z:-324}
 ],
 snoozles:[
   [-2.8,0.55,3.2,0,false],
   [98,24.0,-188,1,false],
-  [102,15.5,-219,2,false]
+  [102,15.5,-219,2,false],
+  [12,22.45,-286,3,false]
 ],
 trees:[],
 steps:[
@@ -160,12 +169,22 @@ steps:[
   // Beat D — mandatory shield gate + renewable star crate
   ['starCrate',42,20,-248,true],
   ['shieldedGate',38,20,-254,8,5.5,1.2],
-  // Beat E — post-gate relief and future-route cue
+  // Beat E — post-gate relief and Observatory approach cue
   ['spaceRestPad',28,18,-256,3.6],
   ['spaceBuoy',28,18,-256,true],
-  ['observatoryLandmark',14,22,-262],
-  ['routeTrail',28,18,-256,14,22,-262,4],
+  ['routeTrail',28,18,-256,14,22,-264,4],
+  ['spaceBuoy',14,22,-264,true],
   ['spaceStage4Endpoint',14,22,-264],
+  // Stage 5 — Star Observatory (calm rest) + Snoozle 4
+  ['routeTrail',14,22,-264,12,22,-278,5],
+  ['spaceBuoy',12,22,-274,true],
+  ['starObservatory',12,22,-278],
+  // Stage 6 — Black Hole finish
+  ['routeTrail',12,22,-286,10,24,-300,5],
+  ['spaceBuoy',10,24,-300,true],
+  ['routeTrail',10,24,-300,10,26,-312,4],
+  ['spaceBuoy',10,26,-312,true],
+  ['blackHoleFinish',10,26,-318],
   // Scenery / backdrop
   ['spaceBuoy',-18,2,14],['spaceBuoy',36,3,18],['spaceBuoy',-8,6,32],
   ['backdropAsteroid',12,14,-20,0.55],['backdropAsteroid',42,18,-48,0.7],
@@ -173,9 +192,11 @@ steps:[
   ['backdropAsteroid',-6,16,-55,0.5],['backdropAsteroid',55,20,-130,0.8],
   ['backdropAsteroid',15,28,-100,0.4],['backdropAsteroid',-20,12,-40,0.55],
   ['backdropAsteroid',60,18,-240,0.45],['backdropAsteroid',22,16,-248,0.5],
+  ['backdropAsteroid',0,30,-290,0.55],['backdropAsteroid',28,18,-305,0.45],
   ['backdropPlanet',-55,18,-70,6,0x6a4a9a,true],
   ['backdropPlanet',48,12,-85,5,0xc45a78,false],
   ['backdropPlanet',-30,8,95,4.5,0x4a8a6a,false],
-  ['blackHoleLandmark',10,35,-210],
-  ['unfinishedFinish',0,0,0]
+  ['backdropPlanet',-40,40,-280,5,0x5a78a8,true],
+  // Mid-route foreshadow (scenery only — finish is blackHoleFinish)
+  ['blackHoleLandmark',10,35,-210]
 ]};

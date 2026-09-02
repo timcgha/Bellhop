@@ -9,7 +9,7 @@ function releaseJump(H){H.ku({code:'Space'});}
 // ---- version ----
 {
   const H=boot();
-  ok(H.getCamDiag().VERSION_BASE==='v48 · Saucer Belt gate','version stamp v42');
+  ok(H.getCamDiag().VERSION_BASE==='v49 · Space finish','version stamp v42');
 }
 
 // ---- flight without camera input (keyboard) ----
@@ -216,7 +216,8 @@ function flyNoCam(H, keys, frames){
 {
   const src=require('fs').readFileSync(require('path').join(__dirname,'..','levels','level4.js'),'utf8')
     +require('fs').readFileSync(require('path').join(__dirname,'..','src','space.js'),'utf8');
-  ok(!/warpTunnel|blackHoleFinish|blackHoleActive|cometRun/i.test(src),'Stage 1.5 build has no Stage 5+ finish systems');
+  ok(!/cometRun/i.test(src),'Comet Run still deferred');
+  ok(/blackHoleFinish|starObservatory/i.test(src),'Stage 5/6 finish systems authored');
 }
 
 report();

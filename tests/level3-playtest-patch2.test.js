@@ -8,7 +8,7 @@ H.startLevel(2);
 const L=H.getLevel();
 const R=L.route;
 ok(L&&L.id==='level3','boots Level 3');
-ok(H.getCamDiag().VERSION_BASE==='v48 · Saucer Belt gate','version stamp');
+ok(H.getCamDiag().VERSION_BASE==='v49 · Space finish','version stamp');
 ok(L.snoozleGoal===4&&W.snoozles.length===4,'Snoozles = 4');
 ok(W.notes.length===10,'notes frozen at 10');
 ok(L.mandatoryLeaps.length===11,'mandatory leaps preserved');

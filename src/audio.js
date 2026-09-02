@@ -82,12 +82,17 @@ function spaceBed(sib,chord,t){
   if(sib%4===2)noise(0.06,{at:t,type:'highpass',freq:4200,gain:0.025,attack:0.02});
 }
 function spaceVoice(i,sib,s,chord,t){
-  const pats=[[0,4],[2,6],[1,5],[0,3,7]];
-  if(pats[i%4].indexOf(sib)<0)return;
+  const pats=[[0,4],[2,6],[1,5],[0,3,7],[0,2,4,6]];
+  if(pats[i%5].indexOf(sib)<0)return;
   if(i===0)tone(hz(chord[sib%3]+12,329.63),0.5,{at:t,type:'sine',gain:0.045,attack:0.02});
   else if(i===1)tone(hz(chord[(s+sib)%3]+7,196),0.38,{at:t,type:'triangle',gain:0.035,attack:0.015});
   else if(i===2)tone(hz(chord[0],110),0.65,{at:t,type:'sine',gain:0.04,attack:0.05});
-  else tone(hz(chord[0]+[0,3,7,10][s%4]+12,261.63),0.45,{at:t,type:'sine',gain:0.035,attack:0.03});
+  else if(i===3)tone(hz(chord[0]+[0,3,7,10][s%4]+12,261.63),0.45,{at:t,type:'sine',gain:0.035,attack:0.03});
+  else{
+    // Win choir pad — only when AU.layers>=5 after portal finish
+    tone(hz(chord[0]+12,196),0.85,{at:t,type:'sine',gain:0.04,attack:0.1});
+    if(sib===0)tone(hz(chord[2]+19,261.63),0.55,{at:t,type:'sine',gain:0.03,attack:0.08});
+  }
 }
 const SONGS={
   meadow:{id:'meadow',bpm:112,chords:[[0,4,7],[-3,0,4],[-7,-3,0],[-5,-1,2]],bed:meadowBed,voice:meadowVoice},
@@ -188,6 +193,8 @@ const SFX={
   crystalChime(){if(!AU.ctx)return;const c=chordNow();const f=hz(c[Math.floor(Math.random()*3)]+24,523.25);tone(f,0.5,{type:'sine',gain:0.05,attack:0.02});tone(f*1.5,0.28,{type:'triangle',gain:0.025,attack:0.02});},
   conchOpen(){if(!AU.ctx)return;const c=AU.ctx.currentTime;tone(220,0.55,{at:c,type:'sine',gain:0.16,slide:440,attack:0.04});[0,4,7,12,16].forEach((n,i)=>tone(hz(n,329.63),0.55,{at:c+0.12+i*0.08,type:'triangle',gain:0.12}));noise(0.45,{at:c,type:'bandpass',freq:900,fslide:1800,gain:0.1,attack:0.05});},
   organSwell(){if(!AU.ctx)return;const c=AU.ctx.currentTime;tone(82,1.1,{at:c,type:'sawtooth',gain:0.12,attack:0.08,slide:110});tone(164,0.9,{at:c+0.08,type:'triangle',gain:0.09,attack:0.1});[0,4,7,12].forEach((n,i)=>tone(hz(n,110),0.7,{at:c+0.15+i*0.1,type:'sine',gain:0.08}));noise(0.7,{at:c,type:'bandpass',freq:500,fslide:1400,gain:0.08,attack:0.08});},
+  blackHoleActivate(){if(!AU.ctx)return;const c=AU.ctx.currentTime;tone(55,1.4,{at:c,type:'sine',gain:0.14,attack:0.12,slide:90});tone(110,1.1,{at:c+0.1,type:'triangle',gain:0.1,attack:0.15});[0,3,7,12,19].forEach((n,i)=>tone(hz(n,82.41),0.8,{at:c+0.2+i*0.12,type:'sine',gain:0.07}));noise(0.9,{at:c,type:'bandpass',freq:400,fslide:1800,gain:0.09,attack:0.1});},
+  warpWhoosh(){if(!AU.ctx)return;const c=AU.ctx.currentTime;noise(0.55,{at:c,type:'bandpass',freq:900,fslide:3200,gain:0.16,attack:0.04});tone(220,0.7,{at:c,type:'sine',gain:0.1,slide:880,attack:0.05});tone(440,0.5,{at:c+0.15,type:'triangle',gain:0.07,slide:1320});[0,4,7,12].forEach((n,i)=>tone(hz(n,523.25),0.35,{at:c+0.25+i*0.08,type:'sine',gain:0.06}));},
   organKey(){if(!AU.ctx)return;const c=chordNow();tone(hz(c[0],130.81),0.35,{type:'triangle',gain:0.1,attack:0.01});tone(hz(c[2],130.81),0.28,{type:'sine',gain:0.06});},
   fishPop(){tone(rand(700,950),0.08,{type:'sine',gain:0.1,slide:400});noise(0.06,{type:'highpass',freq:2500,gain:0.08});},
   sharkPop(){noise(0.2,{type:'lowpass',freq:600,fslide:200,gain:0.15});tone(180,0.15,{type:'sine',gain:0.1,slide:90});},
