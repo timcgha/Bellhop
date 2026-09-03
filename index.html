@@ -1024,10 +1024,10 @@ checks:[
   [0,0,0.45],
   [28,-26,5],
   [28,-104,5],
-  [94,24.0,-195],
-  [102,16.5,-222],
-  [28,18,-254],
-  [10,-256,23]
+  [94,-195,24.0],
+  [102,-222,16.5],
+  [28,-254,18],
+  [10,-272,24.5]
 ],
 tower:{tx:0,tz:0},
 snoozleHomes:[
@@ -1099,9 +1099,9 @@ steps:[
   ['candyPlanet',98,18,-198,11],
   // Candy surface — Star Beam teaching
   ['starCrate',92,24.1,-192,true],
-  // Hover above the landable pad (top ~24.27) — high enough to read, low enough for pad attacks.
-  ['saucerTarget',93.5,25.7,-194.0],
-  ['saucer',96.0,25.85,-195.8,'mid',true],
+  // Hover above the landable pad (top ~24.27) — readable hover, still pad-attackable.
+  ['saucerTarget',93.5,26.15,-194.0],
+  ['saucer',96.0,26.3,-195.8,'mid',true],
   ['candyCaveMouth',102,18.5,-204],
   ['crystalInterior',102,16.5,-204],
   // Interior mid saucer
@@ -4860,17 +4860,17 @@ function applyLandingAssist(dt,p,v){
     if(dy>0.25)v.y-=align*(t.primary?4.2:2.4);
     else if(dy<-0.15)v.y+=align*0.4;
   }
-  if(near>0.35&&dy<3.2&&horiz<t.r*1.45){
-    const snap=near*dt*(t.primary?7.5:5.5);
+  if(near>0.2&&dy<4.5&&horiz<t.r*1.55){
+    const snap=near*dt*(t.primary?8.5:5.5);
     if(horiz>0.08){v.x-=dx/(horiz||1)*snap;v.z-=dz/(horiz||1)*snap;}
-    if(dy>0.08)v.y=moveTo(v.y,-2.2,9*dt);
+    if(dy>0.08)v.y=moveTo(v.y,-2.6,11*dt);
   }
-  if(near>0.45&&dy<2.4&&horiz<t.r*1.15){
-    v.y=moveTo(v.y,-2.4,10*dt);
-    if(horiz>0.05){v.x=moveTo(v.x,-dx/(horiz||1)*1.4,6*dt);v.z=moveTo(v.z,-dz/(horiz||1)*1.4,6*dt);}
+  if(near>0.28&&dy<3.5&&horiz<t.r*1.25){
+    v.y=moveTo(v.y,-2.8,12*dt);
+    if(horiz>0.05){v.x=moveTo(v.x,-dx/(horiz||1)*1.6,7*dt);v.z=moveTo(v.z,-dz/(horiz||1)*1.6,7*dt);}
   }
   // Soft claim while coasting down onto a pad — never while thrusting off one
-  if(!IN.jumpHeld&&near>0.35&&horiz<t.r*1.15&&dy>=0&&dy<(t.primary?2.8:1.85)&&v.y<=0.55&&sp<5.0){
+  if(!IN.jumpHeld&&near>0.18&&horiz<t.r*1.2&&dy>=0&&dy<(t.primary?3.4:1.85)&&v.y<=0.65&&sp<5.5){
     const land=landableSurfaceAt(t.x,t.z);
     if(land){p.x=damp(p.x,t.x,8,dt);p.z=damp(p.z,t.z,8,dt);p.y=land.y;v.x*=0.25;v.y=0;v.z*=0.25;landOn(land.surf||'pad');}
   }
@@ -5159,7 +5159,7 @@ function updateSaucers(dt){
     // Candy-surface saucers stay clearly above the pad — never settle into the shell/deck.
     if(e.surfaceGate&&candyPlanet&&candyPlanet.pad){
       const padTop=candyPlanet.pad.y+0.55;
-      const minY=padTop+1.15;
+      const minY=padTop+1.35;
       if(e.hy<minY)e.hy=minY;
       if(e.y<minY){e.y=minY;if(e.vy<0)e.vy=0;}
     }
@@ -5793,7 +5793,7 @@ function buildObservatory(x,y,z,opts){
     catwalk.mesh.visible=true;
     if(catwalk.mesh.material&&catwalk.mesh.material.color)catwalk.mesh.material.color.setHex(0x7a98c8);
     // Landing assist targets the obvious MAIN deck center — not a tiny offset patch.
-    addLandingBeacon(x,y,z,3.8,{approachR:26,nearR:12,primary:true});
+    addLandingBeacon(x,y,z,3.8,{approachR:30,nearR:16,primary:true});
     addLandingBeacon(x,y+0.05,z-4.6,1.8,{approachR:14,nearR:6,primary:false});
   }
   // Dome sits above deck so it does not hide Snoozle 4
@@ -6620,6 +6620,18 @@ function updateCamera(dt){
   // FINISH-owned celebration framing supersedes gameplay boom (incl. camdiag) while won.
   if(won&&FINISH&&typeof FINISH.camHold==='function'){
     FINISH.camHold(dt);
+    CAM.shake=Math.max(0,CAM.shake-dt*2.2);const sh=CAM.shake*CAM.shake*0.35;
+    camera.position.set(CAM.pos.x+rand(-sh,sh),CAM.pos.y+rand(-sh,sh),CAM.pos.z+rand(-sh,sh));camera.lookAt(CAM.look);
+    CAM.fovKick=damp(CAM.fovKick,0,9,dt);
+    const baseFov=62;const fov=baseFov+CAM.fovKick;CAM.baseFov=baseFov;CAM.fov=fov;
+    if(Math.abs(camera.fov-fov)>0.01){camera.fov=fov;camera.updateProjectionMatrix();}
+    if(camDistParam!=null)updateCamDiagUI();
+    return;
+  }
+  // Authored screenshot / cinematic hold — pos/look stay put.
+  if(CAM.mode==='shot'){
+    CAM.collisionPulled=false;
+    CAM.effectiveDist=Math.hypot(CAM.pos.x-CAM.look.x,CAM.pos.y-CAM.look.y,CAM.pos.z-CAM.look.z);
     CAM.shake=Math.max(0,CAM.shake-dt*2.2);const sh=CAM.shake*CAM.shake*0.35;
     camera.position.set(CAM.pos.x+rand(-sh,sh),CAM.pos.y+rand(-sh,sh),CAM.pos.z+rand(-sh,sh));camera.lookAt(CAM.look);
     CAM.fovKick=damp(CAM.fovKick,0,9,dt);

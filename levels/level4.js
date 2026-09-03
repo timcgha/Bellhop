@@ -53,10 +53,10 @@ checks:[
   [0,0,0.45],
   [28,-26,5],
   [28,-104,5],
-  [94,24.0,-195],
-  [102,16.5,-222],
-  [28,18,-254],
-  [10,-256,23]
+  [94,-195,24.0],
+  [102,-222,16.5],
+  [28,-254,18],
+  [10,-272,24.5]
 ],
 tower:{tx:0,tz:0},
 snoozleHomes:[
@@ -128,9 +128,9 @@ steps:[
   ['candyPlanet',98,18,-198,11],
   // Candy surface — Star Beam teaching
   ['starCrate',92,24.1,-192,true],
-  // Hover above the landable pad (top ~24.27) — high enough to read, low enough for pad attacks.
-  ['saucerTarget',93.5,25.7,-194.0],
-  ['saucer',96.0,25.85,-195.8,'mid',true],
+  // Hover above the landable pad (top ~24.27) — readable hover, still pad-attackable.
+  ['saucerTarget',93.5,26.15,-194.0],
+  ['saucer',96.0,26.3,-195.8,'mid',true],
   ['candyCaveMouth',102,18.5,-204],
   ['crystalInterior',102,16.5,-204],
   // Interior mid saucer

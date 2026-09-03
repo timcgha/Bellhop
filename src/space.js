@@ -43,7 +43,7 @@ function beginSpaceLevel(L){
   if(peakGround)peakGround.visible=false;
   if(underwaterGroup)underwaterGroup.visible=false;
   scene.background=new THREE.Color(0x050812);
-  scene.fog=new THREE.Fog(0x0a1020,85,220);
+  scene.fog=new THREE.Fog(0x0a1020,120,280);
   if(!spaceGroup){spaceGroup=new THREE.Group();scene.add(spaceGroup);}
   spaceGroup.visible=true;
   while(spaceGroup.children.length)spaceGroup.remove(spaceGroup.children[0]);
@@ -514,7 +514,7 @@ function updateSaucers(dt){
     // Candy-surface saucers stay clearly above the pad — never settle into the shell/deck.
     if(e.surfaceGate&&candyPlanet&&candyPlanet.pad){
       const padTop=candyPlanet.pad.y+0.55;
-      const minY=padTop+1.15;
+      const minY=padTop+1.35;
       if(e.hy<minY)e.hy=minY;
       if(e.y<minY){e.y=minY;if(e.vy<0)e.vy=0;}
     }

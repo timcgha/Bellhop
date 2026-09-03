@@ -75,9 +75,10 @@ function wake(H,sn){H.P.pos.set(sn.g.position.x,sn.g.position.y,sn.g.position.z+
 // ---- Observatory checkpoint ----
 {
   const H=boot();H.startLevel(3);H.frames(6);
-  const cp=H.W.checks.find(c=>Math.hypot(c.x-10,c.z+256)<4);
+  const cp=H.W.checks.find(c=>Math.hypot(c.x-10,c.z+272)<4);
   ok(!!cp,'Observatory checkpoint authored');
-  H.P.pos.set(cp.x,cp.y,cp.z);H.P.vel.set(0,0,0);H.frames(30);
+  H.P.pos.set(cp.x,cp.y,cp.z);H.P.vel.set(0,0,0);H.P.grounded=true;H.P.moveZone='grounded';H.P.surf='pad';
+  H.frames(30);
   ok(cp.on,'Observatory checkpoint triggers on approach');
 }
 

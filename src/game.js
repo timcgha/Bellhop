@@ -108,6 +108,18 @@ function updateCamera(dt){
     if(camDistParam!=null)updateCamDiagUI();
     return;
   }
+  // Authored screenshot / cinematic hold — pos/look stay put.
+  if(CAM.mode==='shot'){
+    CAM.collisionPulled=false;
+    CAM.effectiveDist=Math.hypot(CAM.pos.x-CAM.look.x,CAM.pos.y-CAM.look.y,CAM.pos.z-CAM.look.z);
+    CAM.shake=Math.max(0,CAM.shake-dt*2.2);const sh=CAM.shake*CAM.shake*0.35;
+    camera.position.set(CAM.pos.x+rand(-sh,sh),CAM.pos.y+rand(-sh,sh),CAM.pos.z+rand(-sh,sh));camera.lookAt(CAM.look);
+    CAM.fovKick=damp(CAM.fovKick,0,9,dt);
+    const baseFov=62;const fov=baseFov+CAM.fovKick;CAM.baseFov=baseFov;CAM.fov=fov;
+    if(Math.abs(camera.fov-fov)>0.01){camera.fov=fov;camera.updateProjectionMatrix();}
+    if(camDistParam!=null)updateCamDiagUI();
+    return;
+  }
   // Warp tunnel owns framing for the whole ride — outdoor boom must not overwrite it.
   if(typeof isSpaceWarpCamera==='function'&&isSpaceWarpCamera()){
     CAM.mode='warp';CAM.collisionPulled=false;
