@@ -265,6 +265,8 @@ function queryMoveZone(){
 
 function applySpaceRecovery(dt){
   if(!isSpaceLevel()||!spacePlayVolume||spaceRecoveryT>0||P.dead||won)return false;
+  // Finish immunity owns the ride — never soft-return mid-warp or in the void.
+  if(isSpaceFinishImmune())return false;
   const pv=spacePlayVolume,cx=pv.cx!=null?pv.cx:0,cy=pv.cy!=null?pv.cy:8,cz=pv.cz!=null?pv.cz:0;
   const dx=P.pos.x-cx,dz=P.pos.z-cz,dy=P.pos.y-cy;
   const horiz=Math.hypot(dx,dz),dist=Math.hypot(horiz,Math.abs(dy));
@@ -1258,31 +1260,31 @@ function buildWarpTunnelVisuals(){
   if(!BLACK_HOLE)return;
   const g=new THREE.Group();g.name='warpTunnel';
   const streaks=[];
-  for(let i=0;i<110;i++){
-    const a=rand(0,TAU),r=rand(0.9,4.8),d=rand(-4,92);
-    const len=rand(0.9,2.8);
-    const st=mesh(BOXG,new THREE.MeshBasicMaterial({color:Math.random()<0.25?0xfff0c8:0xffffff,transparent:true,opacity:rand(0.45,0.95)}),Math.cos(a)*r,Math.sin(a)*r,-d,0.035,0.035,len);
+  for(let i=0;i<160;i++){
+    const a=rand(0,TAU),r=rand(0.7,5.2),d=rand(2,110);
+    const len=rand(1.2,3.6);
+    const st=mesh(BOXG,new THREE.MeshBasicMaterial({color:Math.random()<0.3?0xfff0c8:0xffffff,transparent:true,opacity:rand(0.55,1)}),Math.cos(a)*r,Math.sin(a)*r,d,0.045,0.045,len);
     g.add(st);streaks.push(st);
   }
   const rings=[];
-  for(let i=0;i<14;i++){
+  for(let i=0;i<16;i++){
     const col=CONF[i%CONF.length];
-    const ring=new THREE.Mesh(new THREE.TorusGeometry(3.15+((i%3)*0.18),0.16+((i%2)*0.04),8,40),new THREE.MeshBasicMaterial({color:col,transparent:true,opacity:0.88}));
-    ring.position.z=-(i*6.5+1.5);
+    const ring=new THREE.Mesh(new THREE.TorusGeometry(3.0+((i%3)*0.22),0.22+((i%2)*0.06),8,40),new THREE.MeshBasicMaterial({color:col,transparent:true,opacity:0.92}));
+    ring.position.z=i*6.2+3;
     ring.rotation.z=i*0.35;
     g.add(ring);rings.push(ring);
   }
   const planets=[];
   const cols=[0xff8a6a,0x6fd4ff,0xffe078,0xc8b0ff,0x7dff9a,0xff9a3c];
-  for(let i=0;i<6;i++){
+  for(let i=0;i<7;i++){
     const pg=new THREE.Group();
-    const rr=rand(0.7,1.7);
+    const rr=rand(0.85,2.0);
     pg.add(mesh(SPH,new THREE.MeshBasicMaterial({color:cols[i%cols.length]}),0,0,0,rr));
     if(i%2===0){
-      const tor=new THREE.Mesh(new THREE.TorusGeometry(rr*1.35,rr*0.08,6,24),new THREE.MeshBasicMaterial({color:0xffffff,transparent:true,opacity:0.45}));
+      const tor=new THREE.Mesh(new THREE.TorusGeometry(rr*1.35,rr*0.1,6,24),new THREE.MeshBasicMaterial({color:0xffffff,transparent:true,opacity:0.55}));
       tor.rotation.x=Math.PI/2;pg.add(tor);
     }
-    pg.position.set(rand(-6.5,6.5),rand(-3.2,3.2),-(12+i*13));
+    pg.position.set(rand(-7,7),rand(-3.5,3.5),18+i*12);
     g.add(pg);planets.push(pg);
   }
   scene.add(g);
@@ -1301,13 +1303,17 @@ function startWarpTunnel(){
   SFX.warpWhoosh();CAM.mode='warp';
   rumble(200,0.5,0.45);
   applyWarpCamera(P.pos.x,P.pos.y,P.pos.z);
+  const hint=$('hint');if(hint)hint.style.opacity=0;
+  const toast=$('toast');if(toast){toast.style.opacity=0;toast.textContent='';}
 }
 
 function applyWarpCamera(px,py,pz){
   const yaw=P.yaw;
-  CAM.look.set(px,py+0.85,pz-3.2);
-  CAM.pos.set(px-Math.sin(yaw)*4.2,py+1.85,pz+Math.cos(yaw)*4.2);
-  CAM.yaw=yaw;CAM.pitch=0.18;CAM.boomDist=5;CAM.targetDist=5;CAM.mode='warp';CAM.collisionPulled=false;
+  // Behind Pling looking forward along his facing (sin/cos yaw).
+  const fx=Math.sin(yaw),fz=Math.cos(yaw);
+  CAM.look.set(px+fx*2.4,py+0.9,pz+fz*2.4);
+  CAM.pos.set(px-fx*4.6,py+2.0,pz-fz*4.6);
+  CAM.yaw=yaw;CAM.pitch=0.16;CAM.boomDist=5;CAM.targetDist=5;CAM.mode='warp';CAM.collisionPulled=false;
   CAM.effectiveDist=Math.hypot(CAM.pos.x-CAM.look.x,CAM.pos.y-CAM.look.y,CAM.pos.z-CAM.look.z);
 }
 
@@ -1348,8 +1354,8 @@ function stageSpaceWinPose(){
   const c=BLACK_HOLE.voidCenter||{x:BLACK_HOLE.x,y:BLACK_HOLE.y+1.5,z:BLACK_HOLE.z-14};
   const vx=c.x,vy=c.y+1.2,vz=c.z;
   P.pos.set(vx,vy,vz);P.vel.set(0,0,0);P.grounded=false;P.yaw=Math.PI;
-  CAM.look.set(vx,vy+1.4,vz-1);CAM.pos.set(vx+0.5,vy+5.8,vz+13);
-  CAM.yaw=0.02;CAM.pitch=0.28;CAM.boomDist=16;CAM.targetDist=16;CAM.mode='finish';CAM.collisionPulled=false;
+  CAM.look.set(vx,vy+1.5,vz);CAM.pos.set(vx+0.4,vy+6.2,vz+16.5);
+  CAM.yaw=0.02;CAM.pitch=0.26;CAM.boomDist=18;CAM.targetDist=18;CAM.mode='finish';CAM.collisionPulled=false;
 }
 
 function spaceWinBurst(){
@@ -1366,11 +1372,11 @@ function spaceWinBurst(){
 function spaceFinishCamHold(dt){
   if(!BLACK_HOLE)return;
   const c=BLACK_HOLE.voidCenter||{x:BLACK_HOLE.x,y:BLACK_HOLE.y+1.8,z:BLACK_HOLE.z-10};
-  const lookX=c.x,lookY=c.y+2.4,lookZ=c.z-1.5;
-  const posX=c.x+0.55,posY=c.y+7.2,posZ=c.z+15;
+  const lookX=c.x,lookY=c.y+1.8,lookZ=c.z;
+  const posX=c.x+0.4,posY=c.y+6.4,posZ=c.z+17.5;
   CAM.look.x=damp(CAM.look.x,lookX,8,dt);CAM.look.y=damp(CAM.look.y,lookY,8,dt);CAM.look.z=damp(CAM.look.z,lookZ,8,dt);
   CAM.pos.x=damp(CAM.pos.x,posX,7,dt);CAM.pos.y=damp(CAM.pos.y,posY,7,dt);CAM.pos.z=damp(CAM.pos.z,posZ,7,dt);
-  CAM.yaw=0.02;CAM.pitch=0.28;CAM.boomDist=16;CAM.targetDist=16;CAM.mode='finish';
+  CAM.yaw=0.02;CAM.pitch=0.26;CAM.boomDist=18;CAM.targetDist=18;CAM.mode='finish';
   CAM.effectiveDist=Math.hypot(CAM.pos.x-CAM.look.x,CAM.pos.y-CAM.look.y,CAM.pos.z-CAM.look.z);
   CAM.collisionPulled=false;
 }
@@ -1423,35 +1429,35 @@ function updateWarpTunnel(dt){
   if(BLACK_HOLE.warpGroup){
     BLACK_HOLE.warpGroup.position.set(P.pos.x,P.pos.y,P.pos.z);
     BLACK_HOLE.warpGroup.rotation.y=P.yaw;
-    const scroll=18+k*22;
+    const scroll=-(22+k*26);
     if(BLACK_HOLE.warpRings){
       for(let i=0;i<BLACK_HOLE.warpRings.length;i++){
         const ring=BLACK_HOLE.warpRings[i];
         ring.position.z+=scroll*dt;
         ring.rotation.z+=dt*(1.2+i*0.05);
-        if(ring.position.z>8){
-          ring.position.z-=BLACK_HOLE.warpRings.length*6.5;
+        if(ring.position.z<-8){
+          ring.position.z+=BLACK_HOLE.warpRings.length*6.2;
           if(ring.material)ring.material.color.setHex(CONF[(i+Math.floor(BLACK_HOLE.warpT*3))%CONF.length]);
         }
       }
     }
     if(BLACK_HOLE.warpStreaks){
       for(const st of BLACK_HOLE.warpStreaks){
-        st.position.z+=(40+k*36)*dt;
-        if(st.position.z>12){
-          const a=rand(0,TAU),r=rand(0.9,4.8);
-          st.position.set(Math.cos(a)*r,Math.sin(a)*r,st.position.z-96);
+        st.position.z+=-(48+k*40)*dt;
+        if(st.position.z<-10){
+          const a=rand(0,TAU),r=rand(0.7,5.2);
+          st.position.set(Math.cos(a)*r,Math.sin(a)*r,st.position.z+110);
         }
       }
     }
     if(BLACK_HOLE.warpPlanets){
       for(let i=0;i<BLACK_HOLE.warpPlanets.length;i++){
         const pg=BLACK_HOLE.warpPlanets[i];
-        pg.position.z+=(9+k*10)*dt;
+        pg.position.z+=-(12+k*12)*dt;
         pg.rotation.y+=dt*0.8;
-        if(pg.position.z>14){
-          pg.position.z-=90;
-          pg.position.x=rand(-6.5,6.5);pg.position.y=rand(-3.2,3.2);
+        if(pg.position.z<-12){
+          pg.position.z+=95;
+          pg.position.x=rand(-7,7);pg.position.y=rand(-3.5,3.5);
         }
       }
     }

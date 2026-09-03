@@ -106,6 +106,11 @@ function homeDist(s){
   ok(bh.warpRings&&bh.warpRings.length>=8,'warp contains multiple light rings');
   ok(bh.warpPlanets&&bh.warpPlanets.length>=4,'warp contains passing celestial objects');
   ok(bh.warpGroup&&bh.warpGroup.parent,'warp tunnel group is in the scene');
+  // Soft recovery must not fire during warp even outside play volume
+  const far=H.getSpace().playVolume;
+  if(far){H.P.pos.x=far.cx+((far.hard||82)+20);H.frames(5);
+    ok(bh.warping&&H.CAM.mode==='warp','warp continues outside play volume without recovery');
+  }
 }
 
 // ---- entering active portal triggers warp then win exactly once ----
