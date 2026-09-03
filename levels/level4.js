@@ -63,13 +63,14 @@ snoozleHomes:[
   {x:8,y:28,z:-200},
   {x:50,y:28,z:-228},
   {x:102,y:28,z:-222},
-  {x:6,y:30,z:-298}
+  {x:6,y:32,z:-300}
 ],
 snoozles:[
   [-2.8,0.55,3.2,0,false],
   [98,24.0,-188,1,false],
   [102,15.5,-219,2,false],
-  [10,23.6,-270,3,false]
+  // On main Observatory deck, facing Black Hole (-Z), clearly above landable surface
+  [10,24.55,-274.8,3,false]
 ],
 trees:[],
 steps:[
@@ -127,8 +128,9 @@ steps:[
   ['candyPlanet',98,18,-198,11],
   // Candy surface — Star Beam teaching
   ['starCrate',92,24.1,-192,true],
-  ['saucerTarget',94,24.0,-196],
-  ['saucer',96,24.0,-202,'mid',true],
+  // Hover above the landable pad (top ~24.27) — high enough to read, low enough for pad attacks.
+  ['saucerTarget',93.5,25.7,-194.0],
+  ['saucer',96.0,25.85,-195.8,'mid',true],
   ['candyCaveMouth',102,18.5,-204],
   ['crystalInterior',102,16.5,-204],
   // Interior mid saucer
@@ -160,9 +162,9 @@ steps:[
   ['saucer',44,20,-250,'small',false,true],
   ['hazardAsteroid',52,21,-247,1.45,'static'],
   ['routeTrail',64,22,-238,46,20,-252,4],
-  // Beat D — mandatory shield gate + renewable star crate
-  ['starCrate',42,20,-248,true],
-  ['shieldedGate',38,20,-254,8,5.5,1.2],
+  // Beat D — mandatory shield gate choke + renewable star crate
+  ['starCrate',42,20.5,-246,true],
+  ['shieldedGate',38,18,-254,7,7,1.4],
   // Beat E — post-gate relief and future-route cue
   ['spaceRestPad',28,18,-256,3.6],
   ['spaceBuoy',28,18,-256,true],
@@ -173,14 +175,16 @@ steps:[
   ['routeTrail',14,22,-264,10,24,-272,5],
   ['spaceBuoy',10,24,-272,true],
   ['observatory',10,24,-272],
-  ['note',8,25.5,-268,false],
-  ['note',12,25,-266,false],
-  ['spaceStage5Endpoint',10,23,-276],
-  // Stage 6 — Black Hole finish
-  ['routeTrail',10,24,-276,6,28,-292,6],
-  ['spaceBuoy',8,27,-286,true],
-  ['spaceBuoy',6,29,-296,true],
-  ['blackHoleFinish',6,28,-298],
+  ['note',7.5,25.2,-269.5,false],
+  ['note',12.5,25.0,-269.0,false],
+  ['spaceStage5Endpoint',10,24.5,-278],
+  // Stage 6 — Black Hole finish (bright, dense path from Observatory)
+  ['routeTrail',10,25,-278,8,28,-286,5],
+  ['spaceBuoy',9,27,-282,true],
+  ['routeTrail',8,28,-286,6,30,-294,5],
+  ['spaceBuoy',7,30,-290,true],
+  ['spaceBuoy',6,31,-296,true],
+  ['blackHoleFinish',6,30,-300],
   // Scenery / backdrop
   ['spaceBuoy',-18,2,14],['spaceBuoy',36,3,18],['spaceBuoy',-8,6,32],
   ['backdropAsteroid',12,14,-20,0.55],['backdropAsteroid',42,18,-48,0.7],

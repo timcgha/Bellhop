@@ -22,7 +22,7 @@ function wake(H,sn){H.P.pos.set(sn.g.position.x,sn.g.position.y,sn.g.position.z+
 // ---- version ----
 {
   const H=boot();
-  ok(H.getCamDiag().VERSION_BASE==='v50 · Finish void celebration','version stamp v50');
+  ok(H.getCamDiag().VERSION_BASE==='v51 · Human playtest route','version stamp v51');
 }
 
 // ---- Snoozles: exactly four (Launch Dock, Candy, Crystal, Observatory) ----

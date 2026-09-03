@@ -186,7 +186,9 @@ function nearestLandingTarget(p){
   let best=null,bestD=Infinity;
   for(const t of spaceLandingTargets){
     const dx=p.x-t.x,dz=p.z-t.z,dy=p.y-(t.y+0.4);
-    const dist=Math.hypot(Math.hypot(dx,dz),Math.abs(dy));
+    let dist=Math.hypot(Math.hypot(dx,dz),Math.abs(dy));
+    // Prefer the obvious primary deck when two beacons compete.
+    if(t.primary)dist*=0.72;
     if(dist<t.approachR&&dist<bestD){best=t;bestD=dist;}
   }
   return best?{target:best,dist:bestD}:null;
@@ -210,22 +212,22 @@ function applyLandingAssist(dt,p,v){
     const align=(0.9*outer+1.4*near)*dt;
     const pull=align*(2.4+4.5*near);
     if(horiz>0.12){v.x-=dx/(horiz||1)*pull;v.z-=dz/(horiz||1)*pull;}
-    if(dy>0.25)v.y-=align*2.4;
+    if(dy>0.25)v.y-=align*(t.primary?4.2:2.4);
     else if(dy<-0.15)v.y+=align*0.4;
   }
-  if(near>0.35&&dy<2.0&&horiz<t.r*1.35){
-    const snap=near*dt*5.5;
+  if(near>0.2&&dy<4.5&&horiz<t.r*1.55){
+    const snap=near*dt*(t.primary?8.5:5.5);
     if(horiz>0.08){v.x-=dx/(horiz||1)*snap;v.z-=dz/(horiz||1)*snap;}
-    if(dy>0.08)v.y=moveTo(v.y,-1.4,7*dt);
+    if(dy>0.08)v.y=moveTo(v.y,-2.6,11*dt);
   }
-  if(near>0.55&&dy<1.0&&horiz<t.r*0.95){
-    v.y=moveTo(v.y,-1.2,8*dt);
-    if(horiz>0.05){v.x=moveTo(v.x,-dx/(horiz||1)*1.0,5*dt);v.z=moveTo(v.z,-dz/(horiz||1)*1.0,5*dt);}
+  if(near>0.28&&dy<3.5&&horiz<t.r*1.25){
+    v.y=moveTo(v.y,-2.8,12*dt);
+    if(horiz>0.05){v.x=moveTo(v.x,-dx/(horiz||1)*1.6,7*dt);v.z=moveTo(v.z,-dz/(horiz||1)*1.6,7*dt);}
   }
   // Soft claim while coasting down onto a pad — never while thrusting off one
-  if(!IN.jumpHeld&&near>0.55&&horiz<t.r*0.9&&dy>=0&&dy<0.65&&v.y<=0&&sp<2.8){
+  if(!IN.jumpHeld&&near>0.18&&horiz<t.r*1.2&&dy>=0&&dy<(t.primary?3.4:1.85)&&v.y<=0.65&&sp<5.5){
     const land=landableSurfaceAt(t.x,t.z);
-    if(land){p.y=land.y;v.x*=0.35;v.y=0;v.z*=0.35;landOn(land.surf||'pad');}
+    if(land){p.x=damp(p.x,t.x,8,dt);p.z=damp(p.z,t.z,8,dt);p.y=land.y;v.x*=0.25;v.y=0;v.z*=0.25;landOn(land.surf||'pad');}
   }
 }
 
@@ -509,6 +511,13 @@ function updateSaucers(dt){
     const dh=Math.hypot(e.x-e.hx,e.y-e.hy,e.z-e.hz);
     if(dh>SAUCER_LEASH){const s=SAUCER_LEASH/dh;e.x=e.hx+(e.x-e.hx)*s;e.y=e.hy+(e.y-e.hy)*s;e.z=e.hz+(e.z-e.hz)*s;e.vx*=0.5;e.vy*=0.5;e.vz*=0.5;}
     e.bob=Math.sin(time*2.4+e.ph)*0.18;
+    // Candy-surface saucers stay clearly above the pad — never settle into the shell/deck.
+    if(e.surfaceGate&&candyPlanet&&candyPlanet.pad){
+      const padTop=candyPlanet.pad.y+0.55;
+      const minY=padTop+1.15;
+      if(e.hy<minY)e.hy=minY;
+      if(e.y<minY){e.y=minY;if(e.vy<0)e.vy=0;}
+    }
     g.position.set(e.x,e.y+e.bob,e.z);
     g.rotation.y=angDamp(g.rotation.y,e.face,5,dt);
     g.rotation.z=e.stunT>0?Math.sin(time*22)*0.25:(e.hurtT>0?Math.sin(time*30)*0.12:Math.sin(time*1.6+e.ph)*0.06);
@@ -850,9 +859,11 @@ function fireStarBeam(fx,fz,mx,my,mz){
   const len=Math.hypot(fx,fz)||1;
   const dx=fx/len,dz=fz/len;
   starBeams.push({x:ox,y:oy,z:oz,dx,dz,t:0,life:BEAM_DUR,hit:new Set()});
-  for(let i=0;i<10;i++){
-    const t=i/9*BEAM_LEN;
-    spawnP(ox+dx*t,oy,oz+dz*t,rand(-0.2,0.2),rand(-0.2,0.2),rand(-0.2,0.2),0.07,Math.random()<0.5?0xffe078:0xffffff,0.45,0.35,0,0.85);
+  // Locked designer identity: PURPLE / VIOLET Star Beam (not yellow/gold).
+  for(let i=0;i<12;i++){
+    const t=i/11*BEAM_LEN;
+    const col=i%3===0?0xffffff:(i%2===0?0xa070ff:0xc8b0ff);
+    spawnP(ox+dx*t,oy,oz+dz*t,rand(-0.15,0.15),rand(-0.15,0.15),rand(-0.15,0.15),0.085,col,0.5,0.35,0,0.9);
   }
   CAM.fovKick=Math.max(CAM.fovKick,3);
 }
@@ -861,8 +872,11 @@ function beamHitPoint(b,px,py,pz,pr){
   const along=(px-b.x)*b.dx+(pz-b.z)*b.dz;
   if(along<0||along>BEAM_LEN)return false;
   const cx=b.x+b.dx*along,cz=b.z+b.dz*along;
-  const d=Math.hypot(px-cx,py-b.y,pz-cz);
-  return d<(pr||BEAM_W);
+  const r=pr||BEAM_W;
+  // Horizontal tube with a taller vertical allowance — purple beam should hit hovering saucers from the pad.
+  const dH=Math.hypot(px-cx,pz-cz);
+  const dV=Math.abs(py-b.y);
+  return dH<r&&dV<r*2.6;
 }
 
 function updateStarBeams(dt){
@@ -871,16 +885,17 @@ function updateStarBeams(dt){
     b.t+=dt;
     if(b.t>=b.life){starBeams.splice(i,1);continue;}
     const k=1-b.t/b.life;
-    for(let s=0;s<3;s++){
-      const t=b.t*BEAM_LEN/BEAM_DUR+s*2;
-      spawnP(b.x+b.dx*t,b.y,b.z+b.dz*t,0,0,0,0.06,0xffe078,0.35*k,0.4,0,0.7);
+    for(let s=0;s<4;s++){
+      const t=b.t*BEAM_LEN/BEAM_DUR+s*1.8;
+      const col=s%2===0?0xa070ff:0xc8b0ff;
+      spawnP(b.x+b.dx*t,b.y,b.z+b.dz*t,0,0,0,0.07,col,0.4*k,0.4,0,0.75);
     }
     for(const e of saucers){
       if(!e.alive||e.state==='dying'||b.hit.has(e))continue;
       if(e.targetDummy){
         if(beamHitPoint(b,e.x,e.y+0.3,e.z,0.9*e.size)){
           b.hit.add(e);e.flashT=0.45;SFX.tick();
-          for(let j=0;j<8;j++)spawnP(e.x,e.y+0.5,e.z,rand(-2,2),rand(0.5,2),rand(-2,2),0.08,0xffe078,0.5,0.4,0,0.85);
+          for(let j=0;j<8;j++)spawnP(e.x,e.y+0.5,e.z,rand(-2,2),rand(0.5,2),rand(-2,2),0.08,Math.random()<0.5?0xa070ff:0xc8b0ff,0.5,0.4,0,0.85);
         }
         continue;
       }
@@ -892,7 +907,7 @@ function updateStarBeams(dt){
     }
     for(const gate of shieldedGates){
       if(gate.opened||b.hit.has(gate))continue;
-      if(beamHitPoint(b,gate.x,gate.y,gate.z,gate.hitR||2.8)){b.hit.add(gate);openShieldedGate(gate);}
+      if(beamHitPoint(b,gate.x,gate.y+gate.h*0.45,gate.z,gate.hitR||2.8)){b.hit.add(gate);openShieldedGate(gate);}
     }
   }
 }
@@ -991,23 +1006,53 @@ function addSpaceStage3Endpoint(x,y,z){
 }
 
 function addShieldedGate(x,y,z,w,h,d){
-  w=w||8;h=h||5;d=d||1.2;
+  w=w||7;h=h||7;d=d||1.4;
   const g=new THREE.Group();g.position.set(x,y,z);
-  const wall=new THREE.Mesh(new THREE.BoxGeometry(w,h,d),new THREE.MeshBasicMaterial({color:0x8868ff,transparent:true,opacity:0.72}));
+  // Purple energy wall fills the ONLY opening in an asteroid choke.
+  const wall=new THREE.Mesh(new THREE.BoxGeometry(w,h,d),new THREE.MeshBasicMaterial({color:0x8868ff,transparent:true,opacity:0.78}));
   wall.position.y=h*0.5;g.add(wall);
-  const rim=new THREE.Mesh(new THREE.BoxGeometry(w+0.4,h+0.6,d+0.3),new THREE.MeshBasicMaterial({color:0xffe078,transparent:true,opacity:0.55}));
+  const rim=new THREE.Mesh(new THREE.BoxGeometry(w+0.45,h+0.7,d+0.35),new THREE.MeshBasicMaterial({color:0xc8b0ff,transparent:true,opacity:0.62}));
   rim.position.y=h*0.5;g.add(rim);
-  for(let i=0;i<6;i++){
-    const t=(i+0.5)/6;
-    g.add(mesh(SPH,new THREE.MeshBasicMaterial({color:0xc8b0ff,transparent:true,opacity:0.85}),lerp(-w*0.42,w*0.42,t),h*0.55,0,0.14));
+  for(let i=0;i<7;i++){
+    const t=(i+0.5)/7;
+    g.add(mesh(SPH,new THREE.MeshBasicMaterial({color:0xa070ff,transparent:true,opacity:0.9}),lerp(-w*0.42,w*0.42,t),h*0.55,0,0.16));
   }
-  const pillarL=mesh(CYL,new THREE.MeshBasicMaterial({color:0x5ec8ff,transparent:true,opacity:0.65}),-w*0.48,0,0,0.22,h*1.05,0.22);
-  const pillarR=mesh(CYL,new THREE.MeshBasicMaterial({color:0x5ec8ff,transparent:true,opacity:0.65}),w*0.48,0,0,0.22,h*1.05,0.22);
+  const pillarL=mesh(CYL,new THREE.MeshBasicMaterial({color:0x5ec8ff,transparent:true,opacity:0.7}),-w*0.52,0,0,0.28,h*1.08,0.28);
+  const pillarR=mesh(CYL,new THREE.MeshBasicMaterial({color:0x5ec8ff,transparent:true,opacity:0.7}),w*0.52,0,0,0.28,h*1.08,0.28);
   g.add(pillarL);g.add(pillarR);
   g.userData.landmark=true;g.userData.shieldGate=true;
   scene.add(g);levelDecor.push(g);
+  // Thin-but-wide asteroid WALL with a single hole. Barriers stay after the beam clears the opening.
+  // Keep Z thickness modest so the post-gate rest pad (z≈gate.z-2) stays clear.
+  const rock=0x6a5a48;
+  const thick=3.4;
+  const spanL=70,spanR=70;
+  const below=14,totalH=42;
+  const left=addSolid(x-w*0.5-spanL*0.5,y-below,z,spanL,totalH,thick,rock,{surf:'stone',invisible:false});
+  if(left.mesh&&left.mesh.material)left.mesh.material.color.setHex(0x7a6a58);
+  const right=addSolid(x+w*0.5+spanR*0.5,y-below,z,spanR,totalH,thick,rock,{surf:'stone',invisible:false});
+  if(right.mesh&&right.mesh.material)right.mesh.material.color.setHex(0x7a6a58);
+  const floor=addSolid(x,y-below,z,w+0.6,below,thick,rock,{surf:'stone',invisible:false});
+  if(floor.mesh&&floor.mesh.material)floor.mesh.material.color.setHex(0x5a4a3a);
+  const ceilH=Math.max(8,totalH-below-h);
+  const ceil=addSolid(x,y+h,z,w+0.6,ceilH,thick,rock,{surf:'stone',invisible:false});
+  if(ceil.mesh&&ceil.mesh.material)ceil.mesh.material.color.setHex(0x5a4a3a);
+  // Readable boulder face along the wall so the choke is obvious, not an invisible slab.
+  for(const side of[-1,1]){
+    for(let i=0;i<6;i++){
+      const bx=x+side*(w*0.5+1.8+i*3.1),by=y+0.6+i*1.35,bz=z+((i%2)?1.1:-1.1);
+      const boulder=mesh(SPH,lam(0x8a7a68),bx,by,bz,1.55+i*0.12,1.2+i*0.08,1.4+i*0.1);
+      scene.add(boulder);levelDecor.push(boulder);
+    }
+  }
+  for(let i=0;i<4;i++){
+    const bx=x-w*0.35+i*(w*0.25),by=y-1.2-i*0.4,bz=z+((i%2)?0.9:-0.9);
+    const sill=mesh(SPH,lam(0x6a5a48),bx,by,bz,1.1,0.85,1.0);
+    scene.add(sill);levelDecor.push(sill);
+  }
   const solid=addSolid(x,y,z,w,h,d,0x442266,{surf:'stone',role:'shieldGate',invisible:true});
-  const gate={g,x,y,z,w,h,d,hitR:Math.max(w,h)*0.42,solid,opened:false,openT:0,fxT:0};
+  const gate={g,x,y,z,w,h,d,hitR:Math.max(w,h)*0.55,solid,opened:false,openT:0,fxT:0,
+    barriers:[left,right,ceil,floor],opening:{x0:x-w/2,x1:x+w/2,y0:y,y1:y+h,z0:z-thick/2,z1:z+thick/2}};
   shieldedGates.push(gate);
   return gate;
 }
@@ -1024,7 +1069,7 @@ function openShieldedGate(gate){
   }
   SFX.crystalChime();CAM.shake=Math.max(CAM.shake,0.45);CAM.fovKick=Math.max(CAM.fovKick,6);
   spawnRing(gate.x,gate.y+gate.h*0.45,gate.z,0xc8b0ff,0.45,8,0.55);
-  for(let i=0;i<18;i++)spawnP(gate.x+rand(-gate.w*0.4,gate.w*0.4),gate.y+rand(0.2,gate.h),gate.z+rand(-0.4,0.4),rand(-2,2),rand(0.5,3),rand(-1,1),rand(0.08,0.16),Math.random()<0.5?0xc8b0ff:0xffe078,rand(0.5,0.9),0.45,-3,0.9);
+  for(let i=0;i<18;i++)spawnP(gate.x+rand(-gate.w*0.4,gate.w*0.4),gate.y+rand(0.2,gate.h),gate.z+rand(-0.4,0.4),rand(-2,2),rand(0.5,3),rand(-1,1),rand(0.08,0.16),Math.random()<0.5?0xc8b0ff:0xa070ff,rand(0.5,0.9),0.45,-3,0.9);
   showToast('Star Beam opened the way!');
 }
 
@@ -1086,38 +1131,54 @@ function gustHitJellyfish(mx,mz,k){
 function buildObservatory(x,y,z,opts){
   opts=opts||{};
   const g=new THREE.Group();g.position.set(x,y,z);
-  // Glass deck platforms
+  // Glass deck platforms — MAIN deck is a real landable solid matching the visible cylinder.
   const deck=mesh(CYL,new THREE.MeshBasicMaterial({color:0x88a8d8,transparent:true,opacity:0.55}),0,0.2,0,5.2,0.35,5.2);
   g.add(deck);
   const deck2=mesh(CYL,new THREE.MeshBasicMaterial({color:0xa8d0ff,transparent:true,opacity:0.42}),-2.2,0.15,-1.8,3.4,0.28,3.4);
   g.add(deck2);
-  const catwalk=addSolid(x+2.5,y+0.1,z-2.2,4.5,0.28,2.2,0x6a88b8,{surf:'pad',role:'landable',landingPad:true});
-  catwalk.mesh.visible=true;
-  if(catwalk.mesh.material&&catwalk.mesh.material.color)catwalk.mesh.material.color.setHex(0x7a98c8);
-  addLandingBeacon(x+2.5,y+0.1,z-2.2,1.6,{approachR:16,nearR:7,primary:true});
-  // Dome and telescopes framing the black hole
-  const dome=new THREE.Mesh(SPH,new THREE.MeshBasicMaterial({color:0xa8d0ff,transparent:true,opacity:0.38}));
-  dome.scale.set(3.6,2.0,3.6);dome.position.y=1.8;g.add(dome);
-  const scope1=mesh(CYL,lam(0xc8d8f0),-1.2,2.2,-2.4,0.16,2.6,0.16);scope1.rotation.x=-0.62;g.add(scope1);
-  const scope2=mesh(CYL,lam(0xc8d8f0),1.4,2.0,-1.8,0.14,2.2,0.14);scope2.rotation.x=-0.48;scope2.rotation.y=0.35;g.add(scope2);
-  const frame=mesh(CYL,new THREE.MeshBasicMaterial({color:0xffe078,transparent:true,opacity:0.7}),0,1.4,3.2,0.1,0.1,2.8);
+  if(!opts.landmarkOnly){
+    // Generous main-deck collision (≈ visual radius 5.2). Bottom at y so top ≈ y+0.42.
+    const mainDeck=addSolid(x,y,z,10.4,0.42,10.4,0x6a88b8,{surf:'pad',role:'landable',landingPad:true});
+    mainDeck.mesh.visible=false;
+    // Side deck also landable so the offset glass is honest.
+    const sideDeck=addSolid(x-2.2,y,z-1.8,6.6,0.36,6.6,0x6a88b8,{surf:'pad',role:'landable',landingPad:true});
+    sideDeck.mesh.visible=false;
+    // Catwalk toward Black Hole remains as a readable secondary pad.
+    const catwalk=addSolid(x,y+0.05,z-4.6,3.8,0.28,3.2,0x6a88b8,{surf:'pad',role:'landable',landingPad:true});
+    catwalk.mesh.visible=true;
+    if(catwalk.mesh.material&&catwalk.mesh.material.color)catwalk.mesh.material.color.setHex(0x7a98c8);
+    // Landing assist targets the obvious MAIN deck center — not a tiny offset patch.
+    addLandingBeacon(x,y,z,3.8,{approachR:30,nearR:16,primary:true});
+    addLandingBeacon(x,y+0.05,z-4.6,1.8,{approachR:14,nearR:6,primary:false});
+  }
+  // Dome sits above deck so it does not hide Snoozle 4
+  const dome=new THREE.Mesh(SPH,new THREE.MeshBasicMaterial({color:0xa8d0ff,transparent:true,opacity:0.32}));
+  dome.scale.set(3.2,1.7,3.2);dome.position.set(0,2.4,-0.4);g.add(dome);
+  // Telescopes / frame point toward the Black Hole (-Z)
+  const scope1=mesh(CYL,lam(0xc8d8f0),-1.4,2.4,-2.8,0.16,2.8,0.16);scope1.rotation.x=0.55;g.add(scope1);
+  const scope2=mesh(CYL,lam(0xc8d8f0),1.5,2.2,-2.4,0.14,2.4,0.14);scope2.rotation.x=0.48;scope2.rotation.y=-0.2;g.add(scope2);
+  const frame=mesh(CYL,new THREE.MeshBasicMaterial({color:0xffe078,transparent:true,opacity:0.78}),0,1.6,-4.2,0.12,0.12,3.4);
   g.add(frame);
+  // Gold rim lights toward Black Hole for orientation
   for(let i=0;i<5;i++){
-    const a=-0.5+i*0.25;
-    g.add(mesh(SPH,new THREE.MeshBasicMaterial({color:0xffe078,transparent:true,opacity:0.65}),Math.sin(a)*4.2,0.7,Math.cos(a)*4.2,0.14));
+    const a=-0.55+i*0.28;
+    g.add(mesh(SPH,new THREE.MeshBasicMaterial({color:0xffe078,transparent:true,opacity:0.75}),Math.sin(a)*3.6,0.85,-Math.cos(a)*4.4,0.16));
   }
-  // Rim lights
-  for(let i=0;i<6;i++){
-    const a=i/6*TAU;
-    g.add(mesh(SPH,new THREE.MeshBasicMaterial({color:0x5ec8ff,transparent:true,opacity:0.55}),Math.cos(a)*4.8,0.45,Math.sin(a)*4.8,0.1));
+  for(let i=0;i<8;i++){
+    const a=i/8*TAU;
+    g.add(mesh(SPH,new THREE.MeshBasicMaterial({color:0x5ec8ff,transparent:true,opacity:0.55}),Math.cos(a)*5.0,0.5,Math.sin(a)*5.0,0.11));
   }
-  g.userData.landmark=true;g.userData.landable=false;g.userData.observatory=true;
+  // Soft pedestal under Snoozle 4 spot (toward BH) so the final friend reads clearly
+  g.add(mesh(CYL,new THREE.MeshBasicMaterial({color:0xffe078,transparent:true,opacity:0.55}),0,0.55,-2.6,0.9,0.18,0.9));
+  g.add(mesh(SPH,new THREE.MeshBasicMaterial({color:0xffffff,transparent:true,opacity:0.5}),0,1.05,-2.6,0.22));
+  g.userData.landmark=true;g.userData.landable=true;g.userData.observatory=true;
+  g.userData.deck={x,y:y+0.42,z,r:5.0};
   scene.add(g);levelDecor.push(g);spaceDecorPlanets.push(g);
   if(!opts.landmarkOnly){
     g.userData.fullObservatory=true;
-    addSpaceJellyfish(x-3.5,y+1.5,z+1.2);
-    addSpaceJellyfish(x+4,y+2.8,z-0.5);
-    addSpaceJellyfish(x-1,y+3.5,z+2.8);
+    addSpaceJellyfish(x-4.2,y+2.2,z+2.0);
+    addSpaceJellyfish(x+4.5,y+3.0,z+0.8);
+    addSpaceJellyfish(x-2.0,y+3.8,z+3.2);
   }
   return g;
 }
@@ -1186,26 +1247,28 @@ function buildFinishVoidScene(bh){
 
 function buildBlackHoleFinish(x,y,z){
   const g=new THREE.Group();g.position.set(x,y,z);
-  const core=mesh(SPH,new THREE.MeshBasicMaterial({color:0x020208}),0,0,0,3.2,3.2,3.2);g.add(core);
-  const ring=new THREE.Mesh(new THREE.TorusGeometry(6.2,0.65,10,48),new THREE.MeshBasicMaterial({color:0x3a2858,transparent:true,opacity:0.82}));
+  // Large inactive silhouette — readable from the Observatory (~28m away).
+  const core=mesh(SPH,new THREE.MeshBasicMaterial({color:0x020208}),0,0,0,4.4,4.4,4.4);g.add(core);
+  const darkHalo=mesh(SPH,new THREE.MeshBasicMaterial({color:0x1a1028,transparent:true,opacity:0.55}),0,0,0,5.6,5.6,5.6);g.add(darkHalo);
+  const ring=new THREE.Mesh(new THREE.TorusGeometry(8.4,0.85,10,48),new THREE.MeshBasicMaterial({color:0x3a2858,transparent:true,opacity:0.88}));
   ring.rotation.x=Math.PI/2;g.add(ring);
-  const ring2=new THREE.Mesh(new THREE.TorusGeometry(7.6,0.28,8,40),new THREE.MeshBasicMaterial({color:0x8878c8,transparent:true,opacity:0.45}));
+  const ring2=new THREE.Mesh(new THREE.TorusGeometry(10.2,0.35,8,40),new THREE.MeshBasicMaterial({color:0x8878c8,transparent:true,opacity:0.55}));
   ring2.rotation.x=Math.PI/2;ring2.rotation.z=0.4;g.add(ring2);
-  const portal=new THREE.Mesh(new THREE.TorusGeometry(2.4,0.22,10,40),new THREE.MeshBasicMaterial({color:0x1a1028,transparent:true,opacity:0.35}));
+  const portal=new THREE.Mesh(new THREE.TorusGeometry(3.2,0.28,10,40),new THREE.MeshBasicMaterial({color:0x1a1028,transparent:true,opacity:0.35}));
   portal.rotation.x=Math.PI/2;portal.visible=false;g.add(portal);
-  const portalHalo=new THREE.Mesh(new THREE.TorusGeometry(2.8,0.12,8,36),new THREE.MeshBasicMaterial({color:0xfff0c8,transparent:true,opacity:0}));
+  const portalHalo=new THREE.Mesh(new THREE.TorusGeometry(3.8,0.16,8,36),new THREE.MeshBasicMaterial({color:0xfff0c8,transparent:true,opacity:0}));
   portalHalo.rotation.x=Math.PI/2;portalHalo.visible=false;g.add(portalHalo);
   const sparkles=[];
-  for(let i=0;i<16;i++){
-    const a=i/16*TAU;
-    const sp=mesh(SPH,new THREE.MeshBasicMaterial({color:0xffffff,transparent:true,opacity:0.7}),Math.cos(a)*7.2,Math.sin(a*2)*0.4,Math.sin(a)*7.2,0.12);
+  for(let i=0;i<20;i++){
+    const a=i/20*TAU;
+    const sp=mesh(SPH,new THREE.MeshBasicMaterial({color:0xffffff,transparent:true,opacity:0.75}),Math.cos(a)*9.4,Math.sin(a*2)*0.5,Math.sin(a)*9.4,0.16);
     g.add(sp);sparkles.push(sp);
   }
   g.userData.landmark=true;g.userData.interactive=true;g.userData.landable=false;g.userData.active=false;
   scene.add(g);blackHoleLandmark=g;levelDecor.push(g);
   BLACK_HOLE={
     g,x,y,z,active:false,activated:false,warping:false,warpT:0,warpDur:7.0,finishImmune:false,
-    portalR:5.5,triggerR:2.6,bounceR:6.5,
+    portalR:7.2,triggerR:3.0,bounceR:8.5,
     core,ring,ring2,portal,portalHalo,sparkles,
     voidReady:true,voidActive:false,voidGroup:null,winBurstT:0,
     warpFrom:null,warpTo:null,
@@ -1227,24 +1290,60 @@ function buildBlackHoleFinish(x,y,z){
   return g;
 }
 
+function igniteBlackHoleRoute(){
+  // Bright gold path from Observatory toward the Black Hole — no reading required.
+  const ox=10,oy=25,oz=-276,tx=BLACK_HOLE.x,ty=BLACK_HOLE.y,tz=BLACK_HOLE.z;
+  for(let i=0;i<=14;i++){
+    const t=i/14;
+    const px=lerp(ox,tx,t),py=lerp(oy,ty,t)+Math.sin(t*Math.PI)*1.6,pz=lerp(oz,tz,t);
+    const star=mesh(SPH,new THREE.MeshBasicMaterial({color:i%2?0xffffff:0xfff0c8,transparent:true,opacity:0.95}),px,py,pz,0.28+t*0.12);
+    star.userData.routeStar=true;star.userData.pathIgnite=true;star.userData.pulseT=i*0.4;
+    scene.add(star);spaceRouteBeacons.push(star);levelDecor.push(star);
+  }
+  for(const b of spaceRouteBeacons){
+    if(!b.userData)continue;
+    const p=b.position||b;
+    const z=p.z!=null?p.z:(b.position&&b.position.z);
+    if(z==null||z>-278)continue;
+    b.userData.pathIgnite=true;
+    if(b.material&&b.material.color){b.material.color.setHex(0xfff0c8);b.material.opacity=1;}
+    if(b.children)b.children.forEach(c=>{
+      if(c.material&&c.material.color){c.material.color.setHex(0xfff0c8);if(c.material.opacity!=null)c.material.opacity=Math.max(c.material.opacity,0.9);}
+    });
+    if(b.scale&&b.scale.setScalar)b.scale.setScalar(1.55);
+  }
+  spawnRing(ox,oy,oz,0xfff0c8,0.5,8,0.55);
+  spawnRing(BLACK_HOLE.x,BLACK_HOLE.y,BLACK_HOLE.z,0xffffff,0.7,12,0.7);
+}
+
 function activateBlackHolePortal(){
   if(!BLACK_HOLE||BLACK_HOLE.activated)return;
   BLACK_HOLE.activated=true;BLACK_HOLE.active=true;BLACK_HOLE.activateT=0;
   if(blackHoleLandmark)blackHoleLandmark.userData.active=true;
-  if(BLACK_HOLE.portal)BLACK_HOLE.portal.visible=true;
-  if(BLACK_HOLE.portalHalo)BLACK_HOLE.portalHalo.visible=true;
+  if(BLACK_HOLE.portal){
+    BLACK_HOLE.portal.visible=true;
+    if(BLACK_HOLE.portal.material){BLACK_HOLE.portal.material.color.setHex(0xfff0c8);BLACK_HOLE.portal.material.opacity=0.92;}
+  }
+  if(BLACK_HOLE.portalHalo){
+    BLACK_HOLE.portalHalo.visible=true;
+    if(BLACK_HOLE.portalHalo.material)BLACK_HOLE.portalHalo.material.opacity=0.95;
+  }
   if(BLACK_HOLE.ring&&BLACK_HOLE.ring.material){
     BLACK_HOLE.ring.material.color.setHex(0xfff0c8);
-    BLACK_HOLE.ring.material.opacity=0.95;
+    BLACK_HOLE.ring.material.opacity=0.98;
   }
   if(BLACK_HOLE.ring2&&BLACK_HOLE.ring2.material){
     BLACK_HOLE.ring2.material.color.setHex(0xffffff);
-    BLACK_HOLE.ring2.material.opacity=0.72;
+    BLACK_HOLE.ring2.material.opacity=0.85;
   }
+  if(BLACK_HOLE.sparkles)BLACK_HOLE.sparkles.forEach(sp=>{if(sp.material){sp.material.color.setHex(0xfff0c8);sp.material.opacity=1;}});
+  igniteBlackHoleRoute();
   SFX.blackHoleOpen();
   CAM.shake=Math.max(CAM.shake,0.55);CAM.fovKick=Math.max(CAM.fovKick,8);
   spawnRing(BLACK_HOLE.x,BLACK_HOLE.y,BLACK_HOLE.z,0xfff0c8,0.55,10,0.65);
-  for(let i=0;i<28;i++)spawnP(BLACK_HOLE.x+rand(-3,3),BLACK_HOLE.y+rand(-1,2),BLACK_HOLE.z+rand(-3,3),rand(-2,2),rand(0.5,3),rand(-2,2),rand(0.08,0.16),Math.random()<0.5?0xfff0c8:0xc8b0ff,rand(0.5,0.9),0.4,-3,0.9);
+  for(let i=0;i<36;i++)spawnP(BLACK_HOLE.x+rand(-4,4),BLACK_HOLE.y+rand(-1,3),BLACK_HOLE.z+rand(-4,4),rand(-2,2),rand(0.5,3.5),rand(-2,2),rand(0.1,0.18),Math.random()<0.5?0xfff0c8:0xffffff,rand(0.55,1.0),0.4,-3,0.95);
+  // Flash visible from Observatory
+  for(let i=0;i<12;i++)spawnP(10+rand(-2,2),25+rand(0,2),-274+rand(-2,2),rand(-1,1),rand(1,3),rand(-3,-1),0.12,0xfff0c8,0.7,0.35,0,0.9);
   showToast('The portal opened!');
 }
 
@@ -1605,9 +1704,13 @@ function updateSpaceDecor(dt){
   if(!isSpaceLevel())return;
   for(const b of spaceRouteBeacons){
     if(b.userData&&b.userData.routeStar){
-      const ph=b.userData.pulseT+time*2.4;
-      b.material.opacity=0.55+Math.sin(ph)*0.35;
-      b.scale.setScalar(0.14+Math.sin(ph*1.3)*0.04);
+      const boost=b.userData.pathIgnite?1.55:1;
+      const ph=b.userData.pulseT+time*(b.userData.pathIgnite?4.2:2.4);
+      b.material.opacity=(0.55+Math.sin(ph)*0.35)*Math.min(1,0.65+boost*0.25);
+      b.scale.setScalar((0.14+Math.sin(ph*1.3)*0.04)*boost);
+    }else if(b.userData&&b.userData.pathIgnite&&b.children){
+      const ph=time*3.6;
+      b.children.forEach(c=>{if(c.material&&c.material.opacity!=null)c.material.opacity=0.75+Math.sin(ph)*0.22;});
     }
   }
   for(const t of spaceLandingTargets){
@@ -1665,5 +1768,6 @@ window.__SPACE={
   get CANDY_SHELL_ENTER_PAD(){return CANDY_SHELL_ENTER_PAD;},
   get CANDY_SHELL_EXIT_PAD(){return CANDY_SHELL_EXIT_PAD;},
   get cheeseMoonBody(){return cheeseMoonBody;},
+  get STAR_BEAM_COLORS(){return[0xa070ff,0xc8b0ff,0xffffff];},
   asteroidPos,hurtFromAsteroid,hitSaucer,stunSaucer,fireStarBeam,gustCrystalDust,spinHitCracked,spinHitStarCrates,slamHitStarCrates
 };

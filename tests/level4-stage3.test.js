@@ -9,7 +9,7 @@ function releaseJump(H){H.ku({code:'Space'});}
 // ---- version ----
 {
   const H=boot();
-  ok(H.getCamDiag().VERSION_BASE==='v50 · Finish void celebration','version stamp v50');
+  ok(H.getCamDiag().VERSION_BASE==='v51 · Human playtest route','version stamp v51');
 }
 
 // ---- Snoozles 1, 2, and 3 present (Snoozle 4 deferred to Observatory) ----
