@@ -31,7 +31,7 @@ function fireBeamAt(H,target){
 // ---- version ----
 {
   const H=boot();
-  ok(H.getCamDiag().VERSION_BASE==='v49 · Star Observatory finish','version stamp v49');
+  ok(H.getCamDiag().VERSION_BASE==='v50 · Finish void celebration','version stamp v50');
 }
 
 // ---- Snoozles: four authored (Snoozle 4 on Observatory) ----

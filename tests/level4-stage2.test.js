@@ -22,7 +22,7 @@ function flyTo(H,x,y,z,frames){
 // ---- version ----
 {
   const H=boot();
-  ok(H.getCamDiag().VERSION_BASE==='v49 · Star Observatory finish','version stamp v49');
+  ok(H.getCamDiag().VERSION_BASE==='v50 · Finish void celebration','version stamp v50');
 }
 
 // ---- Snoozle 1 ----

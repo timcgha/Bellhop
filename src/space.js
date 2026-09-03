@@ -17,6 +17,8 @@ function spaceCfg(){return CURRENT_LEVEL&&CURRENT_LEVEL.openSpace;}
 
 function clearSpaceWorld(){
   const rem=m=>{if(!m)return;if(m.parent&&m.parent.remove)m.parent.remove(m);else if(scene.remove)scene.remove(m);else if(m.visible!=null)m.visible=false;};
+  destroyWarpTunnelVisuals();
+  if(BLACK_HOLE&&BLACK_HOLE.voidGroup)rem(BLACK_HOLE.voidGroup);
   if(spaceGroup){while(spaceGroup.children.length)spaceGroup.remove(spaceGroup.children[0]);spaceGroup.visible=false;}
   blackHoleLandmark=null;cheeseMoonLandmark=null;cheeseMoonBody=null;spaceStars.length=0;spaceDecorPlanets.length=0;
   spaceOpenZones=[];spacePlayVolume=null;spaceRecoveryT=0;spaceRecoveryFrom=null;
@@ -351,6 +353,7 @@ function asteroidPos(a){
 }
 
 function isSpaceFinishImmune(){return won||!!(BLACK_HOLE&&(BLACK_HOLE.warping||BLACK_HOLE.finishImmune));}
+function isSpaceWarpCamera(){return !!(BLACK_HOLE&&BLACK_HOLE.warping&&!won);}
 function hurtFromAsteroid(a,px,py,pz){
   if(isSpaceFinishImmune()||P.inv>0||P.dead)return false;
   const dx=px-a.x,dy=(py+0.55)-a.y,dz=pz-a.z;
@@ -1150,6 +1153,35 @@ function updateSpaceStage5Ends(dt){
   }
 }
 
+function buildFinishVoidScene(bh){
+  const vx=bh.x,vy=bh.y+10,vz=bh.z-48;
+  const g=new THREE.Group();g.position.set(vx,vy,vz);g.visible=false;g.name='finishVoid';
+  // Calm deep starfield — distinct from the ordinary approach black-hole scene.
+  const stars=[];
+  for(let i=0;i<90;i++){
+    const a=rand(0,TAU),el=rand(-0.9,0.9),r=rand(10,58);
+    const sx=Math.cos(a)*Math.cos(el)*r,sy=Math.sin(el)*r*0.7,sz=Math.sin(a)*Math.cos(el)*r-8;
+    const st=mesh(SPH,new THREE.MeshBasicMaterial({color:Math.random()<0.2?0xfff0c8:0xffffff,transparent:true,opacity:rand(0.35,0.95)}),sx,sy,sz,rand(0.05,0.16));
+    g.add(st);stars.push(st);
+  }
+  // Friendly glowing portal-remnant / halo behind the tableau (not scary).
+  const softGlow=mesh(SPH,new THREE.MeshBasicMaterial({color:0x2a1848,transparent:true,opacity:0.55}),0,2.2,-16,5.5,5.5,5.5);
+  g.add(softGlow);
+  const halo=new THREE.Mesh(new THREE.TorusGeometry(7.5,0.55,10,48),new THREE.MeshBasicMaterial({color:0xfff0c8,transparent:true,opacity:0.72}));
+  halo.rotation.x=Math.PI/2;halo.position.set(0,2.2,-16);g.add(halo);
+  const halo2=new THREE.Mesh(new THREE.TorusGeometry(9.2,0.22,8,40),new THREE.MeshBasicMaterial({color:0xc8b0ff,transparent:true,opacity:0.5}));
+  halo2.rotation.x=Math.PI/2;halo2.rotation.z=0.35;halo2.position.set(0,2.2,-16);g.add(halo2);
+  const sparkles=[];
+  for(let i=0;i<18;i++){
+    const a=i/18*TAU;
+    const sp=mesh(SPH,new THREE.MeshBasicMaterial({color:0xffffff,transparent:true,opacity:0.8}),Math.cos(a)*5.5,2.2+Math.sin(a*2)*0.6,Math.sin(a)*5.5-4,0.1);
+    g.add(sp);sparkles.push(sp);
+  }
+  scene.add(g);levelDecor.push(g);
+  bh.voidGroup=g;bh.voidStars=stars;bh.voidHalo=halo;bh.voidHalo2=halo2;bh.voidSparkles=sparkles;
+  bh.voidCenter={x:vx,y:vy,z:vz};bh.voidActive=false;
+}
+
 function buildBlackHoleFinish(x,y,z){
   const g=new THREE.Group();g.position.set(x,y,z);
   const core=mesh(SPH,new THREE.MeshBasicMaterial({color:0x020208}),0,0,0,3.2,3.2,3.2);g.add(core);
@@ -1173,17 +1205,18 @@ function buildBlackHoleFinish(x,y,z){
     g,x,y,z,active:false,activated:false,warping:false,warpT:0,warpDur:7.0,finishImmune:false,
     portalR:5.5,triggerR:2.6,bounceR:6.5,
     core,ring,ring2,portal,portalHalo,sparkles,
-    voidReady:false,winBurstT:0,
-    warpFrom:null,warpTo:null
+    voidReady:true,voidActive:false,voidGroup:null,winBurstT:0,
+    warpFrom:null,warpTo:null,
+    warpGroup:null,warpStreaks:null,warpRings:null,warpPlanets:null
   };
+  buildFinishVoidScene(BLACK_HOLE);
   registerFinish({
     x,z,top:y+14,
     winMsg:'The stars are singing!',
     onAllAwake(){activateBlackHolePortal();},
     onWin(){
       BLACK_HOLE.finishImmune=true;
-      if(BLACK_HOLE.voidGroup)BLACK_HOLE.voidGroup.visible=true;
-      stageSpaceWinPose();
+      if(!BLACK_HOLE.voidActive)enterFinishVoid();
       spaceWinBurst();
     },
     update(dt,winT){updateBlackHoleFinish(dt,winT);},
@@ -1213,44 +1246,148 @@ function activateBlackHolePortal(){
   showToast('The portal opened!');
 }
 
+function destroyWarpTunnelVisuals(){
+  if(!BLACK_HOLE)return;
+  const rem=m=>{if(!m)return;if(m.parent&&m.parent.remove)m.parent.remove(m);else if(scene.remove)scene.remove(m);else if(m.visible!=null)m.visible=false;};
+  if(BLACK_HOLE.warpGroup){rem(BLACK_HOLE.warpGroup);BLACK_HOLE.warpGroup=null;}
+  BLACK_HOLE.warpStreaks=null;BLACK_HOLE.warpRings=null;BLACK_HOLE.warpPlanets=null;
+}
+
+function buildWarpTunnelVisuals(){
+  destroyWarpTunnelVisuals();
+  if(!BLACK_HOLE)return;
+  const g=new THREE.Group();g.name='warpTunnel';
+  const streaks=[];
+  for(let i=0;i<110;i++){
+    const a=rand(0,TAU),r=rand(0.9,4.8),d=rand(-4,92);
+    const len=rand(0.9,2.8);
+    const st=mesh(BOXG,new THREE.MeshBasicMaterial({color:Math.random()<0.25?0xfff0c8:0xffffff,transparent:true,opacity:rand(0.45,0.95)}),Math.cos(a)*r,Math.sin(a)*r,-d,0.035,0.035,len);
+    g.add(st);streaks.push(st);
+  }
+  const rings=[];
+  for(let i=0;i<14;i++){
+    const col=CONF[i%CONF.length];
+    const ring=new THREE.Mesh(new THREE.TorusGeometry(3.15+((i%3)*0.18),0.16+((i%2)*0.04),8,40),new THREE.MeshBasicMaterial({color:col,transparent:true,opacity:0.88}));
+    ring.position.z=-(i*6.5+1.5);
+    ring.rotation.z=i*0.35;
+    g.add(ring);rings.push(ring);
+  }
+  const planets=[];
+  const cols=[0xff8a6a,0x6fd4ff,0xffe078,0xc8b0ff,0x7dff9a,0xff9a3c];
+  for(let i=0;i<6;i++){
+    const pg=new THREE.Group();
+    const rr=rand(0.7,1.7);
+    pg.add(mesh(SPH,new THREE.MeshBasicMaterial({color:cols[i%cols.length]}),0,0,0,rr));
+    if(i%2===0){
+      const tor=new THREE.Mesh(new THREE.TorusGeometry(rr*1.35,rr*0.08,6,24),new THREE.MeshBasicMaterial({color:0xffffff,transparent:true,opacity:0.45}));
+      tor.rotation.x=Math.PI/2;pg.add(tor);
+    }
+    pg.position.set(rand(-6.5,6.5),rand(-3.2,3.2),-(12+i*13));
+    g.add(pg);planets.push(pg);
+  }
+  scene.add(g);
+  BLACK_HOLE.warpGroup=g;BLACK_HOLE.warpStreaks=streaks;BLACK_HOLE.warpRings=rings;BLACK_HOLE.warpPlanets=planets;
+}
+
 function startWarpTunnel(){
   if(!BLACK_HOLE||BLACK_HOLE.warping||won)return;
   BLACK_HOLE.warping=true;BLACK_HOLE.warpT=0;BLACK_HOLE.finishImmune=true;
   BLACK_HOLE.warpFrom={x:P.pos.x,y:P.pos.y,z:P.pos.z,yaw:P.yaw};
-  BLACK_HOLE.warpTo={x:BLACK_HOLE.x,y:BLACK_HOLE.y+2,z:BLACK_HOLE.z-18};
+  // Ride ends at the finish-void entry — not the ordinary approach scene.
+  const vc=BLACK_HOLE.voidCenter||{x:BLACK_HOLE.x,y:BLACK_HOLE.y+10,z:BLACK_HOLE.z-48};
+  BLACK_HOLE.warpTo={x:vc.x,y:vc.y+1.5,z:vc.z+10};
   P.inv=99;P.vel.set(0,0,0);endSpaceThrust();
+  buildWarpTunnelVisuals();
   SFX.warpWhoosh();CAM.mode='warp';
   rumble(200,0.5,0.45);
+  applyWarpCamera(P.pos.x,P.pos.y,P.pos.z);
+}
+
+function applyWarpCamera(px,py,pz){
+  const yaw=P.yaw;
+  CAM.look.set(px,py+0.85,pz-3.2);
+  CAM.pos.set(px-Math.sin(yaw)*4.2,py+1.85,pz+Math.cos(yaw)*4.2);
+  CAM.yaw=yaw;CAM.pitch=0.18;CAM.boomDist=5;CAM.targetDist=5;CAM.mode='warp';CAM.collisionPulled=false;
+  CAM.effectiveDist=Math.hypot(CAM.pos.x-CAM.look.x,CAM.pos.y-CAM.look.y,CAM.pos.z-CAM.look.z);
+}
+
+function stageFinishSnoozleTableau(){
+  if(!BLACK_HOLE||!BLACK_HOLE.voidCenter)return;
+  const n=snoozles.length;
+  for(let i=0;i<n;i++){
+    const s=snoozles[i];
+    s.celebOrbit=true;
+    if(s.state==='sleep'){s.state='home';s.g.userData.closed.visible=false;s.g.userData.open.visible=true;}
+    s.orbitA=(i/Math.max(n,1))*TAU;
+    s.orbitR=3.35;
+    s.orbitH=1.15;
+    s.ph=s.ph!=null?s.ph:i;
+  }
+}
+
+function clearFinishSnoozleTableau(){
+  for(const s of snoozles){if(s)s.celebOrbit=false;}
+}
+
+function enterFinishVoid(){
+  if(!BLACK_HOLE)return;
+  destroyWarpTunnelVisuals();
+  BLACK_HOLE.warping=false;
+  BLACK_HOLE.voidActive=true;
+  BLACK_HOLE.finishImmune=true;
+  if(BLACK_HOLE.voidGroup)BLACK_HOLE.voidGroup.visible=true;
+  // Hide ordinary approach black hole — celebration lives in the void scene.
+  if(BLACK_HOLE.g)BLACK_HOLE.g.visible=false;
+  stageSpaceWinPose();
+  stageFinishSnoozleTableau();
+  updateFinishSnoozleTableau(0);
 }
 
 function stageSpaceWinPose(){
   if(!BLACK_HOLE)return;
-  const vx=BLACK_HOLE.x,vz=BLACK_HOLE.z-14,vy=BLACK_HOLE.y+1.5;
+  const c=BLACK_HOLE.voidCenter||{x:BLACK_HOLE.x,y:BLACK_HOLE.y+1.5,z:BLACK_HOLE.z-14};
+  const vx=c.x,vy=c.y+1.2,vz=c.z;
   P.pos.set(vx,vy,vz);P.vel.set(0,0,0);P.grounded=false;P.yaw=Math.PI;
-  CAM.look.set(vx,vy+1.2,vz-6);CAM.pos.set(vx+0.4,vy+5.5,vz+12);
-  CAM.yaw=0.02;CAM.pitch=0.32;CAM.boomDist=16;CAM.targetDist=16;CAM.mode='finish';
+  CAM.look.set(vx,vy+1.4,vz-1);CAM.pos.set(vx+0.5,vy+5.8,vz+13);
+  CAM.yaw=0.02;CAM.pitch=0.28;CAM.boomDist=16;CAM.targetDist=16;CAM.mode='finish';CAM.collisionPulled=false;
 }
 
 function spaceWinBurst(){
   if(!BLACK_HOLE)return;
-  spawnRing(BLACK_HOLE.x,BLACK_HOLE.y+1,BLACK_HOLE.z,0xfff0c8,0.55,10,0.7);
+  const c=BLACK_HOLE.voidCenter||{x:BLACK_HOLE.x,y:BLACK_HOLE.y,z:BLACK_HOLE.z};
+  spawnRing(c.x,c.y+1,c.z,0xfff0c8,0.55,10,0.7);
   for(let i=0;i<32;i++){
     const a=rand(0,TAU),r=rand(2,9);
-    spawnP(BLACK_HOLE.x+Math.cos(a)*r,BLACK_HOLE.y+rand(0.5,6),BLACK_HOLE.z+Math.sin(a)*r,
+    spawnP(c.x+Math.cos(a)*r,c.y+rand(0.5,6),c.z+Math.sin(a)*r,
       rand(-2,2),rand(1,4),rand(-2,2),rand(0.08,0.16),CONF[Math.floor(Math.random()*CONF.length)],rand(0.6,1.1),0.35,-3,1);
   }
 }
 
 function spaceFinishCamHold(dt){
   if(!BLACK_HOLE)return;
-  const kx=BLACK_HOLE.x,kz=BLACK_HOLE.z-10,ky=BLACK_HOLE.y+1.8;
-  const lookX=kx,lookY=ky+2.8,lookZ=kz-4;
-  const posX=kx+0.6,posY=ky+7.5,posZ=kz+16;
+  const c=BLACK_HOLE.voidCenter||{x:BLACK_HOLE.x,y:BLACK_HOLE.y+1.8,z:BLACK_HOLE.z-10};
+  const lookX=c.x,lookY=c.y+2.4,lookZ=c.z-1.5;
+  const posX=c.x+0.55,posY=c.y+7.2,posZ=c.z+15;
   CAM.look.x=damp(CAM.look.x,lookX,8,dt);CAM.look.y=damp(CAM.look.y,lookY,8,dt);CAM.look.z=damp(CAM.look.z,lookZ,8,dt);
   CAM.pos.x=damp(CAM.pos.x,posX,7,dt);CAM.pos.y=damp(CAM.pos.y,posY,7,dt);CAM.pos.z=damp(CAM.pos.z,posZ,7,dt);
-  CAM.yaw=0.02;CAM.pitch=0.32;CAM.boomDist=16;CAM.targetDist=16;CAM.mode='finish';
+  CAM.yaw=0.02;CAM.pitch=0.28;CAM.boomDist=16;CAM.targetDist=16;CAM.mode='finish';
   CAM.effectiveDist=Math.hypot(CAM.pos.x-CAM.look.x,CAM.pos.y-CAM.look.y,CAM.pos.z-CAM.look.z);
   CAM.collisionPulled=false;
+}
+
+function updateFinishSnoozleTableau(dt){
+  if(!BLACK_HOLE||!BLACK_HOLE.voidActive||!BLACK_HOLE.voidCenter)return;
+  const c=BLACK_HOLE.voidCenter;
+  for(const s of snoozles){
+    if(!s.celebOrbit)continue;
+    s.orbitA=(s.orbitA||0)+dt*0.58;
+    const x=c.x+Math.cos(s.orbitA)*s.orbitR;
+    const z=c.z+Math.sin(s.orbitA)*s.orbitR;
+    const y=c.y+s.orbitH+Math.sin(time*2.2+(s.ph||0))*0.38;
+    s.g.position.set(x,y,z);
+    s.baseY=y;
+    s.g.rotation.y+=dt*2.8;
+  }
 }
 
 function repelInactiveBlackHole(dt){
@@ -1281,22 +1418,53 @@ function updateWarpTunnel(dt){
   if(IN.mx||IN.mz){
     P.pos.x+=IN.mx*dt*2.2;P.pos.y+=IN.mz*dt*1.4;
   }
-  CAM.look.set(px,py+0.9,pz-2);CAM.pos.set(px-Math.sin(P.yaw)*5,py+2.2,pz-Math.cos(P.yaw)*5);
-  CAM.mode='warp';
+  applyWarpCamera(P.pos.x,P.pos.y,P.pos.z);
+  // Tunnel spectacle: streaking stars, rainbow rings, passing planets travel past the camera.
+  if(BLACK_HOLE.warpGroup){
+    BLACK_HOLE.warpGroup.position.set(P.pos.x,P.pos.y,P.pos.z);
+    BLACK_HOLE.warpGroup.rotation.y=P.yaw;
+    const scroll=18+k*22;
+    if(BLACK_HOLE.warpRings){
+      for(let i=0;i<BLACK_HOLE.warpRings.length;i++){
+        const ring=BLACK_HOLE.warpRings[i];
+        ring.position.z+=scroll*dt;
+        ring.rotation.z+=dt*(1.2+i*0.05);
+        if(ring.position.z>8){
+          ring.position.z-=BLACK_HOLE.warpRings.length*6.5;
+          if(ring.material)ring.material.color.setHex(CONF[(i+Math.floor(BLACK_HOLE.warpT*3))%CONF.length]);
+        }
+      }
+    }
+    if(BLACK_HOLE.warpStreaks){
+      for(const st of BLACK_HOLE.warpStreaks){
+        st.position.z+=(40+k*36)*dt;
+        if(st.position.z>12){
+          const a=rand(0,TAU),r=rand(0.9,4.8);
+          st.position.set(Math.cos(a)*r,Math.sin(a)*r,st.position.z-96);
+        }
+      }
+    }
+    if(BLACK_HOLE.warpPlanets){
+      for(let i=0;i<BLACK_HOLE.warpPlanets.length;i++){
+        const pg=BLACK_HOLE.warpPlanets[i];
+        pg.position.z+=(9+k*10)*dt;
+        pg.rotation.y+=dt*0.8;
+        if(pg.position.z>14){
+          pg.position.z-=90;
+          pg.position.x=rand(-6.5,6.5);pg.position.y=rand(-3.2,3.2);
+        }
+      }
+    }
+  }
   BLACK_HOLE.ringFxT=(BLACK_HOLE.ringFxT||0)-dt;
   if(BLACK_HOLE.ringFxT<=0){
-    BLACK_HOLE.ringFxT=0.05;
+    BLACK_HOLE.ringFxT=0.07;
     const ringCol=CONF[Math.floor(k*CONF.length)%CONF.length];
-    spawnRing(px,py,pz,ringCol,0.25+k*0.35,5+k*4,0.35);
-    for(let i=0;i<4;i++){
-      const a=rand(0,TAU);
-      spawnP(px+Math.cos(a)*2,py+rand(-0.5,1.5),pz+Math.sin(a)*2,rand(-1,1),rand(-0.5,1),rand(-1,1),0.09,Math.random()<0.5?0xffffff:0xffe078,0.5,0.35,0,0.85);
-    }
+    spawnRing(P.pos.x,P.pos.y,P.pos.z,ringCol,0.2+k*0.3,4+k*3,0.3);
   }
   if(k>0.15&&k<0.95&&Math.random()<dt*3)SFX.warpTwinkle();
   if(BLACK_HOLE.warpT>=BLACK_HOLE.warpDur){
-    BLACK_HOLE.warping=false;
-    stageSpaceWinPose();
+    enterFinishVoid();
     triggerWin();
   }
 }
@@ -1304,22 +1472,24 @@ function updateWarpTunnel(dt){
 function updateBlackHoleFinish(dt,winT){
   if(!BLACK_HOLE)return;
   const bh=BLACK_HOLE;
-  if(bh.active){
-    bh.activateT=(bh.activateT||0)+dt;
-    const spin=0.08+bh.activateT*0.04;
-    bh.g.rotation.y+=dt*spin;
-    if(bh.ring)bh.ring.rotation.z+=dt*(0.35+bh.activateT*0.12);
-    if(bh.ring2)bh.ring2.rotation.z-=dt*(0.22+bh.activateT*0.08);
-    const pulse=0.55+Math.sin(time*2.8)*0.15;
-    if(bh.portal&&bh.portal.material)bh.portal.material.opacity=pulse;
-    if(bh.portalHalo&&bh.portalHalo.material)bh.portalHalo.material.opacity=0.35+Math.sin(time*3.2)*0.12;
-    for(const sp of bh.sparkles){
-      if(sp.material)sp.material.opacity=0.55+Math.sin(time*4+sp.position.x)*0.35;
+  if(bh.g&&bh.g.visible!==false){
+    if(bh.active){
+      bh.activateT=(bh.activateT||0)+dt;
+      const spin=0.08+bh.activateT*0.04;
+      bh.g.rotation.y+=dt*spin;
+      if(bh.ring)bh.ring.rotation.z+=dt*(0.35+bh.activateT*0.12);
+      if(bh.ring2)bh.ring2.rotation.z-=dt*(0.22+bh.activateT*0.08);
+      const pulse=0.55+Math.sin(time*2.8)*0.15;
+      if(bh.portal&&bh.portal.material)bh.portal.material.opacity=pulse;
+      if(bh.portalHalo&&bh.portalHalo.material)bh.portalHalo.material.opacity=0.35+Math.sin(time*3.2)*0.12;
+      for(const sp of bh.sparkles){
+        if(sp.material)sp.material.opacity=0.55+Math.sin(time*4+sp.position.x)*0.35;
+      }
+    }else{
+      bh.g.rotation.y+=dt*0.08;
+      if(bh.ring)bh.ring.rotation.z+=dt*0.25;
+      if(bh.ring2)bh.ring2.rotation.z-=dt*0.18;
     }
-  }else{
-    bh.g.rotation.y+=dt*0.08;
-    if(bh.ring)bh.ring.rotation.z+=dt*0.25;
-    if(bh.ring2)bh.ring2.rotation.z-=dt*0.18;
   }
   if(bh.warping){updateWarpTunnel(dt);return;}
   repelInactiveBlackHole(dt);
@@ -1329,13 +1499,21 @@ function updateBlackHoleFinish(dt,winT){
     if(d<bh.triggerR)startWarpTunnel();
   }
   if(winT>=0){
+    updateFinishSnoozleTableau(dt);
+    if(bh.voidGroup&&bh.voidGroup.visible){
+      if(bh.voidHalo)bh.voidHalo.rotation.z+=dt*0.35;
+      if(bh.voidHalo2)bh.voidHalo2.rotation.z-=dt*0.22;
+      if(bh.voidSparkles){
+        for(const sp of bh.voidSparkles){
+          if(sp.material)sp.material.opacity=0.5+Math.sin(time*4.5+sp.position.x)*0.4;
+        }
+      }
+    }
     bh.winBurstT=(bh.winBurstT||0)-dt;
     if(bh.winBurstT<=0&&winT<14){
       bh.winBurstT=0.08;
       spaceWinBurst();
     }
-    // Friendly halo behind celebration
-    if(bh.ring&&bh.ring.material)bh.ring.material.opacity=0.7+Math.sin(time*2.5)*0.12;
   }
 }
 
@@ -1471,7 +1649,7 @@ window.__SPACE={
   get stage5Ends(){return spaceStage5Ends;},
   get blackHoleFinish(){return BLACK_HOLE;},
   get jellyfish(){return spaceJellyfish;},
-  isSpaceFinishImmune,activateBlackHolePortal,startWarpTunnel,
+  isSpaceFinishImmune,isSpaceWarpCamera,activateBlackHolePortal,startWarpTunnel,
   get starCrates(){return starCrates;},
   get starBeams(){return starBeams;},
   get crystalInterior(){return crystalInterior;},
