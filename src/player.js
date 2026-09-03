@@ -364,6 +364,7 @@ function doGust(){const yaw=P.yaw,fx=Math.sin(yaw),fz=Math.cos(yaw);const mx=P.p
   gustSteamCurtains(mx,mz,k);
   if(typeof gustHitSaucers==='function')gustHitSaucers(mx,mz,k);
   if(typeof gustCrystalDust==='function')gustCrystalDust(mx,mz,k);
+  if(typeof gustHitJellyfish==='function')gustHitJellyfish(mx,mz,k);
   if(typeof fireStarBeam==='function'&&P.hasStarBeam)fireStarBeam(fx,fz,mx,my,mz);
   if(isUnderwater())gustHitKelp(mx,mz,k);
   rumble(60,0.2,0.4);
@@ -405,7 +406,7 @@ function slamImpact(){const px=P.pos.x,py=P.pos.y,pz=P.pos.z;SFX.slam();CAM.shak
   {if(WM){const s=kk(WM.sailX,WM.sailZ);if(s>0)WM.spin+=s*4;}}
   {if(BOAT){const s=kk(BOAT.pos.x,BOAT.pos.z);if(s>0){const d=Math.hypot(BOAT.pos.x-px,BOAT.pos.z-pz)||0.01;BOAT.vel.x+=(BOAT.pos.x-px)/d*s*4;BOAT.vel.z+=(BOAT.pos.z-pz)/d*s*4;}}}
   P.vel.y=SLAM_REBOUND;P.grounded=false;P.lastGround=-9;P.slam=0;P.sq=0.5;if(!P.puff){P.puff=true;refillFX();}}
-function hurtPlayer(kx,kz,col){if(won||P.inv>0||P.dead)return;P.hp--;P.inv=1.4;const l=Math.hypot(kx,kz)||1;P.vel.x=kx/l*5;P.vel.z=kz/l*5;P.vel.y=Math.max(P.vel.y,5);P.grounded=false;P.slam=0;P.puffAir=0;endHover();clearLeapBoost();clearGlide();P.sq=0.6;SFX.hurt();CAM.shake=0.45;rumble(150,0.7,0.3);
+function hurtPlayer(kx,kz,col){if(won||P.inv>0||P.dead)return;if(typeof isSpaceFinishImmune==='function'&&isSpaceFinishImmune())return;P.hp--;P.inv=1.4;const l=Math.hypot(kx,kz)||1;P.vel.x=kx/l*5;P.vel.z=kz/l*5;P.vel.y=Math.max(P.vel.y,5);P.grounded=false;P.slam=0;P.puffAir=0;endHover();clearLeapBoost();clearGlide();P.sq=0.6;SFX.hurt();CAM.shake=0.45;rumble(150,0.7,0.3);
   for(let i=0;i<10;i++)spawnP(P.pos.x,P.pos.y+0.6,P.pos.z,rand(-3,3),rand(1,4),rand(-3,3),rand(0.06,0.12),col||GOOC,rand(0.3,0.5),0.3,-8,0.9);
   const lostFire=P.fire;
   const lostBubble=P.bubble&&isUnderwater();

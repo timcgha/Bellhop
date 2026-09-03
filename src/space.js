@@ -3,7 +3,8 @@ let spaceGroup=null,blackHoleLandmark=null,cheeseMoonLandmark=null,cheeseMoonBod
 let spaceOpenZones=[],spacePlayVolume=null,spaceDecorPlanets=[];
 let spaceRecoveryT=0,spaceRecoveryFrom=null;
 let spaceLandingTargets=[],spaceRouteTrail=[],spaceFirstDest=null,spaceRouteBeacons=[];
-const asteroids=[],saucers=[],spaceSparks=[],spaceStage2Ends=[],spaceStage3Ends=[],shieldedGates=[],spaceStage4Ends=[];
+const asteroids=[],saucers=[],spaceSparks=[],spaceStage2Ends=[],spaceStage3Ends=[],shieldedGates=[],spaceStage4Ends=[],spaceStage5Ends=[],spaceJellyfish=[];
+let BLACK_HOLE=null;
 const starCrates=[],starBeams=[],crystalDust=[];
 let crystalInterior=null,candyPlanet=null,candyPlanetShellFade=1;
 const BEAM_LEN=20,BEAM_DUR=0.35,BEAM_W=0.85;
@@ -27,6 +28,9 @@ function clearSpaceWorld(){
   for(const g of shieldedGates){if(g.g)rem(g.g);if(g.solid&&g.solid.mesh)rem(g.solid.mesh);}
   shieldedGates.length=0;
   for(const e of spaceStage4Ends)rem(e.g);spaceStage4Ends.length=0;
+  for(const e of spaceStage5Ends)rem(e.g);spaceStage5Ends.length=0;
+  for(const j of spaceJellyfish)rem(j.g);spaceJellyfish.length=0;
+  BLACK_HOLE=null;
   for(const c of starCrates)rem(c.g);starCrates.length=0;
   starBeams.length=0;crystalDust.length=0;crystalInterior=null;candyPlanet=null;candyPlanetShellFade=1;
   for(const q of spaceSparks){q.alive=false;q.m.visible=false;}
@@ -346,8 +350,9 @@ function asteroidPos(a){
   return {x:lerp(a.p0.x,a.p1.x,t),y:lerp(a.p0.y,a.p1.y,t),z:lerp(a.p0.z,a.p1.z,t)};
 }
 
+function isSpaceFinishImmune(){return won||!!(BLACK_HOLE&&(BLACK_HOLE.warping||BLACK_HOLE.finishImmune));}
 function hurtFromAsteroid(a,px,py,pz){
-  if(won||P.inv>0||P.dead)return false;
+  if(isSpaceFinishImmune()||P.inv>0||P.dead)return false;
   const dx=px-a.x,dy=(py+0.55)-a.y,dz=pz-a.z;
   const len=Math.hypot(dx,dy,dz)||1;
   // Moderate knockback AWAY from rock face; keep flight usable
@@ -376,7 +381,7 @@ function updateAsteroids(dt){
       if(a.trailT<=0){a.trailT=0.12;spawnP(a.x+rand(-0.3,0.3),a.y,a.z+rand(-0.3,0.3),rand(-0.4,0.4),rand(-0.3,0.3),rand(-0.4,0.4),0.08,0xc8b090,0.4,0.5,0,0.7);}
     }else{a.g.position.set(a.x,a.y,a.z);}
     a.g.rotation.y+=a.spin*dt;a.g.rotation.x+=a.spin*0.35*dt;
-    if(!a.hazard||P.dead||won)continue;
+    if(!a.hazard||P.dead||isSpaceFinishImmune())continue;
     const dx=P.pos.x-a.x,dy=(P.pos.y+0.55)-a.y,dz=P.pos.z-a.z;
     const dist=Math.hypot(dx,dy,dz);
     const hitR=a.r+R*0.95;
@@ -1033,22 +1038,307 @@ function updateShieldedGates(dt){
 }
 
 function addObservatoryLandmark(x,y,z){
+  return buildObservatory(x,y,z,{landmarkOnly:true});
+}
+
+function addSpaceJellyfish(x,y,z){
   const g=new THREE.Group();g.position.set(x,y,z);
-  const deck=mesh(CYL,new THREE.MeshBasicMaterial({color:0x88a8d8,transparent:true,opacity:0.55}),0,0.2,0,4.5,0.35,4.5);
-  g.add(deck);
-  const dome=new THREE.Mesh(SPH,new THREE.MeshBasicMaterial({color:0xa8d0ff,transparent:true,opacity:0.42}));
-  dome.scale.set(3.2,1.8,3.2);dome.position.y=1.6;g.add(dome);
-  const scope=mesh(CYL,lam(0xc8d8f0),0,2.4,-1.2,0.18,2.8,0.18);scope.rotation.x=-0.55;g.add(scope);
-  const arrow=mesh(CYL,new THREE.MeshBasicMaterial({color:0xffe078,transparent:true,opacity:0.75}),0,1.2,2.8,0.12,0.12,2.4);
-  g.add(arrow);
-  for(let i=0;i<3;i++){
-    const a=-0.35+i*0.35;
-    g.add(mesh(SPH,new THREE.MeshBasicMaterial({color:0xffe078,transparent:true,opacity:0.7}),Math.sin(a)*3.8,0.8,Math.cos(a)*3.8,0.16));
+  const bell=new THREE.Mesh(SPH,new THREE.MeshBasicMaterial({color:0xc8b0ff,transparent:true,opacity:0.62}));
+  bell.scale.set(0.55,0.42,0.55);g.add(bell);
+  g.add(mesh(SPH,new THREE.MeshBasicMaterial({color:0xffe078,transparent:true,opacity:0.45}),0,-0.15,0,0.08));
+  for(let i=0;i<4;i++){
+    const a=i/4*TAU;
+    const tent=mesh(CYL,new THREE.MeshBasicMaterial({color:0xa8d0ff,transparent:true,opacity:0.55}),Math.cos(a)*0.22,-0.35,Math.sin(a)*0.22,0.03,0.45,0.03);
+    tent.rotation.x=0.35;g.add(tent);
   }
-  g.userData.landmark=true;g.userData.landable=false;g.userData.observatory=true;g.userData.interactive=false;
-  scene.add(g);levelDecor.push(g);spaceDecorPlanets.push(g);
+  g.userData.decor=true;g.userData.harmless=true;
+  scene.add(g);levelDecor.push(g);
+  spaceJellyfish.push({g,x,y,z,hx:x,hy:y,hz:z,ph:rand(0,TAU),drift:rand(0,TAU)});
   return g;
 }
+
+function updateSpaceJellyfish(dt){
+  for(const j of spaceJellyfish){
+    j.ph+=dt*0.35;
+    const bob=Math.sin(time*1.4+j.ph)*0.35,sway=Math.sin(time*0.7+j.drift)*0.55;
+    j.g.position.set(j.x+sway,j.y+bob,j.z+Math.cos(time*0.6+j.ph)*0.4);
+    j.g.rotation.y+=dt*0.25;
+    const bell=j.g.children[0];
+    if(bell&&bell.material)bell.material.opacity=0.5+Math.sin(time*2+j.ph)*0.12;
+  }
+}
+
+function gustHitJellyfish(mx,mz,k){
+  for(const j of spaceJellyfish){
+    const s=k(j.x,j.z);
+    if(s>0.15&&Math.abs(j.y-P.pos.y)<4){
+      j.drift+=0.8;SFX.bubblePop();
+      for(let i=0;i<5;i++)spawnP(j.x,j.y,j.z,rand(-1,1),rand(0.2,1.2),rand(-1,1),0.07,0xc8b0ff,0.45,0.4,0,0.75);
+    }
+  }
+}
+
+function buildObservatory(x,y,z,opts){
+  opts=opts||{};
+  const g=new THREE.Group();g.position.set(x,y,z);
+  // Glass deck platforms
+  const deck=mesh(CYL,new THREE.MeshBasicMaterial({color:0x88a8d8,transparent:true,opacity:0.55}),0,0.2,0,5.2,0.35,5.2);
+  g.add(deck);
+  const deck2=mesh(CYL,new THREE.MeshBasicMaterial({color:0xa8d0ff,transparent:true,opacity:0.42}),-2.2,0.15,-1.8,3.4,0.28,3.4);
+  g.add(deck2);
+  const catwalk=addSolid(x+2.5,y+0.1,z-2.2,4.5,0.28,2.2,0x6a88b8,{surf:'pad',role:'landable',landingPad:true});
+  catwalk.mesh.visible=true;
+  if(catwalk.mesh.material&&catwalk.mesh.material.color)catwalk.mesh.material.color.setHex(0x7a98c8);
+  addLandingBeacon(x+2.5,y+0.1,z-2.2,1.6,{approachR:16,nearR:7,primary:true});
+  // Dome and telescopes framing the black hole
+  const dome=new THREE.Mesh(SPH,new THREE.MeshBasicMaterial({color:0xa8d0ff,transparent:true,opacity:0.38}));
+  dome.scale.set(3.6,2.0,3.6);dome.position.y=1.8;g.add(dome);
+  const scope1=mesh(CYL,lam(0xc8d8f0),-1.2,2.2,-2.4,0.16,2.6,0.16);scope1.rotation.x=-0.62;g.add(scope1);
+  const scope2=mesh(CYL,lam(0xc8d8f0),1.4,2.0,-1.8,0.14,2.2,0.14);scope2.rotation.x=-0.48;scope2.rotation.y=0.35;g.add(scope2);
+  const frame=mesh(CYL,new THREE.MeshBasicMaterial({color:0xffe078,transparent:true,opacity:0.7}),0,1.4,3.2,0.1,0.1,2.8);
+  g.add(frame);
+  for(let i=0;i<5;i++){
+    const a=-0.5+i*0.25;
+    g.add(mesh(SPH,new THREE.MeshBasicMaterial({color:0xffe078,transparent:true,opacity:0.65}),Math.sin(a)*4.2,0.7,Math.cos(a)*4.2,0.14));
+  }
+  // Rim lights
+  for(let i=0;i<6;i++){
+    const a=i/6*TAU;
+    g.add(mesh(SPH,new THREE.MeshBasicMaterial({color:0x5ec8ff,transparent:true,opacity:0.55}),Math.cos(a)*4.8,0.45,Math.sin(a)*4.8,0.1));
+  }
+  g.userData.landmark=true;g.userData.landable=false;g.userData.observatory=true;
+  scene.add(g);levelDecor.push(g);spaceDecorPlanets.push(g);
+  if(!opts.landmarkOnly){
+    g.userData.fullObservatory=true;
+    addSpaceJellyfish(x-3.5,y+1.5,z+1.2);
+    addSpaceJellyfish(x+4,y+2.8,z-0.5);
+    addSpaceJellyfish(x-1,y+3.5,z+2.8);
+  }
+  return g;
+}
+
+function addSpaceStage5Endpoint(x,y,z){
+  const g=new THREE.Group();g.position.set(x,y,z);
+  g.add(mesh(CYL,new THREE.MeshBasicMaterial({color:0xa8d0ff,transparent:true,opacity:0.38}),0,0.05,0,3.8,0.08,3.8));
+  const ring=new THREE.Mesh(new THREE.TorusGeometry(3.2,0.14,8,32),new THREE.MeshBasicMaterial({color:0xffe078,transparent:true,opacity:0.8}));
+  ring.rotation.x=Math.PI/2;g.add(ring);
+  g.add(mesh(SPH,new THREE.MeshBasicMaterial({color:0x88a8d8,transparent:true,opacity:0.6}),0,1.5,0,0.3));
+  scene.add(g);levelDecor.push(g);
+  spaceStage5Ends.push({g,x,y,z,triggered:false,fxT:0});
+  return g;
+}
+
+function updateSpaceStage5Ends(dt){
+  for(const e of spaceStage5Ends){
+    if(e.triggered){
+      e.fxT+=dt;
+      if(e.fxT>0.08&&e.fxT<0.9){
+        e.pt=(e.pt||0)-dt;if(e.pt<=0){e.pt=0.06;
+          spawnP(e.x+rand(-1.2,1.2),e.y+rand(0.3,2),e.z+rand(-1.2,1.2),rand(-1,1),rand(1,3),rand(-1,1),0.1,Math.random()<0.5?0xa8d0ff:0xffe078,0.5,0.4,0,0.8);
+        }
+      }
+      continue;
+    }
+    if(P.dead||won||isSpaceFinishImmune())continue;
+    if(Math.hypot(P.pos.x-e.x,P.pos.y-e.y,P.pos.z-e.z)<3.5){
+      e.triggered=true;e.fxT=0;e.pt=0;
+      CAM.shake=Math.max(CAM.shake,0.35);CAM.fovKick=Math.max(CAM.fovKick,5);
+      rumble(100,0.35,0.3);SFX.checkpoint();
+      spawnRing(e.x,e.y+0.5,e.z,0xa8d0ff,0.4,6,0.5);
+      showToast('The black hole waits ahead…');
+    }
+  }
+}
+
+function buildBlackHoleFinish(x,y,z){
+  const g=new THREE.Group();g.position.set(x,y,z);
+  const core=mesh(SPH,new THREE.MeshBasicMaterial({color:0x020208}),0,0,0,3.2,3.2,3.2);g.add(core);
+  const ring=new THREE.Mesh(new THREE.TorusGeometry(6.2,0.65,10,48),new THREE.MeshBasicMaterial({color:0x3a2858,transparent:true,opacity:0.82}));
+  ring.rotation.x=Math.PI/2;g.add(ring);
+  const ring2=new THREE.Mesh(new THREE.TorusGeometry(7.6,0.28,8,40),new THREE.MeshBasicMaterial({color:0x8878c8,transparent:true,opacity:0.45}));
+  ring2.rotation.x=Math.PI/2;ring2.rotation.z=0.4;g.add(ring2);
+  const portal=new THREE.Mesh(new THREE.TorusGeometry(2.4,0.22,10,40),new THREE.MeshBasicMaterial({color:0x1a1028,transparent:true,opacity:0.35}));
+  portal.rotation.x=Math.PI/2;portal.visible=false;g.add(portal);
+  const portalHalo=new THREE.Mesh(new THREE.TorusGeometry(2.8,0.12,8,36),new THREE.MeshBasicMaterial({color:0xfff0c8,transparent:true,opacity:0}));
+  portalHalo.rotation.x=Math.PI/2;portalHalo.visible=false;g.add(portalHalo);
+  const sparkles=[];
+  for(let i=0;i<16;i++){
+    const a=i/16*TAU;
+    const sp=mesh(SPH,new THREE.MeshBasicMaterial({color:0xffffff,transparent:true,opacity:0.7}),Math.cos(a)*7.2,Math.sin(a*2)*0.4,Math.sin(a)*7.2,0.12);
+    g.add(sp);sparkles.push(sp);
+  }
+  g.userData.landmark=true;g.userData.interactive=true;g.userData.landable=false;g.userData.active=false;
+  scene.add(g);blackHoleLandmark=g;levelDecor.push(g);
+  BLACK_HOLE={
+    g,x,y,z,active:false,activated:false,warping:false,warpT:0,warpDur:7.0,finishImmune:false,
+    portalR:5.5,triggerR:2.6,bounceR:6.5,
+    core,ring,ring2,portal,portalHalo,sparkles,
+    voidReady:false,winBurstT:0,
+    warpFrom:null,warpTo:null
+  };
+  registerFinish({
+    x,z,top:y+14,
+    winMsg:'The stars are singing!',
+    onAllAwake(){activateBlackHolePortal();},
+    onWin(){
+      BLACK_HOLE.finishImmune=true;
+      if(BLACK_HOLE.voidGroup)BLACK_HOLE.voidGroup.visible=true;
+      stageSpaceWinPose();
+      spaceWinBurst();
+    },
+    update(dt,winT){updateBlackHoleFinish(dt,winT);},
+    camHold(dt){spaceFinishCamHold(dt);}
+  });
+  return g;
+}
+
+function activateBlackHolePortal(){
+  if(!BLACK_HOLE||BLACK_HOLE.activated)return;
+  BLACK_HOLE.activated=true;BLACK_HOLE.active=true;BLACK_HOLE.activateT=0;
+  if(blackHoleLandmark)blackHoleLandmark.userData.active=true;
+  if(BLACK_HOLE.portal)BLACK_HOLE.portal.visible=true;
+  if(BLACK_HOLE.portalHalo)BLACK_HOLE.portalHalo.visible=true;
+  if(BLACK_HOLE.ring&&BLACK_HOLE.ring.material){
+    BLACK_HOLE.ring.material.color.setHex(0xfff0c8);
+    BLACK_HOLE.ring.material.opacity=0.95;
+  }
+  if(BLACK_HOLE.ring2&&BLACK_HOLE.ring2.material){
+    BLACK_HOLE.ring2.material.color.setHex(0xffffff);
+    BLACK_HOLE.ring2.material.opacity=0.72;
+  }
+  SFX.blackHoleOpen();
+  CAM.shake=Math.max(CAM.shake,0.55);CAM.fovKick=Math.max(CAM.fovKick,8);
+  spawnRing(BLACK_HOLE.x,BLACK_HOLE.y,BLACK_HOLE.z,0xfff0c8,0.55,10,0.65);
+  for(let i=0;i<28;i++)spawnP(BLACK_HOLE.x+rand(-3,3),BLACK_HOLE.y+rand(-1,2),BLACK_HOLE.z+rand(-3,3),rand(-2,2),rand(0.5,3),rand(-2,2),rand(0.08,0.16),Math.random()<0.5?0xfff0c8:0xc8b0ff,rand(0.5,0.9),0.4,-3,0.9);
+  showToast('The portal opened!');
+}
+
+function startWarpTunnel(){
+  if(!BLACK_HOLE||BLACK_HOLE.warping||won)return;
+  BLACK_HOLE.warping=true;BLACK_HOLE.warpT=0;BLACK_HOLE.finishImmune=true;
+  BLACK_HOLE.warpFrom={x:P.pos.x,y:P.pos.y,z:P.pos.z,yaw:P.yaw};
+  BLACK_HOLE.warpTo={x:BLACK_HOLE.x,y:BLACK_HOLE.y+2,z:BLACK_HOLE.z-18};
+  P.inv=99;P.vel.set(0,0,0);endSpaceThrust();
+  SFX.warpWhoosh();CAM.mode='warp';
+  rumble(200,0.5,0.45);
+}
+
+function stageSpaceWinPose(){
+  if(!BLACK_HOLE)return;
+  const vx=BLACK_HOLE.x,vz=BLACK_HOLE.z-14,vy=BLACK_HOLE.y+1.5;
+  P.pos.set(vx,vy,vz);P.vel.set(0,0,0);P.grounded=false;P.yaw=Math.PI;
+  CAM.look.set(vx,vy+1.2,vz-6);CAM.pos.set(vx+0.4,vy+5.5,vz+12);
+  CAM.yaw=0.02;CAM.pitch=0.32;CAM.boomDist=16;CAM.targetDist=16;CAM.mode='finish';
+}
+
+function spaceWinBurst(){
+  if(!BLACK_HOLE)return;
+  spawnRing(BLACK_HOLE.x,BLACK_HOLE.y+1,BLACK_HOLE.z,0xfff0c8,0.55,10,0.7);
+  for(let i=0;i<32;i++){
+    const a=rand(0,TAU),r=rand(2,9);
+    spawnP(BLACK_HOLE.x+Math.cos(a)*r,BLACK_HOLE.y+rand(0.5,6),BLACK_HOLE.z+Math.sin(a)*r,
+      rand(-2,2),rand(1,4),rand(-2,2),rand(0.08,0.16),CONF[Math.floor(Math.random()*CONF.length)],rand(0.6,1.1),0.35,-3,1);
+  }
+}
+
+function spaceFinishCamHold(dt){
+  if(!BLACK_HOLE)return;
+  const kx=BLACK_HOLE.x,kz=BLACK_HOLE.z-10,ky=BLACK_HOLE.y+1.8;
+  const lookX=kx,lookY=ky+2.8,lookZ=kz-4;
+  const posX=kx+0.6,posY=ky+7.5,posZ=kz+16;
+  CAM.look.x=damp(CAM.look.x,lookX,8,dt);CAM.look.y=damp(CAM.look.y,lookY,8,dt);CAM.look.z=damp(CAM.look.z,lookZ,8,dt);
+  CAM.pos.x=damp(CAM.pos.x,posX,7,dt);CAM.pos.y=damp(CAM.pos.y,posY,7,dt);CAM.pos.z=damp(CAM.pos.z,posZ,7,dt);
+  CAM.yaw=0.02;CAM.pitch=0.32;CAM.boomDist=16;CAM.targetDist=16;CAM.mode='finish';
+  CAM.effectiveDist=Math.hypot(CAM.pos.x-CAM.look.x,CAM.pos.y-CAM.look.y,CAM.pos.z-CAM.look.z);
+  CAM.collisionPulled=false;
+}
+
+function repelInactiveBlackHole(dt){
+  if(!BLACK_HOLE||BLACK_HOLE.active||BLACK_HOLE.warping||won||P.dead)return;
+  const dx=P.pos.x-BLACK_HOLE.x,dy=(P.pos.y+0.55)-BLACK_HOLE.y,dz=P.pos.z-BLACK_HOLE.z;
+  const d=Math.hypot(dx,dy,dz);
+  if(d>=BLACK_HOLE.bounceR||d<0.01)return;
+  const nx=dx/d,ny=dy/d,nz=dz/d;
+  const push=(BLACK_HOLE.bounceR-d)*10*dt;
+  P.vel.x+=nx*push;P.vel.y+=ny*push*0.65;P.vel.z+=nz*push;
+  BLACK_HOLE.shimmerT=(BLACK_HOLE.shimmerT||0)-dt;
+  if(BLACK_HOLE.shimmerT<=0){
+    BLACK_HOLE.shimmerT=0.12;
+    spawnP(BLACK_HOLE.x+nx*3.2,BLACK_HOLE.y+ny*1.5,BLACK_HOLE.z+nz*3.2,rand(-0.5,0.5),rand(0.2,1),rand(-0.5,0.5),0.08,0x8878c8,0.45,0.4,0,0.75);
+  }
+}
+
+function updateWarpTunnel(dt){
+  if(!BLACK_HOLE||!BLACK_HOLE.warping||won)return;
+  BLACK_HOLE.warpT+=dt;
+  const k=clamp(BLACK_HOLE.warpT/BLACK_HOLE.warpDur,0,1);
+  const ease=smooth(k);
+  const from=BLACK_HOLE.warpFrom,to=BLACK_HOLE.warpTo;
+  const px=lerp(from.x,to.x,ease),py=lerp(from.y,to.y,ease)+Math.sin(k*Math.PI)*2.5,pz=lerp(from.z,to.z,ease);
+  P.pos.set(px,py,pz);
+  P.yaw=from.yaw+((()=>{let d=Math.atan2(to.x-from.x,to.z-from.z)-from.yaw;while(d>Math.PI)d-=TAU;while(d<-Math.PI)d+=TAU;return d;})())*ease;
+  // Soft steering — child stays involved
+  if(IN.mx||IN.mz){
+    P.pos.x+=IN.mx*dt*2.2;P.pos.y+=IN.mz*dt*1.4;
+  }
+  CAM.look.set(px,py+0.9,pz-2);CAM.pos.set(px-Math.sin(P.yaw)*5,py+2.2,pz-Math.cos(P.yaw)*5);
+  CAM.mode='warp';
+  BLACK_HOLE.ringFxT=(BLACK_HOLE.ringFxT||0)-dt;
+  if(BLACK_HOLE.ringFxT<=0){
+    BLACK_HOLE.ringFxT=0.05;
+    const ringCol=CONF[Math.floor(k*CONF.length)%CONF.length];
+    spawnRing(px,py,pz,ringCol,0.25+k*0.35,5+k*4,0.35);
+    for(let i=0;i<4;i++){
+      const a=rand(0,TAU);
+      spawnP(px+Math.cos(a)*2,py+rand(-0.5,1.5),pz+Math.sin(a)*2,rand(-1,1),rand(-0.5,1),rand(-1,1),0.09,Math.random()<0.5?0xffffff:0xffe078,0.5,0.35,0,0.85);
+    }
+  }
+  if(k>0.15&&k<0.95&&Math.random()<dt*3)SFX.warpTwinkle();
+  if(BLACK_HOLE.warpT>=BLACK_HOLE.warpDur){
+    BLACK_HOLE.warping=false;
+    stageSpaceWinPose();
+    triggerWin();
+  }
+}
+
+function updateBlackHoleFinish(dt,winT){
+  if(!BLACK_HOLE)return;
+  const bh=BLACK_HOLE;
+  if(bh.active){
+    bh.activateT=(bh.activateT||0)+dt;
+    const spin=0.08+bh.activateT*0.04;
+    bh.g.rotation.y+=dt*spin;
+    if(bh.ring)bh.ring.rotation.z+=dt*(0.35+bh.activateT*0.12);
+    if(bh.ring2)bh.ring2.rotation.z-=dt*(0.22+bh.activateT*0.08);
+    const pulse=0.55+Math.sin(time*2.8)*0.15;
+    if(bh.portal&&bh.portal.material)bh.portal.material.opacity=pulse;
+    if(bh.portalHalo&&bh.portalHalo.material)bh.portalHalo.material.opacity=0.35+Math.sin(time*3.2)*0.12;
+    for(const sp of bh.sparkles){
+      if(sp.material)sp.material.opacity=0.55+Math.sin(time*4+sp.position.x)*0.35;
+    }
+  }else{
+    bh.g.rotation.y+=dt*0.08;
+    if(bh.ring)bh.ring.rotation.z+=dt*0.25;
+    if(bh.ring2)bh.ring2.rotation.z-=dt*0.18;
+  }
+  if(bh.warping){updateWarpTunnel(dt);return;}
+  repelInactiveBlackHole(dt);
+  if(bh.active&&!won&&!bh.warping){
+    const dx=P.pos.x-bh.x,dy=(P.pos.y+0.55)-bh.y,dz=P.pos.z-bh.z;
+    const d=Math.hypot(dx,dy,dz);
+    if(d<bh.triggerR)startWarpTunnel();
+  }
+  if(winT>=0){
+    bh.winBurstT=(bh.winBurstT||0)-dt;
+    if(bh.winBurstT<=0&&winT<14){
+      bh.winBurstT=0.08;
+      spaceWinBurst();
+    }
+    // Friendly halo behind celebration
+    if(bh.ring&&bh.ring.material)bh.ring.material.opacity=0.7+Math.sin(time*2.5)*0.12;
+  }
+}
+
 
 function addSpaceStage4Endpoint(x,y,z){
   const g=new THREE.Group();g.position.set(x,y,z);
@@ -1120,6 +1410,8 @@ function updateSpaceWorld(dt){
   updateSpaceStage3Ends(dt);
   updateShieldedGates(dt);
   updateSpaceStage4Ends(dt);
+  updateSpaceStage5Ends(dt);
+  updateSpaceJellyfish(dt);
   for(const e of saucers){
     if(e.targetDummy&&e.flashT>0){e.flashT-=dt;if(e.g.userData&&e.g.userData.dome&&e.g.userData.dome.material)e.g.userData.dome.material.color.setHex(e.flashT>0?0xfff06a:0x7dff9a);}
   }
@@ -1144,7 +1436,7 @@ function updateSpaceDecor(dt){
       }
     });
   }
-  if(blackHoleLandmark){
+  if(blackHoleLandmark&&!BLACK_HOLE){
     blackHoleLandmark.rotation.y+=dt*0.08;
     const ch=blackHoleLandmark.children;
     if(ch[1])ch[1].rotation.z+=dt*0.25;
@@ -1176,7 +1468,10 @@ window.__SPACE={
   get stage3Ends(){return spaceStage3Ends;},
   get stage4Ends(){return spaceStage4Ends;},
   get shieldedGates(){return shieldedGates;},
-  openShieldedGate,
+  get stage5Ends(){return spaceStage5Ends;},
+  get blackHoleFinish(){return BLACK_HOLE;},
+  get jellyfish(){return spaceJellyfish;},
+  isSpaceFinishImmune,activateBlackHolePortal,startWarpTunnel,
   get starCrates(){return starCrates;},
   get starBeams(){return starBeams;},
   get crystalInterior(){return crystalInterior;},

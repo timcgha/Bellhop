@@ -233,7 +233,7 @@ ok(H.getSky().glideDur===0.55&&H.getSky().glideFallCap===-2.2&&H.getSky().glideS
 const lavaIds=['firstLavaLeap','islandA','islandB','wideRiver','geyserApproach'];
 ok(lavaIds.every(id=>H.getLevel().mandatoryLeaps.some(l=>l.id===id)),'Lava Field mandatory leaps unchanged');
 ok(W.geysers.length===1&&W.steamVents.length>=1,'vents/geyser systems present');
-ok(typeof H.getCamDiag==='function'&&H.getCamDiag().VERSION_BASE==='v48 · Saucer Belt gate','version stamp + camdiag preserved');
+ok(typeof H.getCamDiag==='function'&&H.getCamDiag().VERSION_BASE==='v49 · Star Observatory finish','version stamp + camdiag preserved');
 ok(H.getCamDiag().parse('?camdist=6.8')===6.8,'camdist diagnostic parse unchanged');
 
 report();

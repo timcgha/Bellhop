@@ -196,7 +196,10 @@ const SFX={
   spikeTouch(){noise(0.14,{type:'highpass',freq:1800,gain:0.16});tone(200,0.12,{type:'square',gain:0.09,slide:120});},
   starBeam(){if(!AU.ctx)return;const c=AU.ctx.currentTime;tone(1760,0.12,{at:c,type:'sine',gain:0.1,attack:0.002});tone(2217,0.18,{at:c+0.02,type:'triangle',gain:0.08,attack:0.002});tone(2793,0.22,{at:c+0.04,type:'sine',gain:0.06,attack:0.002});noise(0.08,{at:c,type:'highpass',freq:4200,gain:0.06});},
   starBeamOut(){noise(0.35,{type:'lowpass',freq:2400,fslide:400,gain:0.1});tone(880,0.28,{type:'triangle',gain:0.07,slide:220});},
-  starPower(){if(!AU.ctx)return;[0,4,7,12,16].forEach((n,i)=>tone(hz(n,440),0.32,{at:AU.ctx.currentTime+i*0.07,type:'sine',gain:0.11}));}
+  starPower(){if(!AU.ctx)return;[0,4,7,12,16].forEach((n,i)=>tone(hz(n,440),0.32,{at:AU.ctx.currentTime+i*0.07,type:'sine',gain:0.11}));},
+  blackHoleOpen(){if(!AU.ctx)return;const c=AU.ctx.currentTime;tone(55,1.2,{at:c,type:'sine',gain:0.14,slide:82,attack:0.06});tone(110,0.9,{at:c+0.08,type:'triangle',gain:0.1,attack:0.08});[0,4,7,12].forEach((n,i)=>tone(hz(n,110),0.65,{at:c+0.12+i*0.1,type:'sine',gain:0.08}));noise(0.8,{at:c,type:'bandpass',freq:400,fslide:1200,gain:0.1,attack:0.08});},
+  warpWhoosh(){if(!AU.ctx)return;const c=AU.ctx.currentTime;noise(1.8,{at:c,type:'bandpass',freq:600,fslide:4200,gain:0.18,attack:0.04});tone(220,1.4,{at:c,type:'sine',gain:0.12,slide:880,attack:0.02});[0,3,7,12].forEach((n,i)=>tone(hz(n,220),0.5,{at:c+0.1+i*0.12,type:'triangle',gain:0.07}));},
+  warpTwinkle(){if(!AU.ctx)return;tone(hz(chordNow()[Math.floor(Math.random()*3)]+24,523.25),0.22,{type:'sine',gain:0.06,attack:0.01});}
 };
 function toggleMute(){AU.muted=!AU.muted;if(AU.master)AU.master.gain.value=AU.muted?0:0.6;$('mute').textContent=AU.muted?'🔇':'🔊';}
 $('mute').addEventListener('pointerdown',e=>{e.stopPropagation();e.preventDefault();toggleMute();});

@@ -39,9 +39,9 @@ openSpace:{
   takeoffAssistH:3.5
 },
 openSpaceZones:[
-  {x0:-50,y0:-12,x1:130,y1:58,z0:-265,z1:48}
+  {x0:-50,y0:-12,x1:130,y1:58,z0:-320,z1:48}
 ],
-playVolume:{cx:25,cy:12,cz:-130,soft:140,hard:165,recoverDur:0.5,recoverTo:{x:22,y:0.45,z:-10}},
+playVolume:{cx:25,cy:12,cz:-130,soft:155,hard:185,recoverDur:0.5,recoverTo:{x:22,y:0.45,z:-10}},
 voidY:-20,
 voidFloor:-40,
 snoozleGoal:4,
@@ -55,18 +55,21 @@ checks:[
   [28,-104,5],
   [94,24.0,-195],
   [102,16.5,-222],
-  [28,18,-254]
+  [28,18,-254],
+  [10,-256,23]
 ],
 tower:{tx:0,tz:0},
 snoozleHomes:[
   {x:8,y:28,z:-200},
   {x:50,y:28,z:-228},
-  {x:102,y:28,z:-222}
+  {x:102,y:28,z:-222},
+  {x:6,y:30,z:-298}
 ],
 snoozles:[
   [-2.8,0.55,3.2,0,false],
   [98,24.0,-188,1,false],
-  [102,15.5,-219,2,false]
+  [102,15.5,-219,2,false],
+  [10,23.6,-270,3,false]
 ],
 trees:[],
 steps:[
@@ -166,6 +169,18 @@ steps:[
   ['observatoryLandmark',14,22,-262],
   ['routeTrail',28,18,-256,14,22,-262,4],
   ['spaceStage4Endpoint',14,22,-264],
+  // Stage 5 — Star Observatory (calm rest, Snoozle 4, black-hole framing)
+  ['routeTrail',14,22,-264,10,24,-272,5],
+  ['spaceBuoy',10,24,-272,true],
+  ['observatory',10,24,-272],
+  ['note',8,25.5,-268,false],
+  ['note',12,25,-266,false],
+  ['spaceStage5Endpoint',10,23,-276],
+  // Stage 6 — Black Hole finish
+  ['routeTrail',10,24,-276,6,28,-292,6],
+  ['spaceBuoy',8,27,-286,true],
+  ['spaceBuoy',6,29,-296,true],
+  ['blackHoleFinish',6,28,-298],
   // Scenery / backdrop
   ['spaceBuoy',-18,2,14],['spaceBuoy',36,3,18],['spaceBuoy',-8,6,32],
   ['backdropAsteroid',12,14,-20,0.55],['backdropAsteroid',42,18,-48,0.7],
@@ -175,7 +190,5 @@ steps:[
   ['backdropAsteroid',60,18,-240,0.45],['backdropAsteroid',22,16,-248,0.5],
   ['backdropPlanet',-55,18,-70,6,0x6a4a9a,true],
   ['backdropPlanet',48,12,-85,5,0xc45a78,false],
-  ['backdropPlanet',-30,8,95,4.5,0x4a8a6a,false],
-  ['blackHoleLandmark',10,35,-210],
-  ['unfinishedFinish',0,0,0]
+  ['backdropPlanet',-30,8,95,4.5,0x4a8a6a,false]
 ]};
