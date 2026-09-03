@@ -4688,7 +4688,7 @@ function beginSpaceLevel(L){
   if(peakGround)peakGround.visible=false;
   if(underwaterGroup)underwaterGroup.visible=false;
   scene.background=new THREE.Color(0x050812);
-  scene.fog=new THREE.Fog(0x0a1020,85,220);
+  scene.fog=new THREE.Fog(0x0a1020,120,280);
   if(!spaceGroup){spaceGroup=new THREE.Group();scene.add(spaceGroup);}
   spaceGroup.visible=true;
   while(spaceGroup.children.length)spaceGroup.remove(spaceGroup.children[0]);
