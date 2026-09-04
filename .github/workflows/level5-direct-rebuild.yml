@@ -1,0 +1,52 @@
+name: Level 5 Direct Rebuild
+
+on:
+  push:
+    branches:
+      - feature/level5-desert-mvp
+
+permissions:
+  contents: write
+
+jobs:
+  rebuild-and-validate:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Syntax checks
+        run: |
+          node --check src/desert.js
+          node --check src/player.js
+          node --check src/audio.js
+      - name: Rebuild bundled index
+        run: node build.js
+      - name: Verify generated bundle
+        run: node build.js --check
+      - name: Run full test suite
+        run: node tests/run.js
+      - name: Ensure build touched only generated index
+        shell: bash
+        run: |
+          unexpected="$(git status --porcelain | grep -vE '^ M index\.html$' || true)"
+          if [ -n "$unexpected" ]; then
+            echo "$unexpected"
+            exit 1
+          fi
+      - name: Publish rebuilt index if needed
+        shell: bash
+        run: |
+          if git diff --quiet -- index.html; then
+            echo 'index.html already current'
+            exit 0
+          fi
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add index.html
+          git commit -m 'chore(level5): rebuild bundled index'
+          git push origin HEAD:feature/level5-desert-mvp
