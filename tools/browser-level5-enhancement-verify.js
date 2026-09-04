@@ -3,7 +3,7 @@
 // The full journey uses only keyboard input and the real picker/progression flow.
 // No player teleporting, finish forcing, progress flags, or direct quicksand activation.
 const {spawn}=require('child_process');
-const {mkdirSync,writeFileSync,existsSync}=require('fs');
+const {mkdirSync,writeFileSync,existsSync,rmSync}=require('fs');
 const {join}=require('path');
 const http=require('http');
 
@@ -11,7 +11,7 @@ const outDir=join(__dirname,'..','artifacts','browser-level5-enhancement');
 mkdirSync(outDir,{recursive:true});
 const chrome=[process.env.CHROME_BIN,'/usr/bin/google-chrome','/usr/local/bin/google-chrome','/usr/bin/chromium','/usr/bin/chromium-browser'].find(p=>p&&existsSync(p));
 if(!chrome)throw new Error('Chrome/Chromium executable not found');
-const port=8795,cdpPort=9235,userData='/tmp/bellhop-level5-enhancement';
+const port=8795,cdpPort=9235,userData=`/tmp/bellhop-level5-enhancement-${process.pid}`;
 const base=`http://127.0.0.1:${port}/index.html`;
 const results={challengeBeats:4};
 
@@ -71,11 +71,19 @@ async function perf(ev){return ev(`(()=>new Promise(r=>{let n=0,N=45,t=performan
 function validateLayout(x,label){assert(x.won&&x.mode==='finish',label+' victory/camera');assert(x.canvas,label+' canvas');assert(x.oasisVisible&&x.waterVisible,label+' oasis/water');assert(x.oasisChildren>=115,label+' lushness '+x.oasisChildren);assert(x.win&&x.win.display!=='none'&&x.win.opacity>0.2,label+' victory banner visible');assert(x.win.x>=-1&&x.win.y>=-1&&x.win.right<=x.w+1&&x.win.bottom<=x.h+1,label+' banner clipped');assert(!x.overlaps.length,label+' controls overlap '+x.overlaps.join(','));assert(Math.abs(x.playerNdc.x)<0.92&&Math.abs(x.playerNdc.y)<0.92,label+' Pling outside finish composition');}
 
 async function main(){
+  rmSync(userData,{recursive:true,force:true});
   const server=spawn('python3',['-m','http.server',String(port),'--bind','127.0.0.1'],{cwd:join(__dirname,'..'),stdio:'ignore'});
-  const cp=spawn(chrome,['--headless=new',`--remote-debugging-port=${cdpPort}`,`--user-data-dir=${userData}`,'--no-sandbox','--disable-dev-shm-usage','--enable-webgl','--ignore-gpu-blocklist','--use-angle=swiftshader','--window-size=1280,720','about:blank'],{stdio:'ignore'});
+  let chromeErr='';
+  const cp=spawn(chrome,['--headless=new',`--remote-debugging-address=127.0.0.1`,`--remote-debugging-port=${cdpPort}`,`--user-data-dir=${userData}`,'--no-sandbox','--disable-dev-shm-usage','--no-first-run','--no-default-browser-check','--disable-background-networking','--enable-webgl','--ignore-gpu-blocklist','--use-angle=swiftshader','--window-size=1280,720','about:blank'],{stdio:['ignore','ignore','pipe']});
+  if(cp.stderr)cp.stderr.on('data',d=>{chromeErr+=d.toString();if(chromeErr.length>12000)chromeErr=chromeErr.slice(-12000);});
   let cdp;
   try{
-    for(let i=0;i<30;i++){try{await getJSON(`http://127.0.0.1:${cdpPort}/json/list`);break;}catch(e){await sleep(200);}}
+    let ready=false,lastErr=null;
+    for(let i=0;i<75;i++){
+      if(cp.exitCode!==null)throw new Error(`Chrome exited before CDP became ready (code ${cp.exitCode}): ${chromeErr.trim()}`);
+      try{await getJSON(`http://127.0.0.1:${cdpPort}/json/version`);ready=true;break;}catch(e){lastErr=e;await sleep(200);}
+    }
+    if(!ready)throw new Error(`Chrome CDP did not become ready on ${cdpPort}: ${lastErr&&lastErr.message}; stderr=${chromeErr.trim()}`);
     cdp=await openCDP();await viewport(cdp,844,390);await cdp.send('Page.navigate',{url:base+'?level5-enhancement=1'});
     await waitEval(cdp.evaluate,`typeof __setPickerIdx==='function'`);await cdp.evaluate(`__setPickerIdx(4)`);await tap(cdp.evaluate,'Space');
     await waitEval(cdp.evaluate,`!!(__started&&__started())&&__LEVEL().id==='level5'`);await cameraForward(cdp.evaluate);await sleep(650);
@@ -90,7 +98,7 @@ async function main(){
     // Natural route timing begins after the orientation diagnostic; every progression step below is real input.
     const naturalStart=Date.now();let adversarialMs=0;
     await driveTo(cdp.evaluate,-5,-8,'heart lizard');await tap(cdp.evaluate,'KeyJ');await tap(cdp.evaluate,'KeyK');await sleep(700);assert(await cdp.evaluate(`!__W.lizards.find(l=>l.reward==='heart').alive`),'heart lizard not hit');await tap(cdp.evaluate,'Space');await waitEval(cdp.evaluate,`!!__P.camel`);
-    await driveTo(cdp.evaluate,0,-22,'ordinary quicksand lip');await jumpForward(cdp.evaluate,1050);let s=await state(cdp.evaluate);assert(!s.won&&!s.finish&&s.rec===0,'first ordinary quicksand incorrectly won/recovered during successful jump');
+    await driveTo(cdp.evaluate,0,-22,'ordinary quicksand lip');await jumpForward(cdp.evaluate,1050);let s=await state(cdp.evaluate);assert(!s.won&&! s.finish&&s.rec===0,'first ordinary quicksand incorrectly won/recovered during successful jump');
     await driveTo(cdp.evaluate,4.2,-58,'note lizard');await tap(cdp.evaluate,'KeyJ');await tap(cdp.evaluate,'KeyK');await sleep(700);assert(await cdp.evaluate(`!__W.lizards.find(l=>l.reward==='note').alive`),'note lizard not hit');await tap(cdp.evaluate,'Space');await waitEval(cdp.evaluate,`!!__P.camel`);
 
     // Beat 2: alternating sandstone switchbacks.
@@ -122,6 +130,6 @@ async function main(){
     await sleep(3800);await tap(cdp.evaluate,'Space');await waitEval(cdp.evaluate,`!(__started&&__started())`,5000);results.returnToPicker=true;await cdp.evaluate(`__setPickerIdx(4)`);await tap(cdp.evaluate,'Space');await waitEval(cdp.evaluate,`!!(__started&&__started())&&__LEVEL().id==='level5'`,5000);results.restart=true;
 
     writeFileSync(join(outDir,'result.json'),JSON.stringify(results,null,2));console.log('LEVEL5_BROWSER_RESULT=PASS');console.log(JSON.stringify(results));
-  }finally{if(cdp)cdp.close();try{cp.kill('SIGKILL');}catch(e){}try{server.kill('SIGKILL');}catch(e){}}
+  }finally{if(cdp)cdp.close();try{cp.kill('SIGKILL');}catch(e){}try{server.kill('SIGKILL');}catch(e){}try{rmSync(userData,{recursive:true,force:true});}catch(e){}}
 }
 main().catch(e=>{console.error('LEVEL5_BROWSER_RESULT=FAIL');console.error(e&&e.stack||e);process.exit(1);});
