@@ -92,13 +92,13 @@ async function main(){
     await driveTo(cdp.evaluate,-4,21,'camel intro');await tap(cdp.evaluate,'Space');await waitEval(cdp.evaluate,`!!__P.camel`);
     results.camel={};results.camel.south=await direction(cdp.evaluate,['KeyS'],'south',[0,1]);results.camel.north=await direction(cdp.evaluate,['KeyW'],'north',[0,-1]);results.camel.east=await direction(cdp.evaluate,['KeyD'],'east',[1,0]);results.camel.west=await direction(cdp.evaluate,['KeyA'],'west',[-1,0]);const q=Math.SQRT1_2;results.camel.diagonal=await direction(cdp.evaluate,['KeyW','KeyD'],'diagonal',[q,-q]);
     await cdp.screenshot(join(outDir,'01-camel-forward-844x390.png'));
-    await sleep(500);const y0=(await state(cdp.evaluate)).y;await tap(cdp.evaluate,'Space');await sleep(120);const js=await state(cdp.evaluate);assert(js.camel&&js.vy>4&&js.y>y0,'mounted camel jump regressed');await sleep(900);
+    await waitEval(cdp.evaluate,`__P.grounded===true`,5000);const y0=(await state(cdp.evaluate)).y;await key(cdp.evaluate,'Space',true);await sleep(70);const js=await state(cdp.evaluate);await key(cdp.evaluate,'Space',false);assert(js.camel&&js.vy>7&&js.y>y0,`mounted camel jump regressed vy=${js.vy} dy=${js.y-y0}`);results.camelJump={vy:js.vy,dy:js.y-y0};await sleep(900);
     await tap(cdp.evaluate,'KeyJ');assert(!(await state(cdp.evaluate)).camel,'dismount failed');await tap(cdp.evaluate,'Space');await waitEval(cdp.evaluate,`!!__P.camel`);
 
     // Natural route timing begins after the orientation diagnostic; every progression step below is real input.
     const naturalStart=Date.now();let adversarialMs=0;
     await driveTo(cdp.evaluate,-5,-8,'heart lizard');await tap(cdp.evaluate,'KeyJ');await tap(cdp.evaluate,'KeyK');await sleep(700);assert(await cdp.evaluate(`!__W.lizards.find(l=>l.reward==='heart').alive`),'heart lizard not hit');await tap(cdp.evaluate,'Space');await waitEval(cdp.evaluate,`!!__P.camel`);
-    await driveTo(cdp.evaluate,0,-22,'ordinary quicksand lip');await jumpForward(cdp.evaluate,1050);let s=await state(cdp.evaluate);assert(!s.won&&! s.finish&&s.rec===0,'first ordinary quicksand incorrectly won/recovered during successful jump');
+    await driveTo(cdp.evaluate,0,-22,'ordinary quicksand lip');await jumpForward(cdp.evaluate,1050);let s=await state(cdp.evaluate);assert(!s.won&&!s.finish&&s.rec===0,'first ordinary quicksand incorrectly won/recovered during successful jump');
     await driveTo(cdp.evaluate,4.2,-58,'note lizard');await tap(cdp.evaluate,'KeyJ');await tap(cdp.evaluate,'KeyK');await sleep(700);assert(await cdp.evaluate(`!__W.lizards.find(l=>l.reward==='note').alive`),'note lizard not hit');await tap(cdp.evaluate,'Space');await waitEval(cdp.evaluate,`!!__P.camel`);
 
     // Beat 2: alternating sandstone switchbacks.
