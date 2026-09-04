@@ -9,7 +9,7 @@ function releaseJump(H){H.ku({code:'Space'});}
 // ---- version ----
 {
   const H=boot();
-  ok(H.getCamDiag().VERSION_BASE==='v52 · iPhone playtest polish','version stamp v52');
+  ok(H.getCamDiag().VERSION_BASE==='v53 · Desert Level 5','version stamp v53');
 }
 
 // ---- flight without camera input (keyboard) ----

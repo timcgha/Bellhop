@@ -22,7 +22,7 @@ function waitDeath(H,e,maxFrames){
 // ---- version ----
 {
   const H=boot();
-  ok(H.getCamDiag().VERSION_BASE==='v52 · iPhone playtest polish','version stamp v52');
+  ok(H.getCamDiag().VERSION_BASE==='v53 · Desert Level 5','version stamp v53');
 }
 
 // ---- Fix 1: tutorial Candy saucer above pad, not immortal ----

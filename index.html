@@ -83,12 +83,13 @@ body:not(.playing) #hint{opacity:0!important;pointer-events:none}
 <div id="hint"></div>
 <div id="start"><div class="card">
 <h1>BELLHOP</h1>
-<div class="sub" id="ver">v52 · iPhone playtest polish</div>
+<div class="sub" id="ver">v53 · Desert Level 5</div>
 <div class="level-pick">
 <div class="lvl-card sel" id="lvl0"><canvas class="lvl-art" id="art0" width="160" height="100"></canvas><span class="lvl-label">Meadow</span></div>
 <div class="lvl-card" id="lvl1"><canvas class="lvl-art" id="art1" width="160" height="100"></canvas><span class="lvl-label">The Deep</span></div>
 <div class="lvl-card" id="lvl2"><canvas class="lvl-art" id="art2" width="160" height="100"></canvas><span class="lvl-label">The Peak</span></div>
 <div class="lvl-card" id="lvl3"><canvas class="lvl-art" id="art3" width="160" height="100"></canvas><span class="lvl-label">Space</span></div>
+<div class="lvl-card" id="lvl4"><canvas class="lvl-art" id="art4" width="160" height="100"></canvas><span class="lvl-label">Desert</span></div>
 </div>
 <p class="pick-hint" id="pickHint"></p>
 <p class="keys" id="ctlText"></p>
@@ -1178,6 +1179,61 @@ steps:[
 ]};
 
 
+// ===== levels/level5.js =====
+const LEVEL5={
+id:'level5',
+music:'desert',
+desertAtmosphere:true,
+spawn:{x:0,y:0,z:28},
+physics:{
+  speed:6.8,acc:44,dec:60,airAcc:20,
+  grav:-30,maxFall:-32,jumpV:10.5,puffV:9.4,
+  coyote:0.12,buffer:0.15,step:0.42,r:0.36,h:1.15,
+  hoverHeld:1.0,hoverReleased:0.5,hoverDrift:-1.6,
+  slamHang:0.14,slamFall:-34,slamRebound:8,
+  jetTime:0.38,bonkR:2.05,bonkCD:0.5
+},
+fence:0x9c5f32,
+fenceSolids:[
+  [0,0,36,40,3.5,0.7],[0,0,-126,40,3.5,0.7],
+  [-20,0,-45,0.7,3.5,162],[20,0,-45,0.7,3.5,162]
+],
+pathTiles:[],hedges:[],trees:[],
+checks:[[0,26],[0,-16],[0,-56],[0,-80,7.22]],
+tower:{tx:0,tz:0},snoozleHomes:[],snoozles:[],snoozleGoal:0,
+steps:[
+  // Stage 1 — arrival: a friendly rideable camel is in the first safe space.
+  ['camel',-4,0,20,true],
+  ['desertDune',-10,0,14,3.8,1.15],['desertDune',11,0,8,4.6,1.3],
+  ['cactus',-12,0,18,1.15],['cactus',12,0,17,1.05],['cactus',-14,0,4,1.0],
+  ['lizard',-5,0,-8,'heart'],
+  ['desertMarker',0,0,10,'camel'],
+
+  // Stage 2–4 — a generous camel lane and ordinary quicksand jump field.
+  ['quicksand',0,0,-27,6.4,3.4,'ordinary'],
+  ['cactus',-8,0,-26,1.15],['cactus',8,0,-31,1.15],
+  ['camel',3,0,-38,true],
+  ['desertMarker',0,0,-34,'ride'],
+  ['quicksand',-5.7,0,-45,4.0,4.0,'ordinary'],
+  ['quicksand',5.8,0,-50,4.4,4.2,'ordinary'],
+  ['cactus',-11,0,-45,1.25],['cactus',11,0,-52,1.25],['cactus',-10,0,-58,1.0],
+  ['lizard',4.2,0,-58,'note'],
+  ['desertDune',-12,0,-68,5.0,1.4],['desertDune',12,0,-73,5.5,1.5],
+
+  // Stage 5 — a climb onto a visible sandstone cliff.
+  ['desertRamp',0,0,-66,14,18,0.38],
+  ['desertCliff',0,0,-85,18,7.22,14],
+  ['cactus',-8.4,7.22,-83,1.0],['cactus',8.4,7.22,-83,1.0],
+  ['desertMarker',0,7.22,-87,'cliff'],
+
+  // Stage 6 — the intentional drop, special sand trap, portal, and green oasis.
+  ['finalQuicksand',0,0,-99,16,10],
+  ['oasis',0,0,-150],
+  ['desertDune',-15,0,-106,4.5,1.2],['desertDune',15,0,-105,4.5,1.2]
+]
+};
+
+
 // ===== src/util.js =====
 const clamp=(v,a,b)=>Math.max(a,Math.min(b,v));
 const lerp=(a,b,t)=>a+(b-a)*t;
@@ -1281,13 +1337,25 @@ function spaceVoice(i,sib,s,chord,t){
   if(i===0)tone(hz(chord[sib%3]+12,329.63),0.5,{at:t,type:'sine',gain:0.045,attack:0.02});
   else if(i===1)tone(hz(chord[(s+sib)%3]+7,196),0.38,{at:t,type:'triangle',gain:0.035,attack:0.015});
   else if(i===2)tone(hz(chord[0],110),0.65,{at:t,type:'sine',gain:0.04,attack:0.05});
-  else tone(hz(chord[0]+[0,3,7,10][s%4]+12,261.63),0.45,{at:t,type:'sine',gain:0.035,attack:0.03});
+  else tone(hz(chord[0]+[0,3,7,10][s%4]+12,261.63),0.45,{at:t,type:'sine',gain:0.035,attack:0.02});
+}
+function desertBed(sib,chord,t){
+  if(sib===0||sib===4)tone(hz(chord[0],73.42),0.32,{at:t,type:'triangle',gain:0.08,attack:0.02});
+  if(sib===2||sib===6)noise(0.055,{at:t,type:'lowpass',freq:520,gain:0.07});
+}
+function desertVoice(i,sib,s,chord,t){
+  const pats=[[1,5],[0,3,6],[2,4,7],[1,4,6]];
+  if(pats[i%4].indexOf(sib)<0)return;
+  if(i===0)tone(hz(chord[(s+sib)%3]+12,293.66),0.34,{at:t,type:'triangle',gain:0.055,attack:0.01});
+  else if(i===1)tone(hz(chord[1]+[0,3,5,7][s%4]+12,220),0.42,{at:t,type:'sine',gain:0.045,attack:0.025});
+  else tone(hz(chord[2]+12,329.63),0.22,{at:t,type:'sine',gain:0.035,attack:0.02});
 }
 const SONGS={
   meadow:{id:'meadow',bpm:112,chords:[[0,4,7],[-3,0,4],[-7,-3,0],[-5,-1,2]],bed:meadowBed,voice:meadowVoice},
   deep:{id:'deep',bpm:84,chords:[[0,3,7],[-2,2,5],[-5,0,3],[2,5,9]],bed:deepBed,voice:deepVoice},
   peak:{id:'peak',bpm:96,chords:[[0,4,7],[-2,2,5],[-5,0,4],[3,7,10]],bed:peakBed,voice:peakVoice},
-  space:{id:'space',bpm:78,chords:[[0,3,7],[-3,0,5],[-5,2,7],[2,5,9]],bed:spaceBed,voice:spaceVoice}
+  space:{id:'space',bpm:78,chords:[[0,3,7],[-3,0,5],[-5,2,7],[2,5,9]],bed:spaceBed,voice:spaceVoice},
+  desert:{id:'desert',bpm:102,chords:[[0,4,7],[-2,3,7],[-5,0,4],[-3,2,7]],bed:desertBed,voice:desertVoice}
 };
 AU.song=SONGS.meadow;
 // Kept as aliases so older call sites / mental model still match meadow.
@@ -1393,11 +1461,14 @@ const SFX={
   starPower(){if(!AU.ctx)return;[0,4,7,12,16].forEach((n,i)=>tone(hz(n,440),0.32,{at:AU.ctx.currentTime+i*0.07,type:'sine',gain:0.11}));},
   blackHoleOpen(){if(!AU.ctx)return;const c=AU.ctx.currentTime;tone(55,1.2,{at:c,type:'sine',gain:0.14,slide:82,attack:0.06});tone(110,0.9,{at:c+0.08,type:'triangle',gain:0.1,attack:0.08});[0,4,7,12].forEach((n,i)=>tone(hz(n,110),0.65,{at:c+0.12+i*0.1,type:'sine',gain:0.08}));noise(0.8,{at:c,type:'bandpass',freq:400,fslide:1200,gain:0.1,attack:0.08});},
   warpWhoosh(){if(!AU.ctx)return;const c=AU.ctx.currentTime;noise(1.8,{at:c,type:'bandpass',freq:600,fslide:4200,gain:0.18,attack:0.04});tone(220,1.4,{at:c,type:'sine',gain:0.12,slide:880,attack:0.02});[0,3,7,12].forEach((n,i)=>tone(hz(n,220),0.5,{at:c+0.1+i*0.12,type:'triangle',gain:0.07}));},
-  warpTwinkle(){if(!AU.ctx)return;tone(hz(chordNow()[Math.floor(Math.random()*3)]+24,523.25),0.22,{type:'sine',gain:0.06,attack:0.01});}
+  warpTwinkle(){if(!AU.ctx)return;tone(hz(chordNow()[Math.floor(Math.random()*3)]+24,523.25),0.22,{type:'sine',gain:0.06,attack:0.01});},
+  camelMount(){tone(294,0.16,{type:'triangle',gain:0.09,slide:392});tone(587,0.22,{at:AU.ctx?AU.ctx.currentTime+0.08:0,type:'sine',gain:0.06});},
+  lizardReward(){tone(1046,0.12,{type:'sine',gain:0.08,slide:1568});tone(1318,0.24,{at:AU.ctx?AU.ctx.currentTime+0.06:0,type:'triangle',gain:0.06});},
+  quicksand(){noise(0.35,{type:'lowpass',freq:360,fslide:120,gain:0.13});tone(180,0.28,{type:'sine',gain:0.06,slide:92});},
+  sandPortal(){noise(0.7,{type:'bandpass',freq:560,fslide:2600,gain:0.1,attack:0.04});tone(220,0.7,{type:'sine',gain:0.08,slide:880});}
 };
 function toggleMute(){AU.muted=!AU.muted;if(AU.master)AU.master.gain.value=AU.muted?0:0.6;$('mute').textContent=AU.muted?'🔇':'🔊';}
 $('mute').addEventListener('pointerdown',e=>{e.stopPropagation();e.preventDefault();toggleMute();});
-
 
 
 // ===== src/input.js =====
@@ -1529,7 +1600,7 @@ let SNOOZLE_GOAL=0;
 function snoozleGoalCount(){return SNOOZLE_GOAL>0?SNOOZLE_GOAL:snoozles.length;}
 window.__snoozleGoal=()=>snoozleGoalCount();
 const checks=[];let won=false,winT=0,confT=0;
-const LEVELS=[LEVEL1,LEVEL2,LEVEL3,LEVEL4];
+const LEVELS=[LEVEL1,LEVEL2,LEVEL3,LEVEL4,LEVEL5];
 let CURRENT_LEVEL=null;
 function isUnderwater(){return !!(CURRENT_LEVEL&&CURRENT_LEVEL.underwater);}
 const POND={x0:-6,x1:6,z0:-33,z1:-25};
@@ -1696,6 +1767,7 @@ function clearLevelWorld(){
   for(const o of lavas){rem(o.g);if(o.edge)rem(o.edge);}lavas.length=0;
   clearPeakWorld();
   clearSpaceWorld();
+  clearDesertWorld();
   for(const o of clouds)rem(o.g);clouds.length=0;
   for(const o of gloops)rem(o.g);gloops.length=0;
   for(const o of hearts)rem(o.g);hearts.length=0;
@@ -1923,8 +1995,9 @@ function loadLevel(L){
   if(L.underwater)beginUnderwaterLevel(L);
   else if(L.peakAtmosphere)beginPeakLevel();
   else if(L.spaceAtmosphere)beginSpaceLevel(L);
+  else if(L.desertAtmosphere)beginDesertLevel(L);
   else beginLandLevel();
-  P.fire=false;P.bubble=false;P.hasSkyBlast=false;P.hasStarBeam=false;clearLeapBoost();clearGlide();endSpaceThrust();P.puff=true;P.puffAir=0;endHover();P.slam=0;P.lavaRecT=0;P.anchorSettleT=0;P.moveZone='grounded';P.spaceThrust=false;
+  P.fire=false;P.bubble=false;P.hasSkyBlast=false;P.hasStarBeam=false;clearLeapBoost();clearGlide();endSpaceThrust();P.puff=true;P.puffAir=0;endHover();P.slam=0;P.lavaRecT=0;P.quicksandRecT=0;P.camel=null;P.anchorSettleT=0;P.moveZone='grounded';P.spaceThrust=false;
   if(L.spawn){P.spawn.x=L.spawn.x;P.spawn.y=L.spawn.y;P.spawn.z=L.spawn.z;P.pos.set(L.spawn.x,L.spawn.y,L.spawn.z);P.vel.set(0,0,0);initSafeAnchor(L.spawn.x,L.spawn.y,L.spawn.z);
     if(L.spaceAtmosphere&&typeof landableSurfaceAt==='function'){const land=landableSurfaceAt(L.spawn.x,L.spawn.z);if(land&&L.spawn.y<=land.y+STEP+0.3){P.pos.y=land.y;P.grounded=true;P.moveZone='grounded';P.surf=land.surf||'pad';P.lastGround=time;}}}
   const fence=L.fence;
@@ -1936,6 +2009,16 @@ function loadLevel(L){
   for(const step of L.steps){
     const k=step[0];
     if(k==='solid')addSolid(step[1],step[2],step[3],step[4],step[5],step[6],step[7],step[8]||undefined);
+    else if(k==='desertDune')addDesertDune(step[1],step[2],step[3],step[4],step[5]);
+    else if(k==='desertRamp')addDesertRamp(step[1],step[2],step[3],step[4],step[5],step[6]);
+    else if(k==='desertCliff')addDesertCliff(step[1],step[2],step[3],step[4],step[5],step[6]);
+    else if(k==='cactus')addCactus(step[1],step[2],step[3],step[4]);
+    else if(k==='camel')addCamel(step[1],step[2],step[3],step[4]);
+    else if(k==='lizard')addLizard(step[1],step[2],step[3],step[4]);
+    else if(k==='quicksand')addQuicksand(step[1],step[2],step[3],step[4],step[5],step[6]);
+    else if(k==='finalQuicksand')addFinalQuicksand(step[1],step[2],step[3],step[4],step[5]);
+    else if(k==='desertMarker')addDesertMarker(step[1],step[2],step[3],step[4]);
+    else if(k==='oasis')addOasis(step[1],step[2],step[3]);
     else if(k==='note')addNote(step[1],step[2],step[3],step[4]);
     else if(k==='crate')addCrate(step[1],step[2],step[3],step[4]);
     else if(k==='cupPyramid')addCupPyramid(step[1],step[2],step[3]);
@@ -2033,7 +2116,7 @@ function loadLevel(L){
 window.__LEVEL=()=>CURRENT_LEVEL;
 window.__LEVELS=LEVELS;
 window.__isUnderwater=isUnderwater;
-
+window.__isDesert=isDesertLevel;
 
 
 // ===== src/player.js =====
@@ -2118,7 +2201,7 @@ function shadowOpacityForHeight(h){
 }
 function shadowScaleForHeight(h){return clamp(1-h*SHADOW_SCALE_RATE,SHADOW_SCALE_MIN,1);}
 
-const P=window.__P={spawn:{x:0,y:0,z:10},pos:new THREE.Vector3(0,0,10),vel:new THREE.Vector3(),yaw:Math.PI,grounded:false,wasGrounded:false,lastGround:-9,jumpBuf:-9,jumping:false,puff:true,slam:0,hangT:0,gustCD:0,bonkCD:0,bonkT:0,sq:1,sqV:0,sqT:1,footT:0,surf:'grass',run:0,mouthT:0,blinkT:2,blinkAnim:0,inFan:false,splT:0,puffAir:0,hover:false,hovT:0,hoverS:null,hp:4,maxHp:4,inv:0,dead:false,deadT:0,inGoo:false,fire:false,bubble:false,hasSkyBlast:false,hasStarBeam:false,leapBoost:new THREE.Vector3(),glideT:0,glideArmed:false,wingsOut:false,lavaRecT:0,lavaRecMax:0,anchorSettleT:0,safeAnchor:new THREE.Vector3(0,0,10),lavaRecFrom:new THREE.Vector3(),jetT:0,jetP:0,jetHits:[],moveZone:'grounded',spaceThrust:false,spaceThrustS:null,spaceThrustY:0};
+const P=window.__P={spawn:{x:0,y:0,z:10},pos:new THREE.Vector3(0,0,10),vel:new THREE.Vector3(),yaw:Math.PI,grounded:false,wasGrounded:false,lastGround:-9,jumpBuf:-9,jumping:false,puff:true,slam:0,hangT:0,gustCD:0,bonkCD:0,bonkT:0,sq:1,sqV:0,sqT:1,footT:0,surf:'grass',run:0,mouthT:0,blinkT:2,blinkAnim:0,inFan:false,splT:0,puffAir:0,hover:false,hovT:0,hoverS:null,hp:4,maxHp:4,inv:0,dead:false,deadT:0,inGoo:false,fire:false,bubble:false,hasSkyBlast:false,hasStarBeam:false,leapBoost:new THREE.Vector3(),glideT:0,glideArmed:false,wingsOut:false,lavaRecT:0,lavaRecMax:0,quicksandRecT:0,quicksandRecMax:0,quicksandRecFrom:new THREE.Vector3(),camel:null,anchorSettleT:0,safeAnchor:new THREE.Vector3(0,0,10),lavaRecFrom:new THREE.Vector3(),jetT:0,jetP:0,jetHits:[],moveZone:'grounded',spaceThrust:false,spaceThrustS:null,spaceThrustY:0};
 let R=0.36,H=1.15,SPEED=6.8,ACC=44,DEC=60,AIRACC=20,GRAV=-30,JUMPV=10.5,PUFFV=9.4,MAXFALL=-32,COYOTE=0.12,BUFFER=0.15,STEP=0.42;
 let HOVER_HELD=1.0,HOVER_REL=0.5,HOVER_DRIFT=-1.6,SLAM_HANG=0.14,SLAM_FALL=-34,SLAM_REBOUND=8,JET_T=0.38,BONKR=2.05,BONK_CD=0.5;
 // Sky Blast tuning — inactive until a level supplies skyBlast (Level 3). Separate from ordinary SPEED/PUFFV.
@@ -2550,6 +2633,9 @@ function updatePlayer(dt){const p=P.pos,v=P.vel;
   P.inv-=dt;if(P.dead){P.deadT-=dt;if(P.deadT<=0)respawn();}
   // Lava recovery owns motion briefly — skip normal move/input so a live boost cannot fight the fling.
   if(updateLavaRecovery(dt))return;
+  // Desert finish and ordinary quicksand recovery own motion before any player input.
+  if(typeof updateDesertFinishPlayer==='function'&&updateDesertFinishPlayer(dt))return;
+  if(typeof updateDesertQuicksandRecovery==='function'&&updateDesertQuicksandRecovery(dt))return;
   const cy=CAM.yaw,fx=-Math.sin(cy),fz=-Math.cos(cy),rx=Math.cos(cy),rz=-Math.sin(cy);
   let wx=fx*(-IN.mz)+rx*IN.mx,wz=fz*(-IN.mz)+rz*IN.mx;let wl=Math.hypot(wx,wz);if(wl>1){wx/=wl;wz/=wl;wl=1;}if(P.dead){wx=0;wz=0;wl=0;}
   if(isSpaceLevel()){
@@ -2557,12 +2643,16 @@ function updatePlayer(dt){const p=P.pos,v=P.vel;
     if(P.moveZone==='openSpace'){updateOpenSpacePlayer(dt,IN.mx,IN.mz);return;}
     P.moveZone='grounded';
   }else P.moveZone='grounded';
-  // Ordinary movement stays SPEED-capped. leapBoost is applied separately so stick reverse cannot cancel it.
-  if(P.slam===0){const a=P.grounded?(wl>0.05?ACC:DEC):(wl>0.05?AIRACC:3);v.x=moveTo(v.x,wx*SPEED,a*dt);v.z=moveTo(v.z,wz*SPEED,a*dt);if(wl>0.05)P.yaw=angDamp(P.yaw,Math.atan2(wx,wz),14,dt);}
+  // A/Space remains jump except within an intentional camel interaction radius.
+  const desertAction=typeof desertHandleJumpAction==='function'&&desertHandleJumpAction();
+  if(desertAction)IN.jump=false;
+  // Ordinary movement stays SPEED-capped. Camel riding adds a forgiving stride without changing base physics.
+  const rideMul=P.camel?1.38:1,rideJump=P.camel?1.55:0;
+  if(P.slam===0){const a=P.grounded?(wl>0.05?ACC:DEC):(wl>0.05?AIRACC:3);v.x=moveTo(v.x,wx*SPEED*rideMul,a*dt);v.z=moveTo(v.z,wz*SPEED*rideMul,a*dt);if(wl>0.05)P.yaw=angDamp(P.yaw,Math.atan2(wx,wz),14,dt);}
   decayLeapBoost(dt);
   if(IN.jump)P.jumpBuf=time;
   const canJump=(P.grounded||time-P.lastGround<COYOTE)&&P.slam===0;
-  if(!P.dead&&time-P.jumpBuf<BUFFER&&canJump){v.y=JUMPV;P.grounded=false;P.lastGround=-9;P.jumpBuf=-9;P.jumping=true;P.sq=1.25;SFX.jump();fireJet();for(let i=0;i<3;i++)spawnP(p.x,p.y+0.05,p.z,rand(-1,1),rand(0.5,1),rand(-1,1),0.09,0xffffff,0.3,0.8,0,0.5);}
+  if(!P.dead&&time-P.jumpBuf<BUFFER&&canJump){v.y=JUMPV+rideJump;P.grounded=false;P.lastGround=-9;P.jumpBuf=-9;P.jumping=true;P.sq=1.25;SFX.jump();fireJet();for(let i=0;i<3;i++)spawnP(p.x,p.y+0.05,p.z,rand(-1,1),rand(0.5,1),rand(-1,1),0.09,0xffffff,0.3,0.8,0,0.5);}
   else if(!P.dead&&IN.jump&&!P.grounded&&!canJump&&P.puff&&P.slam===0){
     const puffV=PUFFV*(P.hasSkyBlast?SKY.puffVMul:1);
     v.y=Math.max(v.y,0)*0.35+puffV;P.puff=false;P.puffAir=1;P.jumping=true;P.jumpBuf=-9;P.sq=1.35;
@@ -2572,6 +2662,8 @@ function updatePlayer(dt){const p=P.pos,v=P.vel;
   if(P.jumping&&!IN.jumpHeld&&v.y>0){v.y*=0.5;P.jumping=false;}
   if(v.y<=0)P.jumping=false;
   P.gustCD-=dt;P.bonkCD-=dt;
+  const desertDismount=typeof desertHandleDismountAction==='function'&&desertHandleDismountAction();
+  if(desertDismount)IN.b=false;
   const uw=isUnderwater();
   if(!P.dead&&IN.b&&P.slam===0&&!P.inFan){
     if(uw){if(P.gustCD<=0){doGust();P.gustCD=0.45;}}
@@ -2642,7 +2734,7 @@ function updatePlayer(dt){const p=P.pos,v=P.vel;
 function updatePlayerVisual(dt){const u=player.userData;if(P.dead)P.sqT=0.45;
   P.sqV+=((P.sqT-P.sq)*220-P.sqV*16)*dt;P.sq+=P.sqV*dt;P.sq=clamp(P.sq,0.4,1.6);
   u.bel.scale.y=P.sq;u.head.position.y=0.3+0.57*P.sq;
-  player.position.copy(P.pos);player.rotation.y=P.yaw;
+  player.position.copy(P.pos);if(P.camel)player.position.y+=1.55+Math.sin(time*5+(P.camel.ph||0))*0.04;player.rotation.y=P.yaw;
   const sp=Math.hypot(P.vel.x,P.vel.z);
   if(P.grounded){P.run+=dt*sp*2.2;const a=Math.sin(P.run)*Math.min(sp/6,1)*0.7;u.legL.rotation.x=a;u.legR.rotation.x=-a;u.armL.rotation.x=-a*0.6;u.armR.rotation.x=a*0.6;u.head.rotation.x=sp<0.5?Math.sin(time*2)*0.03:Math.min(sp/6,1)*0.12;}
   else{const k=1-Math.exp(-8*dt);u.legL.rotation.x=lerp(u.legL.rotation.x,0.5,k);u.legR.rotation.x=lerp(u.legR.rotation.x,0.5,k);u.armL.rotation.x=lerp(u.armL.rotation.x,-1.2,k);u.armR.rotation.x=lerp(u.armR.rotation.x,-1.2,k);u.head.rotation.x=0;}
@@ -2707,8 +2799,6 @@ function updatePlayerVisual(dt){const u=player.userData;if(P.dead)P.sqT=0.45;
     S.state.x=P.pos.x;S.state.z=P.pos.z;
   }
 }
-
-
 
 
 // ===== src/enemies.js =====
@@ -6484,6 +6574,225 @@ window.__SPACE={
 };
 
 
+// ===== src/desert.js =====
+// Level 5 — bright desert journey: camel riding, lizard rewards, quicksand, and oasis finish.
+const camels=[],cacti=[],lizards=[],quicksands=[];
+let desertGroup=null,desertSandTexture=null,desertSandLoading=false,DESERT=null;
+const desertSandMaterials=[];
+const DESERT_SAND_URL='https://files.manuscdn.com/user_upload_by_module/session_file/310519663940279136/ArEOdrOdqLrUPnrZ.png';
+
+function isDesertLevel(){return !!(CURRENT_LEVEL&&CURRENT_LEVEL.desertAtmosphere);}
+function removeChildren(g){if(!g)return;while(g.children&&g.children.length)g.remove(g.children[0]);}
+function desertMat(){
+  const m=lam(0xf0ba57);
+  desertSandMaterials.push(m);
+  // Keep the warm material visible while the optional CDN texture loads. A failed
+  // texture request must never turn the entire child-friendly route black.
+  if(!desertSandTexture&&!desertSandLoading&&THREE.TextureLoader){
+    desertSandLoading=true;
+    try{new THREE.TextureLoader().load(DESERT_SAND_URL,t=>{desertSandTexture=t;t.wrapS=t.wrapT=THREE.RepeatWrapping;t.repeat.set(28,84);t.encoding=THREE.sRGBEncoding;for(const mm of desertSandMaterials){mm.map=t;mm.needsUpdate=true;}},undefined,()=>{desertSandLoading=false;});}catch(e){desertSandLoading=false;}
+  }
+  if(desertSandTexture){m.map=desertSandTexture;m.needsUpdate=true;}
+  return m;
+}
+function beginDesertLevel(){
+  if(landGround)landGround.visible=false;if(peakGround)peakGround.visible=false;if(underwaterGroup)underwaterGroup.visible=false;
+  scene.background=new THREE.Color(0xffc36f);scene.fog=new THREE.Fog(0xffc36f,46,138);
+  if(!desertGroup){desertGroup=new THREE.Group();desertGroup.name='desertGround';scene.add(desertGroup);}
+  desertGroup.visible=true;removeChildren(desertGroup);
+  const floor=new THREE.Mesh(new THREE.PlaneGeometry(44,176),desertMat());floor.rotation.x=-Math.PI/2;floor.position.set(0,-0.025,-45);desertGroup.add(floor);
+  const edgeMat=lam(0xd88f45);
+  for(const q of[[-25,-15,10,1.0,28], [25,-42,11,1.1,38],[-26,-86,13,1.2,42],[26,-108,12,1.15,34]]){
+    const d=mesh(SPH,edgeMat,q[0],q[3]*0.45,q[1],q[2],q[3],q[4]);desertGroup.add(d);
+  }
+  // A few broad, non-colliding background mesas frame the route without cluttering it.
+  for(const q of[[-15,-88,3.8],[15,-112,3.3],[-17,-120,2.8],[16,18,2.4]]){
+    const g=new THREE.Group();g.position.set(q[0],0,q[1]);g.add(mesh(CYL,lam(0xc96f45),0,q[2]*0.55,0,q[2]*0.66,q[2]*1.1,q[2]*0.7));g.add(mesh(SPH,lam(0xea9d5a),0,q[2]*1.1,0,q[2]*0.84,q[2]*0.34,q[2]*0.78));desertGroup.add(g);
+  }
+  DESERT={finish:null,final:null,portal:null,oasis:null,oasisGroup:null,finishCam:false};
+}
+function hideDesertWorld(){if(desertGroup)desertGroup.visible=false;if(DESERT&&DESERT.oasisGroup)DESERT.oasisGroup.visible=false;}
+function clearDesertWorld(){
+  dismountCamel(true);camels.length=0;cacti.length=0;lizards.length=0;quicksands.length=0;
+  if(desertGroup){removeChildren(desertGroup);desertGroup.visible=false;}
+  if(DESERT&&DESERT.oasisGroup){removeChildren(DESERT.oasisGroup);DESERT.oasisGroup.visible=false;scene.remove(DESERT.oasisGroup);}
+  DESERT=null;
+}
+
+function addDesertDune(x,y,z,r,h){
+  const g=new THREE.Group();g.position.set(x,y,z);
+  g.add(mesh(SPH,lam(0xe9aa4c),0,h*0.42,0,r,h*0.78,r*1.15));
+  g.add(mesh(SPH,new THREE.MeshBasicMaterial({color:0xffd783,transparent:true,opacity:0.28}),-r*0.16,h*0.68,-r*0.12,r*0.74,h*0.18,r*0.83));
+  desertGroup.add(g);return g;
+}
+function addDesertRamp(x,y,z,w,d,h){
+  // Five shallow steps make the cliff climb forgiving on foot and while mounted.
+  const n=5;for(let i=0;i<n;i++){const t=(i+0.5)/n,yy=y+h*(i+1)/n-h/n;addSolid(x,yy,z+d*0.5-t*d,w,h/n+0.05,d/n+0.35,0xd88a45,{surf:'sand',role:'desertRamp'});}
+  const g=new THREE.Group();g.position.set(x,y,z);g.add(mesh(BOXG,lam(0xe3a052),0,h*0.5,0,w*0.92,h,d));desertGroup.add(g);return g;
+}
+function addDesertCliff(x,y,z,w,h,d){
+  const sol=addSolid(x,y,z,w,h,d,0xbc6c43,{surf:'stone',role:'cliff'});sol.mesh.visible=false;
+  const g=new THREE.Group();g.position.set(x,y,z);
+  g.add(mesh(BOXG,lam(0xc97848),0,h*0.46,0,w,h*0.92,d));
+  g.add(mesh(BOXG,lam(0xf1ba68),0,h+0.07,0,w*0.94,0.13,d*0.94));
+  for(let i=0;i<7;i++){const px=-w*0.38+i*(w*0.13);g.add(mesh(SPH,lam(i%2?0xd78952:0xa9573a),px,h*(0.25+(i%3)*0.15),d*0.52,1.15,h*0.18,0.18));}
+  desertGroup.add(g);return sol;
+}
+function addCactus(x,y,z,scale){
+  scale=scale||1;const h=2.45*scale;
+  const sol=addSolid(x,y,z,0.7*scale,h,0.7*scale,0x397c36,{surf:'stone',role:'cactus',invisible:true});
+  const g=new THREE.Group();g.position.set(x,y,z);const green=lam(0x3f8f3b),light=lam(0x64ae47),flower=lam(0xffa13b);
+  g.add(mesh(CYL,green,0,h*0.5,0,0.27*scale,h,0.27*scale));g.add(mesh(SPH,light,0,h*0.84,0,0.27*scale,0.16*scale,0.27*scale));
+  for(const s of[-1,1]){const arm=new THREE.Group();arm.position.set(s*0.3*scale,h*0.5,0);arm.add(mesh(CYL,green,0,0,0,0.14*scale,0.74*scale,0.14*scale));arm.rotation.z=s*-0.83;g.add(arm);g.add(mesh(SPH,light,s*0.55*scale,h*0.7,0,0.14*scale,0.18*scale,0.14*scale));}
+  for(let i=0;i<4;i++){const a=i/4*TAU;g.add(mesh(SPH,flower,Math.cos(a)*0.17*scale,h+0.04,Math.sin(a)*0.17*scale,0.06*scale));}
+  desertGroup.add(g);const c={g,sol,x,y,z,scale,h};cacti.push(c);return c;
+}
+function buildCamel(){
+  const g=new THREE.Group(),fur=lam(0xd9a060),dark=lam(0x8a522e),cream=lam(0xf2d18a),saddle=lam(0x2b9bb0),trim=lam(0xf3bb45);
+  g.add(mesh(SPH,fur,0,1.16,0,1.0,0.56,0.48));
+  for(const sx of[-0.68,0.68])for(const sz of[-0.28,0.28])g.add(mesh(CYL,dark,sx,0.5,sz,0.105,1.0,0.105));
+  const neck=new THREE.Group();neck.position.set(0,1.5,-0.34);neck.rotation.x=-0.25;neck.add(mesh(CYL,fur,0,0.5,0,0.22,1.3,0.22));neck.add(mesh(SPH,fur,0,1.15,-0.02,0.36,0.28,0.32));neck.add(mesh(SPH,dark,-0.13,1.2,-0.27,0.05));neck.add(mesh(SPH,dark,0.13,1.2,-0.27,0.05));g.add(neck);
+  const seat=mesh(BOXG,saddle,0,1.72,0.08,0.9,0.18,0.62);g.add(seat);g.add(mesh(BOXG,trim,0,1.82,0.08,0.98,0.04,0.7));
+  g.add(mesh(SPH,cream,0,1.66,0.43,0.22,0.18,0.12));
+  g.userData={seat,neck};return g;
+}
+function addCamel(x,y,z,rideable){
+  const g=buildCamel();g.position.set(x,y,z);desertGroup.add(g);const c={g,x,y,z,home:{x,y,z},rideable:rideable!==false,mounted:false,postMountT:0,ph:rand(0,TAU)};camels.push(c);return c;
+}
+function nearbyCamel(){
+  if(!isDesertLevel()||!P||P.dead||won)return null;
+  let best=null,bd=2.35;for(const c of camels){if(!c.rideable||c.mounted)continue;const d=Math.hypot(P.pos.x-c.x,P.pos.z-c.z);if(d<bd){best=c;bd=d;}}
+  return best;
+}
+function mountCamel(c){
+  if(!c||P.camel||P.dead)return false;
+  c.mounted=true;c.postMountT=0;P.camel=c;P.vel.set(0,0,0);P.puffAir=0;endHover();clearLeapBoost();clearGlide();
+  SFX.camelMount();showToast('Ride the camel! A again to hop off.');spawnRing(P.pos.x,P.pos.y+0.1,P.pos.z,0x58c6c7,0.35,5,0.45);return true;
+}
+function dismountCamel(silent){
+  if(!P||!P.camel)return false;const c=P.camel;c.mounted=false;c.postMountT=0;c.x=P.pos.x+0.85;c.y=P.pos.y;c.z=P.pos.z;c.g.position.set(c.x,c.y,c.z);P.camel=null;
+  if(!silent){SFX.camelMount();showToast('Nice riding!');}return true;
+}
+function desertHandleJumpAction(){
+  if(!isDesertLevel()||!IN.jump||P.dead||won||(DESERT&&DESERT.finish))return false;
+  // Once riding, A/Space stays a jump button so the camel can clear traversal gaps.
+  if(P.camel)return false;
+  const c=nearbyCamel();if(c){mountCamel(c);return true;}return false;
+}
+function desertHandleDismountAction(){
+  // B/J/Shift becomes the short, stable "hop off" action while mounted.
+  if(!isDesertLevel()||!IN.b||!P.camel||P.dead||won||(DESERT&&DESERT.finish))return false;
+  dismountCamel();return true;
+}
+function updateCamels(dt){
+  for(const c of camels){c.postMountT=Math.max(0,c.postMountT-dt);const bob=Math.sin(time*5+c.ph)*0.055;
+    if(c.mounted){c.x=P.pos.x;c.y=P.pos.y;c.z=P.pos.z;c.g.position.set(c.x,c.y+bob,c.z);c.g.rotation.y=P.yaw;}
+    else{c.g.position.set(c.x,c.y+bob,c.z);c.g.rotation.y=Math.sin(time*0.5+c.ph)*0.12;}
+    if(c.g.userData&&c.g.userData.neck)c.g.userData.neck.rotation.z=Math.sin(time*2.1+c.ph)*0.055;
+  }
+}
+
+function buildLizard(){
+  const g=new THREE.Group(),green=lam(0x6bae43),lime=lam(0x9bd85e),eye=lam(0x20221b);
+  g.add(mesh(SPH,green,0,0.18,0,0.35,0.15,0.22));g.add(mesh(SPH,lime,0,0.24,-0.23,0.17,0.13,0.16));
+  g.add(mesh(SPH,eye,-0.07,0.31,-0.34,0.045));g.add(mesh(SPH,eye,0.07,0.31,-0.34,0.045));
+  const tail=mesh(CONE,green,0,0.15,0.32,0.12,0.65,0.12);tail.rotation.x=Math.PI*0.52;g.add(tail);return g;
+}
+function addLizard(x,y,z,reward){const g=buildLizard();g.position.set(x,y,z);desertGroup.add(g);const l={g,x,y,z,reward:reward==='note'?'note':'heart',alive:true,ph:rand(0,TAU)};lizards.push(l);return l;}
+function hitLizard(l){
+  if(!l.alive)return false;l.alive=false;l.g.visible=false;const col=l.reward==='heart'?0xff5a7a:0xffd54a;
+  if(l.reward==='heart')addHeart(l.x,l.y+0.7,l.z);else addNote(l.x,l.y+0.75,l.z,false);
+  SFX.lizardReward();spawnRing(l.x,l.y+0.15,l.z,col,0.22,3.5,0.35);
+  for(let i=0;i<9;i++)spawnP(l.x,l.y+0.3,l.z,rand(-2,2),rand(1,3),rand(-2,2),rand(0.06,0.11),col,0.4,0.35,-4,0.85);
+  return true;
+}
+function updateLizards(dt){
+  for(const l of lizards){if(!l.alive)continue;l.g.position.y=l.y+Math.sin(time*5+l.ph)*0.04;l.g.rotation.y=Math.sin(time*1.5+l.ph)*0.28;
+    const d=Math.hypot(P.pos.x-l.x,P.pos.z-l.z),spin=P.bonkT>0&&d<1.7,jet=P.jetT>0&&d<0.8&&P.pos.y>l.y+0.35;
+    if(!P.dead&&!won&&(spin||jet))hitLizard(l);
+  }
+}
+
+function makeQuicksandVisual(w,d,final){
+  const g=new THREE.Group(),outer=final?0x9a542e:0x855035,inner=final?0xc1773b:0x6b402d;
+  const rim=new THREE.Mesh(new THREE.CylinderGeometry(1,1,0.06,28),new THREE.MeshBasicMaterial({color:outer,transparent:true,opacity:0.96}));rim.scale.set(w*0.5,1,d*0.5);rim.position.y=0.025;g.add(rim);
+  const pool=new THREE.Mesh(new THREE.CylinderGeometry(0.76,0.82,0.08,28),new THREE.MeshBasicMaterial({color:inner,transparent:true,opacity:0.96}));pool.scale.set(w*0.5,1,d*0.5);pool.position.y=0.07;g.add(pool);
+  const rings=[];for(let i=0;i<3;i++){const ring=new THREE.Mesh(new THREE.TorusGeometry(0.2+i*0.15,0.025,6,28),new THREE.MeshBasicMaterial({color:final?0xffda72:0xd19a5b,transparent:true,opacity:0.42}));ring.rotation.x=Math.PI/2;ring.position.y=0.125+i*0.006;ring.scale.set(w/(1.5+i),1,d/(1.5+i));g.add(ring);rings.push(ring);}return {g,pool,rings};
+}
+function addQuicksand(x,y,z,w,d,role){
+  const final=role==='final';const v=makeQuicksandVisual(w,d,final);v.g.position.set(x,y,z);desertGroup.add(v.g);
+  const q={g:v.g,pool:v.pool,rings:v.rings,x,y,z,w,d,role:final?'final':'ordinary',ph:rand(0,TAU),active:true};quicksands.push(q);return q;
+}
+function addFinalQuicksand(x,y,z,w,d){const q=addQuicksand(x,y,z,w,d,'final');if(DESERT)DESERT.final=q;return q;}
+function inQuicksand(q,x,z){return Math.abs(x-q.x)<q.w*0.5&&Math.abs(z-q.z)<q.d*0.5;}
+function playerInOrdinaryQuicksand(){if(!isDesertLevel()||!P)return false;return quicksands.some(q=>q.role==='ordinary'&&q.active&&inQuicksand(q,P.pos.x,P.pos.z)&&P.pos.y<q.y+0.55);}
+function beginQuicksandRecovery(){
+  if(P.quicksandRecT>0||P.dead||won)return false;dismountCamel(true);P.hp--;P.inv=1.4;P.quicksandRecMax=0.62;P.quicksandRecT=P.quicksandRecMax;P.quicksandRecFrom.copy(P.pos);P.vel.set(0,0,0);P.grounded=false;P.puffAir=0;endHover();clearLeapBoost();clearGlide();P.anchorSettleT=0;
+  SFX.quicksand();CAM.shake=Math.max(CAM.shake,0.28);spawnRing(P.pos.x,P.pos.y+0.1,P.pos.z,0xd58a48,0.3,4.2,0.4);updateHUD();
+  if(P.hp<=0){P.dead=true;P.deadT=1.8;P.quicksandRecT=0;SFX.deflate();showToast('Out of puff! Back to the last checkpoint…');}
+  else showToast('Squelch! Back to the checkpoint.');return true;
+}
+function updateDesertQuicksandRecovery(dt){
+  if(!P.quicksandRecT)return false;P.quicksandRecT-=dt;const dur=P.quicksandRecMax||0.62,k=smooth(clamp(1-Math.max(P.quicksandRecT,0)/dur,0,1));
+  P.pos.x=lerp(P.quicksandRecFrom.x,P.safeAnchor.x,k);P.pos.z=lerp(P.quicksandRecFrom.z,P.safeAnchor.z,k);P.pos.y=lerp(P.quicksandRecFrom.y,P.safeAnchor.y,k)-Math.sin(k*Math.PI)*0.38;P.vel.set(0,0,0);P.sqT=0.58;
+  if(P.quicksandRecT<=0){P.quicksandRecT=0;P.pos.copy(P.safeAnchor);P.grounded=true;P.lastGround=time;P.surf='sand';P.puff=true;P.sqT=1;}
+  return true;
+}
+function finalQuicksandReady(q){return q&&q.role==='final'&&!P.dead&&!won&&!DESERT.finish&&inQuicksand(q,P.pos.x,P.pos.z)&&P.pos.y<q.y+0.55;}
+function beginFinalQuicksand(q){
+  if(!finalQuicksandReady(q))return false;dismountCamel(true);DESERT.finish={phase:'sink',t:0,from:{x:P.pos.x,y:P.pos.y,z:P.pos.z,yaw:P.yaw},q};DESERT.finishCam=true;P.inv=99;P.vel.set(0,0,0);P.grounded=false;P.puffAir=0;endHover();clearLeapBoost();clearGlide();
+  if(DESERT.portal)DESERT.portal.visible=true;SFX.quicksand();showToast('The special sand is pulling you in!');CAM.shake=Math.max(CAM.shake,0.38);return true;
+}
+function updateQuicksandVisuals(dt){
+  for(const q of quicksands){const pulse=0.86+Math.sin(time*2.2+q.ph)*0.08;if(q.pool)q.pool.scale.y=pulse;if(q.rings)q.rings.forEach((r,i)=>{r.rotation.z+=dt*(i%2?0.65:-0.45);if(r.material)r.material.opacity=0.26+Math.sin(time*2.6+i+q.ph)*0.16;});}
+}
+
+function addDesertMarker(x,y,z,kind){
+  const g=new THREE.Group();g.position.set(x,y,z);const post=lam(0x9a5834),sign=lam(0xffd36c);g.add(mesh(CYL,post,0,0.6,0,0.055,1.2,0.055));g.add(mesh(BOXG,sign,0,1.15,0,0.84,0.42,0.08));
+  if(kind==='camel')g.add(mesh(SPH,lam(0x58b8be),0,1.15,0.07,0.15));else if(kind==='ride')g.add(mesh(CONE,lam(0x58b8be),0,1.15,0.07,0.16,0.25,0.16));else g.add(mesh(CONE,lam(0xffffff),0,1.28,0.07,0.11,0.24,0.11));desertGroup.add(g);return g;
+}
+function addOasis(ox,oy,oz){
+  const g=new THREE.Group();g.position.set(ox,oy,oz);g.visible=false;scene.add(g);
+  const grass=lam(0x6bbd4b),water=new THREE.MeshBasicMaterial({color:0x3bb8d8,transparent:true,opacity:0.88}),palm=lam(0x6a4a28),leaf=lam(0x3b993f);
+  g.add(mesh(SPH,grass,0,0.1,0,13,0.4,9));g.add(mesh(SPH,lam(0x91d862),-5,0.16,-1,7,0.22,4.7));
+  const pool=new THREE.Mesh(new THREE.CylinderGeometry(4.8,5.1,0.08,32),water);pool.position.set(0,0.22,0);g.add(pool);
+  for(let i=0;i<7;i++){const a=i/7*TAU+0.22,r=7.1;const px=Math.cos(a)*r,pz=Math.sin(a)*r*0.65,h=3.8+(i%3)*0.55;g.add(mesh(CYL,palm,px,h*0.5,pz,0.16,h,0.16));for(let j=0;j<5;j++){const fr=mesh(CONE,leaf,px,h,pz,0.5,1.9,0.18);fr.rotation.z=(j/5*TAU);fr.rotation.y=j/5*TAU;g.add(fr);}}
+  for(let i=0;i<18;i++){const a=rand(0,TAU),r=rand(3.5,10);g.add(mesh(SPH,lam(i%2?0xf3c75e:0xff8c6b),Math.cos(a)*r,0.38,Math.sin(a)*r*0.62,0.13,0.12,0.13));}
+  const portal=new THREE.Group();portal.position.set(0,0.4,8);const halo=new THREE.Mesh(new THREE.TorusGeometry(2.25,0.24,10,36),new THREE.MeshBasicMaterial({color:0xffd264,transparent:true,opacity:0.82}));halo.rotation.x=Math.PI/2;portal.add(halo);portal.add(mesh(SPH,new THREE.MeshBasicMaterial({color:0xffc05a,transparent:true,opacity:0.34}),0,0.28,0,1.9,0.22,1.9));portal.visible=false;desertGroup.add(portal);
+  if(DESERT){DESERT.oasis={x:ox,y:oy,z:oz,g,pool,portalHalo:halo};DESERT.oasisGroup=g;DESERT.portal=portal;}
+  registerFinish({x:ox,z:oz,top:oy+5.2,winMsg:'You found the green oasis!',onAllAwake(){},onWin(){if(DESERT&&DESERT.oasisGroup)DESERT.oasisGroup.visible=true;},update(dt,winT){updateOasisCelebration(dt,winT);},camHold(dt){oasisCameraHold(dt);}});
+  return g;
+}
+function updateOasisCelebration(dt,winT){
+  if(!DESERT||!DESERT.oasis||!DESERT.oasisGroup||!DESERT.oasisGroup.visible)return;const o=DESERT.oasis;if(o.portalHalo){o.portalHalo.rotation.z+=dt*0.8;if(o.portalHalo.material)o.portalHalo.material.opacity=0.58+Math.sin(time*3)*0.22;}
+  if(o.pool&&o.pool.material)o.pool.material.opacity=0.72+Math.sin(time*2)*0.12;
+  if(winT>=0){DESERT.oasisBurstT=(DESERT.oasisBurstT||0)-dt;if(DESERT.oasisBurstT<=0&&winT<14){DESERT.oasisBurstT=0.08;const a=rand(0,TAU),r=rand(1.2,9);spawnP(o.x+Math.cos(a)*r,o.y+rand(0.8,5.5),o.z+Math.sin(a)*r*0.65,rand(-1.2,1.2),rand(0.8,3.2),rand(-1.2,1.2),rand(0.08,0.15),[0xffffff,0x7dd95a,0x4fc9e8,0xffd15a][Math.floor(rand(0,4))],1.2,0.3,-1.6,0.95);}}
+}
+function oasisCameraHold(dt){
+  if(!DESERT||!DESERT.oasis)return;const o=DESERT.oasis;CAM.look.x=damp(CAM.look.x,o.x,8,dt);CAM.look.y=damp(CAM.look.y,o.y+1.65,8,dt);CAM.look.z=damp(CAM.look.z,o.z,8,dt);CAM.pos.x=damp(CAM.pos.x,o.x+0.6,7,dt);CAM.pos.y=damp(CAM.pos.y,o.y+5.3,7,dt);CAM.pos.z=damp(CAM.pos.z,o.z+15.5,7,dt);CAM.yaw=0.03;CAM.pitch=0.26;CAM.boomDist=16;CAM.targetDist=16;CAM.mode='finish';CAM.collisionPulled=false;CAM.effectiveDist=Math.hypot(CAM.pos.x-CAM.look.x,CAM.pos.y-CAM.look.y,CAM.pos.z-CAM.look.z);
+}
+function updateDesertFinishPlayer(dt){
+  if(!isDesertLevel()||!DESERT||!DESERT.finish)return false;const f=DESERT.finish;f.t+=dt;P.vel.set(0,0,0);P.puffAir=0;P.grounded=false;P.sqT=0.58;
+  if(f.phase==='sink'){
+    const k=clamp(f.t/1.05,0,1);P.pos.set(f.from.x,f.from.y-1.5*k,f.from.z);P.yaw=f.from.yaw+Math.sin(f.t*7)*0.08;
+    if(f.t>=1.05){f.phase='portal';f.t=0;SFX.sandPortal();showToast('A sand portal!');}
+  }else if(f.phase==='portal'){
+    const k=smooth(clamp(f.t/1.25,0,1)),q=f.q;P.pos.set(lerp(q.x,f.q.x,0.5),lerp(q.y-1.5,q.y+1.2,k),lerp(q.z,q.z+0.45,k));P.yaw=f.from.yaw+f.t*1.8;
+    if(DESERT.portal){DESERT.portal.position.set(q.x,q.y+0.15,q.z);DESERT.portal.scale.setScalar(0.7+1.6*k);}
+    if(f.t>=1.25){f.phase='oasis';const o=DESERT.oasis;DESERT.finishCam=false;if(DESERT.portal)DESERT.portal.visible=false;if(o&&o.g)o.g.visible=true;P.pos.set(o.x,o.y+0.38,o.z+3.3);P.yaw=Math.PI;P.grounded=true;P.puff=true;P.sqT=1;CAM.shake=Math.max(CAM.shake,0.55);triggerWin();}
+  }
+  return true;
+}
+function desertFinishCamera(dt){
+  if(!DESERT||!DESERT.finish||DESERT.finish.phase==='oasis')return false;const f=DESERT.finish,q=f.q;const px=P.pos.x,py=P.pos.y,pz=P.pos.z;CAM.look.x=damp(CAM.look.x,px,10,dt);CAM.look.y=damp(CAM.look.y,py+0.5,10,dt);CAM.look.z=damp(CAM.look.z,pz-0.6,10,dt);CAM.pos.x=damp(CAM.pos.x,px+0.3,8,dt);CAM.pos.y=damp(CAM.pos.y,py+3.2,8,dt);CAM.pos.z=damp(CAM.pos.z,pz+7.0,8,dt);CAM.yaw=0;CAM.pitch=0.22;CAM.boomDist=7;CAM.targetDist=7;CAM.mode='sandPortal';CAM.collisionPulled=false;CAM.effectiveDist=Math.hypot(CAM.pos.x-CAM.look.x,CAM.pos.y-CAM.look.y,CAM.pos.z-CAM.look.z);return true;}
+function updateDesertWorld(dt){
+  if(!isDesertLevel())return;updateCamels(dt);updateLizards(dt);updateQuicksandVisuals(dt);
+  if(!DESERT||DESERT.finish||P.quicksandRecT>0||P.dead||won)return;
+  for(const q of quicksands){if(q.role==='final'){if(finalQuicksandReady(q))beginFinalQuicksand(q);}else if(q.active&&inQuicksand(q,P.pos.x,P.pos.z)&&P.pos.y<q.y+0.55){beginQuicksandRecovery();break;}}
+}
+window.__DESERT={isDesertLevel,get camels(){return camels;},get cacti(){return cacti;},get lizards(){return lizards;},get quicksands(){return quicksands;},get state(){return DESERT;},nearbyCamel,mountCamel,dismountCamel,beginFinalQuicksand,playerInOrdinaryQuicksand};
+
+
 // ===== src/hud.js =====
 function updateHUD(){$('hp').textContent='❤️'.repeat(Math.max(P.hp,0))+'🤍'.repeat(P.maxHp-Math.max(P.hp,0));$('snz').textContent='😴 '+rescued+'/'+((typeof snoozleGoalCount==='function')?snoozleGoalCount():snoozles.length);$('nts').textContent='♪ '+gotNotes+'/'+notes.length;
   const f=$('fire');f.style.display=P.fire?'':'none';f.textContent='🔥';
@@ -6531,7 +6840,7 @@ window.__touchArmed=()=>touchArmed;
 window.__setPickerIdx=setPickerIdx;
 
 function drawLevelArt(){
-  [[$('art0'),'meadow'],[$('art1'),'deep'],[$('art2'),'peak'],[$('art3'),'space']].forEach(([cv,kind])=>{
+  [[$('art0'),'meadow'],[$('art1'),'deep'],[$('art2'),'peak'],[$('art3'),'space'],[$('art4'),'desert']].forEach(([cv,kind])=>{
     if(!cv||typeof cv.getContext!=='function')return;
     const w=160,h=100;
     const g=cv.getContext('2d');if(!g)return;
@@ -6568,6 +6877,14 @@ function drawLevelArt(){
       g.fillStyle='#020208';g.beginPath();g.arc(w*0.55,h*0.18,7,0,TAU);g.fill();
       g.strokeStyle='rgba(136,120,200,0.7)';g.lineWidth=2;g.beginPath();g.ellipse(w*0.55,h*0.18,12,4,0,0,TAU);g.stroke();
       g.fillStyle='#5ec8ff';g.fillRect(w*0.46,h*0.62,w*0.08,h*0.06);
+    }else if(kind==='desert'){
+      const sky=g.createLinearGradient(0,0,0,h);sky.addColorStop(0,'#8ed4f2');sky.addColorStop(0.48,'#ffd27c');sky.addColorStop(1,'#f4ad4f');g.fillStyle=sky;g.fillRect(0,0,w,h);
+      g.fillStyle='#e99d42';g.beginPath();g.ellipse(w*0.16,h*0.74,66,27,0,0,TAU);g.fill();g.beginPath();g.ellipse(w*0.86,h*0.77,62,24,0,0,TAU);g.fill();
+      g.fillStyle='#f4c568';g.fillRect(0,h*0.68,w,h*0.34);
+      g.fillStyle='#7c4930';g.beginPath();g.ellipse(w*0.52,h*0.77,25,9,0,0,TAU);g.fill();g.fillStyle='#b57138';g.beginPath();g.ellipse(w*0.52,h*0.77,17,6,0,0,TAU);g.fill();
+      g.fillStyle='#458b3d';g.fillRect(w*0.14,h*0.37,7,35);g.beginPath();g.arc(w*0.17,h*0.36,4,0,TAU);g.fill();g.fillRect(w*0.08,h*0.5,22,6);
+      g.fillStyle='#d59b5c';g.beginPath();g.ellipse(w*0.73,h*0.63,24,12,0,0,TAU);g.fill();g.fillRect(w*0.76,h*0.38,7,27);g.beginPath();g.arc(w*0.795,h*0.37,8,0,TAU);g.fill();
+      g.fillStyle='#249ab4';g.fillRect(w*0.82,h*0.76,31,8);
     }
   });
 }
@@ -6577,7 +6894,7 @@ for(let i=0;i<LEVELS.length;i++){
 }
 
 function startGame(){if(started)return;loadLevel(LEVELS[pickerIdx]);started=true;document.body.classList.add('playing');$('start').style.display='none';initAudio();IN.jump=false;IN.b=false;IN.y=false;updateHUD();
-  const msg=pickerIdx===0?'Follow the path. Wake all four Snoozles!':(pickerIdx===1?'Dive in. Wake four Snoozles on the ocean floor!':(pickerIdx===2?'Try the long leap. Jump, then puff again!':'Hold jump to fly. Let go to glide.'));
+  const msg=pickerIdx===0?'Follow the path. Wake all four Snoozles!':(pickerIdx===1?'Dive in. Wake four Snoozles on the ocean floor!':(pickerIdx===2?'Try the long leap. Jump, then puff again!':(pickerIdx===3?'Hold jump to fly. Let go to glide.':'Try A or Space beside a camel. B hops off!')));
   setTimeout(()=>showToast(msg),600);setTimeout(()=>{$('hint').style.opacity=0;},12000);}
 window.__startGame=startGame;
 updatePickerUI();
@@ -6586,13 +6903,13 @@ updatePickerUI();
 // ===== src/game.js =====
 let time=0,rescued=0,gotNotes=0;
 let started=false;
-window.__W={solids,gloops,goos,hearts,crates,powers,fires,checks,snoozles,notes,dust,puddles,sharks,fish,spikefish,clams,bubbleShots,kelps,steamVents,lavas,cinders,embers,wisps,salamanders,geysers,scorches,protoEndpoints,steamCurtains,crystalSparks,celebrationParticles:PART,get asteroids(){return typeof asteroids!=='undefined'?asteroids:[];},get saucers(){return typeof saucers!=='undefined'?saucers:[];},get underwaterGroup(){return underwaterGroup;},get won(){return won;},get WM(){return WM;},get RAINBOW(){return RAINBOW;},get FINISH(){return FINISH;},get sfx(){return SFX;},get wreck(){return WRECK;},get conch(){return CONCH;},get organ(){return ORGAN;},get organFireworks(){return organFireworks;},get geodeShell(){return GEODE_SHELL;},get crackedGeode(){return crackedGeodeChamber;}};
+window.__W={solids,gloops,goos,hearts,crates,powers,fires,checks,snoozles,notes,dust,puddles,sharks,fish,spikefish,clams,bubbleShots,kelps,steamVents,lavas,cinders,embers,wisps,salamanders,geysers,scorches,protoEndpoints,steamCurtains,crystalSparks,celebrationParticles:PART,get camels(){return typeof camels!=='undefined'?camels:[];},get cacti(){return typeof cacti!=='undefined'?cacti:[];},get lizards(){return typeof lizards!=='undefined'?lizards:[];},get quicksands(){return typeof quicksands!=='undefined'?quicksands:[];},get asteroids(){return typeof asteroids!=='undefined'?asteroids:[];},get saucers(){return typeof saucers!=='undefined'?saucers:[];},get underwaterGroup(){return underwaterGroup;},get won(){return won;},get WM(){return WM;},get RAINBOW(){return RAINBOW;},get FINISH(){return FINISH;},get sfx(){return SFX;},get wreck(){return WRECK;},get conch(){return CONCH;},get organ(){return ORGAN;},get organFireworks(){return organFireworks;},get geodeShell(){return GEODE_SHELL;},get crackedGeode(){return crackedGeodeChamber;}};
 window.__started=()=>started;
 
 // ---------- camera ----------
 const CAM=window.__CAM={yaw:0,pitch:0.42,dist:8.5,pos:new THREE.Vector3(0,5,19),look:new THREE.Vector3(0,1,10),shake:0,fovKick:0,lastManual:-9,boomDist:8.5,targetDist:8.5,effectiveDist:8.5,collisionPulled:false,mode:'outdoor'};
 // Stage 4.8A — temporary Level 3 landscape camera-distance diagnostic (not a shipping profile).
-const VERSION_BASE='v52 · iPhone playtest polish';
+const VERSION_BASE='v53 · Desert Level 5';
 const CAMDIST_ALLOW={'8.5':8.5,'8.50':8.5,'6.8':6.8,'6.80':6.8,'6.07':6.07,'5':5,'5.0':5,'5.00':5,'3.93':3.93};
 const CAMDIST_STEPS=[8.5,6.8,6.07,5,3.93];
 function parseCamDistQuery(search){
@@ -6694,6 +7011,14 @@ function updateCamera(dt){
     if(camDistParam!=null)updateCamDiagUI();
     return;
   }
+  // The Level 5 final quicksand owns a short cinematic sink/portal frame before winning.
+  if(typeof desertFinishCamera==='function'&&desertFinishCamera(dt)){
+    CAM.shake=Math.max(0,CAM.shake-dt*2.2);const sh=CAM.shake*CAM.shake*0.35;
+    camera.position.set(CAM.pos.x+rand(-sh,sh),CAM.pos.y+rand(-sh,sh),CAM.pos.z+rand(-sh,sh));camera.lookAt(CAM.look);
+    CAM.fovKick=damp(CAM.fovKick,0,9,dt);const fov=66+CAM.fovKick;
+    if(Math.abs(camera.fov-fov)>0.01){camera.fov=fov;camera.updateProjectionMatrix();}
+    return;
+  }
   // Authored screenshot / cinematic hold — pos/look stay put.
   if(CAM.mode==='shot'){
     CAM.collisionPulled=false;
@@ -6728,7 +7053,7 @@ function updateCamera(dt){
   const sp=Math.hypot(P.vel.x,P.vel.z);
   if(sp>2&&time-CAM.lastManual>1.2){const mvx=P.vel.x/sp,mvz=P.vel.z/sp;const fx=-Math.sin(CAM.yaw),fz=-Math.cos(CAM.yaw);const d=mvx*fx+mvz*fz;if(d>-0.3)CAM.yaw=angDamp(CAM.yaw,Math.atan2(-mvx,-mvz),1.2*(0.5+d*0.5),dt);}
   // Prefer a slightly higher look target and a longer boom in tight spaces.
-  const tx=P.pos.x,ty=P.pos.y+(tight?1.6:1.1),tz=P.pos.z;
+  const tx=P.pos.x,ty=P.pos.y+(tight?1.6:(P.camel?2.2:1.1)),tz=P.pos.z;
   const cp=Math.cos(CAM.pitch),spp=Math.sin(CAM.pitch);
   let want;
   if(inConch){want=12.2;CAM.boomDist=12.2;CAM.mode='conch';}
@@ -6775,6 +7100,7 @@ function frame(now){requestAnimationFrame(frame);let dt=(now-last)/1000;last=now
   updatePeak(dt);
   updateSpaceDecor(dt);
   updateSpaceWorld(dt);
+  updateDesertWorld(dt);
   updateSharks(dt);updateFish(dt);updateSpikefish(dt);updateBubbleShots(dt);updateClams(dt);updateKelp(dt);
   updateWin(dt);if(FINISH)FINISH.update(dt,won?winT:-1);
   updateParticles(dt);updateRings(dt);updateZ(dt);updateCamera(dt);updatePlayerVisual(dt);

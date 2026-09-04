@@ -11,7 +11,7 @@
 // Order matters: modules are emitted in the order listed below, inside one IIFE,
 // so later files can use anything an earlier one declared.
 const fs=require('fs'),path=require('path');
-const ORDER=['util.js','audio.js','input.js','render.js','fx.js','entities.js','player.js','enemies.js','peak.js','deep.js','space.js','hud.js','game.js'];
+const ORDER=['util.js','audio.js','input.js','render.js','fx.js','entities.js','player.js','enemies.js','peak.js','deep.js','space.js','desert.js','hud.js','game.js'];
 const SRC=path.join(__dirname,'src'),LEVELS=path.join(__dirname,'levels');
 const HTML=path.join(__dirname,'index.html');
 const START='// ---- BUILD:START ----',END='// ---- BUILD:END ----';

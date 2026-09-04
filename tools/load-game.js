@@ -2,7 +2,7 @@
 const fs = require('fs');
 const path = require('path');
 
-const ORDER = ['util.js','audio.js','input.js','render.js','fx.js','entities.js','player.js','enemies.js','deep.js','hud.js','game.js'];
+const ORDER = ['util.js','audio.js','input.js','render.js','fx.js','entities.js','player.js','enemies.js','peak.js','deep.js','space.js','desert.js','hud.js','game.js'];
 const SRC = path.join(__dirname, '..', 'src');
 const LEVELS = path.join(__dirname, '..', 'levels');
 
