@@ -31,13 +31,13 @@ function fireBeamAt(H,target){
 // ---- version ----
 {
   const H=boot();
-  ok(H.getCamDiag().VERSION_BASE==='v48 · Saucer Belt gate','version stamp v48');
+  ok(H.getCamDiag().VERSION_BASE==='v51 · Human playtest route','version stamp v51');
 }
 
-// ---- Snoozles: exactly three obtainable (Launch Dock, Candy Planet, Crystal Cavern) ----
+// ---- Snoozles: four authored (Snoozle 4 on Observatory) ----
 {
   const H=boot();H.startLevel(3);H.frames(10);
-  ok(H.W.snoozles.length===3,'Level 4 has three authored Snoozles');
+  ok(H.W.snoozles.length===4,'Level 4 has four authored Snoozles');
   ok(H.getLevel().snoozleGoal===4,'snoozleGoal remains 4');
   const dock=H.W.snoozles[0],candy=H.W.snoozles[1],crystal=H.W.snoozles[2];
   ok(Math.hypot(dock.g.position.x,dock.g.position.z)<8&&dock.g.position.y<2,'Snoozle 1 on Launch Dock');
@@ -82,14 +82,12 @@ function fireBeamAt(H,target){
   ok(S.asteroids.filter(a=>a.hazard&&a.z<-200).length>=4,'asteroid-only teaching lane present');
 }
 
-// ---- no Stage 5+ gameplay ----
+// ---- Stage 5/6 finish authored ----
 {
-  const fs=require('fs'),path=require('path');
-  const src=fs.readFileSync(path.join(__dirname,'..','levels','level4.js'),'utf8')
-    +fs.readFileSync(path.join(__dirname,'..','src','space.js'),'utf8');
-  ok(!/warpTunnel|blackHoleFinish|blackHoleActive|cometRun/i.test(src),'no Stage 5+ finish / Comet Run');
-  ok(H_snoozleCount()===3,'no fabricated Snoozle 4');
-  function H_snoozleCount(){const H=boot();H.startLevel(3);return H.W.snoozles.length;}
+  const H=boot();H.startLevel(3);H.frames(6);
+  ok(!!H.getSpace().blackHoleFinish,'black hole finish present');
+  ok(H.getSpace().stage5Ends.length===1,'Stage 5 endpoint present');
+  ok(H.W.FINISH.winMsg==='The stars are singing!','FINISH owns space win subtitle');
 }
 
 // ---- shield gate: gust and spin do not open ----

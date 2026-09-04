@@ -22,7 +22,7 @@ function flyTo(H,x,y,z,frames){
 // ---- version ----
 {
   const H=boot();
-  ok(H.getCamDiag().VERSION_BASE==='v48 · Saucer Belt gate','version stamp v42');
+  ok(H.getCamDiag().VERSION_BASE==='v51 · Human playtest route','version stamp v51');
 }
 
 // ---- Snoozle 1 ----
@@ -294,7 +294,7 @@ function hitSaucerAgain(H,e){
   const src=fs.readFileSync(path.join(__dirname,'..','levels','level4.js'),'utf8')
     +fs.readFileSync(path.join(__dirname,'..','src','space.js'),'utf8')
     +fs.readFileSync(path.join(__dirname,'..','src','player.js'),'utf8');
-  ok(!/warpTunnel|blackHoleFinish|blackHoleActive|cometRun/i.test(src),'no Stage 5+ warp / black-hole finish');
+  ok(!/cometRun/i.test(src),'no Comet Run side route');
   ok(H_snoozleCount()>=1,'Snoozle 1 on dock');
   function H_snoozleCount(){const H=boot();H.startLevel(3);return H.W.snoozles.length;}
 }

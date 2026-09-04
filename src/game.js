@@ -6,7 +6,7 @@ window.__started=()=>started;
 // ---------- camera ----------
 const CAM=window.__CAM={yaw:0,pitch:0.42,dist:8.5,pos:new THREE.Vector3(0,5,19),look:new THREE.Vector3(0,1,10),shake:0,fovKick:0,lastManual:-9,boomDist:8.5,targetDist:8.5,effectiveDist:8.5,collisionPulled:false,mode:'outdoor'};
 // Stage 4.8A — temporary Level 3 landscape camera-distance diagnostic (not a shipping profile).
-const VERSION_BASE='v48 · Saucer Belt gate';
+const VERSION_BASE='v51 · Human playtest route';
 const CAMDIST_ALLOW={'8.5':8.5,'8.50':8.5,'6.8':6.8,'6.80':6.8,'6.07':6.07,'5':5,'5.0':5,'5.00':5,'3.93':3.93};
 const CAMDIST_STEPS=[8.5,6.8,6.07,5,3.93];
 function parseCamDistQuery(search){
@@ -104,6 +104,30 @@ function updateCamera(dt){
     camera.position.set(CAM.pos.x+rand(-sh,sh),CAM.pos.y+rand(-sh,sh),CAM.pos.z+rand(-sh,sh));camera.lookAt(CAM.look);
     CAM.fovKick=damp(CAM.fovKick,0,9,dt);
     const baseFov=62;const fov=baseFov+CAM.fovKick;CAM.baseFov=baseFov;CAM.fov=fov;
+    if(Math.abs(camera.fov-fov)>0.01){camera.fov=fov;camera.updateProjectionMatrix();}
+    if(camDistParam!=null)updateCamDiagUI();
+    return;
+  }
+  // Authored screenshot / cinematic hold — pos/look stay put.
+  if(CAM.mode==='shot'){
+    CAM.collisionPulled=false;
+    CAM.effectiveDist=Math.hypot(CAM.pos.x-CAM.look.x,CAM.pos.y-CAM.look.y,CAM.pos.z-CAM.look.z);
+    CAM.shake=Math.max(0,CAM.shake-dt*2.2);const sh=CAM.shake*CAM.shake*0.35;
+    camera.position.set(CAM.pos.x+rand(-sh,sh),CAM.pos.y+rand(-sh,sh),CAM.pos.z+rand(-sh,sh));camera.lookAt(CAM.look);
+    CAM.fovKick=damp(CAM.fovKick,0,9,dt);
+    const baseFov=62;const fov=baseFov+CAM.fovKick;CAM.baseFov=baseFov;CAM.fov=fov;
+    if(Math.abs(camera.fov-fov)>0.01){camera.fov=fov;camera.updateProjectionMatrix();}
+    if(camDistParam!=null)updateCamDiagUI();
+    return;
+  }
+  // Warp tunnel owns framing for the whole ride — outdoor boom must not overwrite it.
+  if(typeof isSpaceWarpCamera==='function'&&isSpaceWarpCamera()){
+    CAM.mode='warp';CAM.collisionPulled=false;
+    CAM.effectiveDist=Math.hypot(CAM.pos.x-CAM.look.x,CAM.pos.y-CAM.look.y,CAM.pos.z-CAM.look.z);
+    CAM.shake=Math.max(0,CAM.shake-dt*2.2);const sh=CAM.shake*CAM.shake*0.35;
+    camera.position.set(CAM.pos.x+rand(-sh,sh),CAM.pos.y+rand(-sh,sh),CAM.pos.z+rand(-sh,sh));camera.lookAt(CAM.look);
+    CAM.fovKick=damp(CAM.fovKick,0,9,dt);
+    const baseFov=72;const fov=baseFov+CAM.fovKick;CAM.baseFov=baseFov;CAM.fov=fov;
     if(Math.abs(camera.fov-fov)>0.01){camera.fov=fov;camera.updateProjectionMatrix();}
     if(camDistParam!=null)updateCamDiagUI();
     return;

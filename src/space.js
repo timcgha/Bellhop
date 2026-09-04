@@ -3,7 +3,8 @@ let spaceGroup=null,blackHoleLandmark=null,cheeseMoonLandmark=null,cheeseMoonBod
 let spaceOpenZones=[],spacePlayVolume=null,spaceDecorPlanets=[];
 let spaceRecoveryT=0,spaceRecoveryFrom=null;
 let spaceLandingTargets=[],spaceRouteTrail=[],spaceFirstDest=null,spaceRouteBeacons=[];
-const asteroids=[],saucers=[],spaceSparks=[],spaceStage2Ends=[],spaceStage3Ends=[],shieldedGates=[],spaceStage4Ends=[];
+const asteroids=[],saucers=[],spaceSparks=[],spaceStage2Ends=[],spaceStage3Ends=[],shieldedGates=[],spaceStage4Ends=[],spaceStage5Ends=[],spaceJellyfish=[];
+let BLACK_HOLE=null;
 const starCrates=[],starBeams=[],crystalDust=[];
 let crystalInterior=null,candyPlanet=null,candyPlanetShellFade=1;
 const BEAM_LEN=20,BEAM_DUR=0.35,BEAM_W=0.85;
@@ -16,6 +17,8 @@ function spaceCfg(){return CURRENT_LEVEL&&CURRENT_LEVEL.openSpace;}
 
 function clearSpaceWorld(){
   const rem=m=>{if(!m)return;if(m.parent&&m.parent.remove)m.parent.remove(m);else if(scene.remove)scene.remove(m);else if(m.visible!=null)m.visible=false;};
+  destroyWarpTunnelVisuals();
+  if(BLACK_HOLE&&BLACK_HOLE.voidGroup)rem(BLACK_HOLE.voidGroup);
   if(spaceGroup){while(spaceGroup.children.length)spaceGroup.remove(spaceGroup.children[0]);spaceGroup.visible=false;}
   blackHoleLandmark=null;cheeseMoonLandmark=null;cheeseMoonBody=null;spaceStars.length=0;spaceDecorPlanets.length=0;
   spaceOpenZones=[];spacePlayVolume=null;spaceRecoveryT=0;spaceRecoveryFrom=null;
@@ -27,6 +30,9 @@ function clearSpaceWorld(){
   for(const g of shieldedGates){if(g.g)rem(g.g);if(g.solid&&g.solid.mesh)rem(g.solid.mesh);}
   shieldedGates.length=0;
   for(const e of spaceStage4Ends)rem(e.g);spaceStage4Ends.length=0;
+  for(const e of spaceStage5Ends)rem(e.g);spaceStage5Ends.length=0;
+  for(const j of spaceJellyfish)rem(j.g);spaceJellyfish.length=0;
+  BLACK_HOLE=null;
   for(const c of starCrates)rem(c.g);starCrates.length=0;
   starBeams.length=0;crystalDust.length=0;crystalInterior=null;candyPlanet=null;candyPlanetShellFade=1;
   for(const q of spaceSparks){q.alive=false;q.m.visible=false;}
@@ -37,7 +43,7 @@ function beginSpaceLevel(L){
   if(peakGround)peakGround.visible=false;
   if(underwaterGroup)underwaterGroup.visible=false;
   scene.background=new THREE.Color(0x050812);
-  scene.fog=new THREE.Fog(0x0a1020,85,220);
+  scene.fog=new THREE.Fog(0x0a1020,120,280);
   if(!spaceGroup){spaceGroup=new THREE.Group();scene.add(spaceGroup);}
   spaceGroup.visible=true;
   while(spaceGroup.children.length)spaceGroup.remove(spaceGroup.children[0]);
@@ -180,7 +186,9 @@ function nearestLandingTarget(p){
   let best=null,bestD=Infinity;
   for(const t of spaceLandingTargets){
     const dx=p.x-t.x,dz=p.z-t.z,dy=p.y-(t.y+0.4);
-    const dist=Math.hypot(Math.hypot(dx,dz),Math.abs(dy));
+    let dist=Math.hypot(Math.hypot(dx,dz),Math.abs(dy));
+    // Prefer the obvious primary deck when two beacons compete.
+    if(t.primary)dist*=0.72;
     if(dist<t.approachR&&dist<bestD){best=t;bestD=dist;}
   }
   return best?{target:best,dist:bestD}:null;
@@ -204,22 +212,22 @@ function applyLandingAssist(dt,p,v){
     const align=(0.9*outer+1.4*near)*dt;
     const pull=align*(2.4+4.5*near);
     if(horiz>0.12){v.x-=dx/(horiz||1)*pull;v.z-=dz/(horiz||1)*pull;}
-    if(dy>0.25)v.y-=align*2.4;
+    if(dy>0.25)v.y-=align*(t.primary?4.2:2.4);
     else if(dy<-0.15)v.y+=align*0.4;
   }
-  if(near>0.35&&dy<2.0&&horiz<t.r*1.35){
-    const snap=near*dt*5.5;
+  if(near>0.2&&dy<4.5&&horiz<t.r*1.55){
+    const snap=near*dt*(t.primary?8.5:5.5);
     if(horiz>0.08){v.x-=dx/(horiz||1)*snap;v.z-=dz/(horiz||1)*snap;}
-    if(dy>0.08)v.y=moveTo(v.y,-1.4,7*dt);
+    if(dy>0.08)v.y=moveTo(v.y,-2.6,11*dt);
   }
-  if(near>0.55&&dy<1.0&&horiz<t.r*0.95){
-    v.y=moveTo(v.y,-1.2,8*dt);
-    if(horiz>0.05){v.x=moveTo(v.x,-dx/(horiz||1)*1.0,5*dt);v.z=moveTo(v.z,-dz/(horiz||1)*1.0,5*dt);}
+  if(near>0.28&&dy<3.5&&horiz<t.r*1.25){
+    v.y=moveTo(v.y,-2.8,12*dt);
+    if(horiz>0.05){v.x=moveTo(v.x,-dx/(horiz||1)*1.6,7*dt);v.z=moveTo(v.z,-dz/(horiz||1)*1.6,7*dt);}
   }
   // Soft claim while coasting down onto a pad — never while thrusting off one
-  if(!IN.jumpHeld&&near>0.55&&horiz<t.r*0.9&&dy>=0&&dy<0.65&&v.y<=0&&sp<2.8){
+  if(!IN.jumpHeld&&near>0.18&&horiz<t.r*1.2&&dy>=0&&dy<(t.primary?3.4:1.85)&&v.y<=0.65&&sp<5.5){
     const land=landableSurfaceAt(t.x,t.z);
-    if(land){p.y=land.y;v.x*=0.35;v.y=0;v.z*=0.35;landOn(land.surf||'pad');}
+    if(land){p.x=damp(p.x,t.x,8,dt);p.z=damp(p.z,t.z,8,dt);p.y=land.y;v.x*=0.25;v.y=0;v.z*=0.25;landOn(land.surf||'pad');}
   }
 }
 
@@ -259,6 +267,8 @@ function queryMoveZone(){
 
 function applySpaceRecovery(dt){
   if(!isSpaceLevel()||!spacePlayVolume||spaceRecoveryT>0||P.dead||won)return false;
+  // Finish immunity owns the ride — never soft-return mid-warp or in the void.
+  if(isSpaceFinishImmune())return false;
   const pv=spacePlayVolume,cx=pv.cx!=null?pv.cx:0,cy=pv.cy!=null?pv.cy:8,cz=pv.cz!=null?pv.cz:0;
   const dx=P.pos.x-cx,dz=P.pos.z-cz,dy=P.pos.y-cy;
   const horiz=Math.hypot(dx,dz),dist=Math.hypot(horiz,Math.abs(dy));
@@ -346,8 +356,10 @@ function asteroidPos(a){
   return {x:lerp(a.p0.x,a.p1.x,t),y:lerp(a.p0.y,a.p1.y,t),z:lerp(a.p0.z,a.p1.z,t)};
 }
 
+function isSpaceFinishImmune(){return won||!!(BLACK_HOLE&&(BLACK_HOLE.warping||BLACK_HOLE.finishImmune));}
+function isSpaceWarpCamera(){return !!(BLACK_HOLE&&BLACK_HOLE.warping&&!won);}
 function hurtFromAsteroid(a,px,py,pz){
-  if(won||P.inv>0||P.dead)return false;
+  if(isSpaceFinishImmune()||P.inv>0||P.dead)return false;
   const dx=px-a.x,dy=(py+0.55)-a.y,dz=pz-a.z;
   const len=Math.hypot(dx,dy,dz)||1;
   // Moderate knockback AWAY from rock face; keep flight usable
@@ -376,7 +388,7 @@ function updateAsteroids(dt){
       if(a.trailT<=0){a.trailT=0.12;spawnP(a.x+rand(-0.3,0.3),a.y,a.z+rand(-0.3,0.3),rand(-0.4,0.4),rand(-0.3,0.3),rand(-0.4,0.4),0.08,0xc8b090,0.4,0.5,0,0.7);}
     }else{a.g.position.set(a.x,a.y,a.z);}
     a.g.rotation.y+=a.spin*dt;a.g.rotation.x+=a.spin*0.35*dt;
-    if(!a.hazard||P.dead||won)continue;
+    if(!a.hazard||P.dead||isSpaceFinishImmune())continue;
     const dx=P.pos.x-a.x,dy=(P.pos.y+0.55)-a.y,dz=P.pos.z-a.z;
     const dist=Math.hypot(dx,dy,dz);
     const hitR=a.r+R*0.95;
@@ -499,6 +511,13 @@ function updateSaucers(dt){
     const dh=Math.hypot(e.x-e.hx,e.y-e.hy,e.z-e.hz);
     if(dh>SAUCER_LEASH){const s=SAUCER_LEASH/dh;e.x=e.hx+(e.x-e.hx)*s;e.y=e.hy+(e.y-e.hy)*s;e.z=e.hz+(e.z-e.hz)*s;e.vx*=0.5;e.vy*=0.5;e.vz*=0.5;}
     e.bob=Math.sin(time*2.4+e.ph)*0.18;
+    // Candy-surface saucers stay clearly above the pad — never settle into the shell/deck.
+    if(e.surfaceGate&&candyPlanet&&candyPlanet.pad){
+      const padTop=candyPlanet.pad.y+0.55;
+      const minY=padTop+1.35;
+      if(e.hy<minY)e.hy=minY;
+      if(e.y<minY){e.y=minY;if(e.vy<0)e.vy=0;}
+    }
     g.position.set(e.x,e.y+e.bob,e.z);
     g.rotation.y=angDamp(g.rotation.y,e.face,5,dt);
     g.rotation.z=e.stunT>0?Math.sin(time*22)*0.25:(e.hurtT>0?Math.sin(time*30)*0.12:Math.sin(time*1.6+e.ph)*0.06);
@@ -840,9 +859,11 @@ function fireStarBeam(fx,fz,mx,my,mz){
   const len=Math.hypot(fx,fz)||1;
   const dx=fx/len,dz=fz/len;
   starBeams.push({x:ox,y:oy,z:oz,dx,dz,t:0,life:BEAM_DUR,hit:new Set()});
-  for(let i=0;i<10;i++){
-    const t=i/9*BEAM_LEN;
-    spawnP(ox+dx*t,oy,oz+dz*t,rand(-0.2,0.2),rand(-0.2,0.2),rand(-0.2,0.2),0.07,Math.random()<0.5?0xffe078:0xffffff,0.45,0.35,0,0.85);
+  // Locked designer identity: PURPLE / VIOLET Star Beam (not yellow/gold).
+  for(let i=0;i<12;i++){
+    const t=i/11*BEAM_LEN;
+    const col=i%3===0?0xffffff:(i%2===0?0xa070ff:0xc8b0ff);
+    spawnP(ox+dx*t,oy,oz+dz*t,rand(-0.15,0.15),rand(-0.15,0.15),rand(-0.15,0.15),0.085,col,0.5,0.35,0,0.9);
   }
   CAM.fovKick=Math.max(CAM.fovKick,3);
 }
@@ -851,8 +872,11 @@ function beamHitPoint(b,px,py,pz,pr){
   const along=(px-b.x)*b.dx+(pz-b.z)*b.dz;
   if(along<0||along>BEAM_LEN)return false;
   const cx=b.x+b.dx*along,cz=b.z+b.dz*along;
-  const d=Math.hypot(px-cx,py-b.y,pz-cz);
-  return d<(pr||BEAM_W);
+  const r=pr||BEAM_W;
+  // Horizontal tube with a taller vertical allowance — purple beam should hit hovering saucers from the pad.
+  const dH=Math.hypot(px-cx,pz-cz);
+  const dV=Math.abs(py-b.y);
+  return dH<r&&dV<r*2.6;
 }
 
 function updateStarBeams(dt){
@@ -861,16 +885,17 @@ function updateStarBeams(dt){
     b.t+=dt;
     if(b.t>=b.life){starBeams.splice(i,1);continue;}
     const k=1-b.t/b.life;
-    for(let s=0;s<3;s++){
-      const t=b.t*BEAM_LEN/BEAM_DUR+s*2;
-      spawnP(b.x+b.dx*t,b.y,b.z+b.dz*t,0,0,0,0.06,0xffe078,0.35*k,0.4,0,0.7);
+    for(let s=0;s<4;s++){
+      const t=b.t*BEAM_LEN/BEAM_DUR+s*1.8;
+      const col=s%2===0?0xa070ff:0xc8b0ff;
+      spawnP(b.x+b.dx*t,b.y,b.z+b.dz*t,0,0,0,0.07,col,0.4*k,0.4,0,0.75);
     }
     for(const e of saucers){
       if(!e.alive||e.state==='dying'||b.hit.has(e))continue;
       if(e.targetDummy){
         if(beamHitPoint(b,e.x,e.y+0.3,e.z,0.9*e.size)){
           b.hit.add(e);e.flashT=0.45;SFX.tick();
-          for(let j=0;j<8;j++)spawnP(e.x,e.y+0.5,e.z,rand(-2,2),rand(0.5,2),rand(-2,2),0.08,0xffe078,0.5,0.4,0,0.85);
+          for(let j=0;j<8;j++)spawnP(e.x,e.y+0.5,e.z,rand(-2,2),rand(0.5,2),rand(-2,2),0.08,Math.random()<0.5?0xa070ff:0xc8b0ff,0.5,0.4,0,0.85);
         }
         continue;
       }
@@ -882,7 +907,7 @@ function updateStarBeams(dt){
     }
     for(const gate of shieldedGates){
       if(gate.opened||b.hit.has(gate))continue;
-      if(beamHitPoint(b,gate.x,gate.y,gate.z,gate.hitR||2.8)){b.hit.add(gate);openShieldedGate(gate);}
+      if(beamHitPoint(b,gate.x,gate.y+gate.h*0.45,gate.z,gate.hitR||2.8)){b.hit.add(gate);openShieldedGate(gate);}
     }
   }
 }
@@ -981,23 +1006,53 @@ function addSpaceStage3Endpoint(x,y,z){
 }
 
 function addShieldedGate(x,y,z,w,h,d){
-  w=w||8;h=h||5;d=d||1.2;
+  w=w||7;h=h||7;d=d||1.4;
   const g=new THREE.Group();g.position.set(x,y,z);
-  const wall=new THREE.Mesh(new THREE.BoxGeometry(w,h,d),new THREE.MeshBasicMaterial({color:0x8868ff,transparent:true,opacity:0.72}));
+  // Purple energy wall fills the ONLY opening in an asteroid choke.
+  const wall=new THREE.Mesh(new THREE.BoxGeometry(w,h,d),new THREE.MeshBasicMaterial({color:0x8868ff,transparent:true,opacity:0.78}));
   wall.position.y=h*0.5;g.add(wall);
-  const rim=new THREE.Mesh(new THREE.BoxGeometry(w+0.4,h+0.6,d+0.3),new THREE.MeshBasicMaterial({color:0xffe078,transparent:true,opacity:0.55}));
+  const rim=new THREE.Mesh(new THREE.BoxGeometry(w+0.45,h+0.7,d+0.35),new THREE.MeshBasicMaterial({color:0xc8b0ff,transparent:true,opacity:0.62}));
   rim.position.y=h*0.5;g.add(rim);
-  for(let i=0;i<6;i++){
-    const t=(i+0.5)/6;
-    g.add(mesh(SPH,new THREE.MeshBasicMaterial({color:0xc8b0ff,transparent:true,opacity:0.85}),lerp(-w*0.42,w*0.42,t),h*0.55,0,0.14));
+  for(let i=0;i<7;i++){
+    const t=(i+0.5)/7;
+    g.add(mesh(SPH,new THREE.MeshBasicMaterial({color:0xa070ff,transparent:true,opacity:0.9}),lerp(-w*0.42,w*0.42,t),h*0.55,0,0.16));
   }
-  const pillarL=mesh(CYL,new THREE.MeshBasicMaterial({color:0x5ec8ff,transparent:true,opacity:0.65}),-w*0.48,0,0,0.22,h*1.05,0.22);
-  const pillarR=mesh(CYL,new THREE.MeshBasicMaterial({color:0x5ec8ff,transparent:true,opacity:0.65}),w*0.48,0,0,0.22,h*1.05,0.22);
+  const pillarL=mesh(CYL,new THREE.MeshBasicMaterial({color:0x5ec8ff,transparent:true,opacity:0.7}),-w*0.52,0,0,0.28,h*1.08,0.28);
+  const pillarR=mesh(CYL,new THREE.MeshBasicMaterial({color:0x5ec8ff,transparent:true,opacity:0.7}),w*0.52,0,0,0.28,h*1.08,0.28);
   g.add(pillarL);g.add(pillarR);
   g.userData.landmark=true;g.userData.shieldGate=true;
   scene.add(g);levelDecor.push(g);
+  // Thin-but-wide asteroid WALL with a single hole. Barriers stay after the beam clears the opening.
+  // Keep Z thickness modest so the post-gate rest pad (z≈gate.z-2) stays clear.
+  const rock=0x6a5a48;
+  const thick=3.4;
+  const spanL=70,spanR=70;
+  const below=14,totalH=42;
+  const left=addSolid(x-w*0.5-spanL*0.5,y-below,z,spanL,totalH,thick,rock,{surf:'stone',invisible:false});
+  if(left.mesh&&left.mesh.material)left.mesh.material.color.setHex(0x7a6a58);
+  const right=addSolid(x+w*0.5+spanR*0.5,y-below,z,spanR,totalH,thick,rock,{surf:'stone',invisible:false});
+  if(right.mesh&&right.mesh.material)right.mesh.material.color.setHex(0x7a6a58);
+  const floor=addSolid(x,y-below,z,w+0.6,below,thick,rock,{surf:'stone',invisible:false});
+  if(floor.mesh&&floor.mesh.material)floor.mesh.material.color.setHex(0x5a4a3a);
+  const ceilH=Math.max(8,totalH-below-h);
+  const ceil=addSolid(x,y+h,z,w+0.6,ceilH,thick,rock,{surf:'stone',invisible:false});
+  if(ceil.mesh&&ceil.mesh.material)ceil.mesh.material.color.setHex(0x5a4a3a);
+  // Readable boulder face along the wall so the choke is obvious, not an invisible slab.
+  for(const side of[-1,1]){
+    for(let i=0;i<6;i++){
+      const bx=x+side*(w*0.5+1.8+i*3.1),by=y+0.6+i*1.35,bz=z+((i%2)?1.1:-1.1);
+      const boulder=mesh(SPH,lam(0x8a7a68),bx,by,bz,1.55+i*0.12,1.2+i*0.08,1.4+i*0.1);
+      scene.add(boulder);levelDecor.push(boulder);
+    }
+  }
+  for(let i=0;i<4;i++){
+    const bx=x-w*0.35+i*(w*0.25),by=y-1.2-i*0.4,bz=z+((i%2)?0.9:-0.9);
+    const sill=mesh(SPH,lam(0x6a5a48),bx,by,bz,1.1,0.85,1.0);
+    scene.add(sill);levelDecor.push(sill);
+  }
   const solid=addSolid(x,y,z,w,h,d,0x442266,{surf:'stone',role:'shieldGate',invisible:true});
-  const gate={g,x,y,z,w,h,d,hitR:Math.max(w,h)*0.42,solid,opened:false,openT:0,fxT:0};
+  const gate={g,x,y,z,w,h,d,hitR:Math.max(w,h)*0.55,solid,opened:false,openT:0,fxT:0,
+    barriers:[left,right,ceil,floor],opening:{x0:x-w/2,x1:x+w/2,y0:y,y1:y+h,z0:z-thick/2,z1:z+thick/2}};
   shieldedGates.push(gate);
   return gate;
 }
@@ -1014,7 +1069,7 @@ function openShieldedGate(gate){
   }
   SFX.crystalChime();CAM.shake=Math.max(CAM.shake,0.45);CAM.fovKick=Math.max(CAM.fovKick,6);
   spawnRing(gate.x,gate.y+gate.h*0.45,gate.z,0xc8b0ff,0.45,8,0.55);
-  for(let i=0;i<18;i++)spawnP(gate.x+rand(-gate.w*0.4,gate.w*0.4),gate.y+rand(0.2,gate.h),gate.z+rand(-0.4,0.4),rand(-2,2),rand(0.5,3),rand(-1,1),rand(0.08,0.16),Math.random()<0.5?0xc8b0ff:0xffe078,rand(0.5,0.9),0.45,-3,0.9);
+  for(let i=0;i<18;i++)spawnP(gate.x+rand(-gate.w*0.4,gate.w*0.4),gate.y+rand(0.2,gate.h),gate.z+rand(-0.4,0.4),rand(-2,2),rand(0.5,3),rand(-1,1),rand(0.08,0.16),Math.random()<0.5?0xc8b0ff:0xa070ff,rand(0.5,0.9),0.45,-3,0.9);
   showToast('Star Beam opened the way!');
 }
 
@@ -1033,22 +1088,540 @@ function updateShieldedGates(dt){
 }
 
 function addObservatoryLandmark(x,y,z){
+  return buildObservatory(x,y,z,{landmarkOnly:true});
+}
+
+function addSpaceJellyfish(x,y,z){
   const g=new THREE.Group();g.position.set(x,y,z);
-  const deck=mesh(CYL,new THREE.MeshBasicMaterial({color:0x88a8d8,transparent:true,opacity:0.55}),0,0.2,0,4.5,0.35,4.5);
-  g.add(deck);
-  const dome=new THREE.Mesh(SPH,new THREE.MeshBasicMaterial({color:0xa8d0ff,transparent:true,opacity:0.42}));
-  dome.scale.set(3.2,1.8,3.2);dome.position.y=1.6;g.add(dome);
-  const scope=mesh(CYL,lam(0xc8d8f0),0,2.4,-1.2,0.18,2.8,0.18);scope.rotation.x=-0.55;g.add(scope);
-  const arrow=mesh(CYL,new THREE.MeshBasicMaterial({color:0xffe078,transparent:true,opacity:0.75}),0,1.2,2.8,0.12,0.12,2.4);
-  g.add(arrow);
-  for(let i=0;i<3;i++){
-    const a=-0.35+i*0.35;
-    g.add(mesh(SPH,new THREE.MeshBasicMaterial({color:0xffe078,transparent:true,opacity:0.7}),Math.sin(a)*3.8,0.8,Math.cos(a)*3.8,0.16));
+  const bell=new THREE.Mesh(SPH,new THREE.MeshBasicMaterial({color:0xc8b0ff,transparent:true,opacity:0.62}));
+  bell.scale.set(0.55,0.42,0.55);g.add(bell);
+  g.add(mesh(SPH,new THREE.MeshBasicMaterial({color:0xffe078,transparent:true,opacity:0.45}),0,-0.15,0,0.08));
+  for(let i=0;i<4;i++){
+    const a=i/4*TAU;
+    const tent=mesh(CYL,new THREE.MeshBasicMaterial({color:0xa8d0ff,transparent:true,opacity:0.55}),Math.cos(a)*0.22,-0.35,Math.sin(a)*0.22,0.03,0.45,0.03);
+    tent.rotation.x=0.35;g.add(tent);
   }
-  g.userData.landmark=true;g.userData.landable=false;g.userData.observatory=true;g.userData.interactive=false;
-  scene.add(g);levelDecor.push(g);spaceDecorPlanets.push(g);
+  g.userData.decor=true;g.userData.harmless=true;
+  scene.add(g);levelDecor.push(g);
+  spaceJellyfish.push({g,x,y,z,hx:x,hy:y,hz:z,ph:rand(0,TAU),drift:rand(0,TAU)});
   return g;
 }
+
+function updateSpaceJellyfish(dt){
+  for(const j of spaceJellyfish){
+    j.ph+=dt*0.35;
+    const bob=Math.sin(time*1.4+j.ph)*0.35,sway=Math.sin(time*0.7+j.drift)*0.55;
+    j.g.position.set(j.x+sway,j.y+bob,j.z+Math.cos(time*0.6+j.ph)*0.4);
+    j.g.rotation.y+=dt*0.25;
+    const bell=j.g.children[0];
+    if(bell&&bell.material)bell.material.opacity=0.5+Math.sin(time*2+j.ph)*0.12;
+  }
+}
+
+function gustHitJellyfish(mx,mz,k){
+  for(const j of spaceJellyfish){
+    const s=k(j.x,j.z);
+    if(s>0.15&&Math.abs(j.y-P.pos.y)<4){
+      j.drift+=0.8;SFX.bubblePop();
+      for(let i=0;i<5;i++)spawnP(j.x,j.y,j.z,rand(-1,1),rand(0.2,1.2),rand(-1,1),0.07,0xc8b0ff,0.45,0.4,0,0.75);
+    }
+  }
+}
+
+function buildObservatory(x,y,z,opts){
+  opts=opts||{};
+  const g=new THREE.Group();g.position.set(x,y,z);
+  // Glass deck platforms — MAIN deck is a real landable solid matching the visible cylinder.
+  const deck=mesh(CYL,new THREE.MeshBasicMaterial({color:0x88a8d8,transparent:true,opacity:0.55}),0,0.2,0,5.2,0.35,5.2);
+  g.add(deck);
+  const deck2=mesh(CYL,new THREE.MeshBasicMaterial({color:0xa8d0ff,transparent:true,opacity:0.42}),-2.2,0.15,-1.8,3.4,0.28,3.4);
+  g.add(deck2);
+  if(!opts.landmarkOnly){
+    // Generous main-deck collision (≈ visual radius 5.2). Bottom at y so top ≈ y+0.42.
+    const mainDeck=addSolid(x,y,z,10.4,0.42,10.4,0x6a88b8,{surf:'pad',role:'landable',landingPad:true});
+    mainDeck.mesh.visible=false;
+    // Side deck also landable so the offset glass is honest.
+    const sideDeck=addSolid(x-2.2,y,z-1.8,6.6,0.36,6.6,0x6a88b8,{surf:'pad',role:'landable',landingPad:true});
+    sideDeck.mesh.visible=false;
+    // Catwalk toward Black Hole remains as a readable secondary pad.
+    const catwalk=addSolid(x,y+0.05,z-4.6,3.8,0.28,3.2,0x6a88b8,{surf:'pad',role:'landable',landingPad:true});
+    catwalk.mesh.visible=true;
+    if(catwalk.mesh.material&&catwalk.mesh.material.color)catwalk.mesh.material.color.setHex(0x7a98c8);
+    // Landing assist targets the obvious MAIN deck center — not a tiny offset patch.
+    addLandingBeacon(x,y,z,3.8,{approachR:30,nearR:16,primary:true});
+    addLandingBeacon(x,y+0.05,z-4.6,1.8,{approachR:14,nearR:6,primary:false});
+  }
+  // Dome sits above deck so it does not hide Snoozle 4
+  const dome=new THREE.Mesh(SPH,new THREE.MeshBasicMaterial({color:0xa8d0ff,transparent:true,opacity:0.32}));
+  dome.scale.set(3.2,1.7,3.2);dome.position.set(0,2.4,-0.4);g.add(dome);
+  // Telescopes / frame point toward the Black Hole (-Z)
+  const scope1=mesh(CYL,lam(0xc8d8f0),-1.4,2.4,-2.8,0.16,2.8,0.16);scope1.rotation.x=0.55;g.add(scope1);
+  const scope2=mesh(CYL,lam(0xc8d8f0),1.5,2.2,-2.4,0.14,2.4,0.14);scope2.rotation.x=0.48;scope2.rotation.y=-0.2;g.add(scope2);
+  const frame=mesh(CYL,new THREE.MeshBasicMaterial({color:0xffe078,transparent:true,opacity:0.78}),0,1.6,-4.2,0.12,0.12,3.4);
+  g.add(frame);
+  // Gold rim lights toward Black Hole for orientation
+  for(let i=0;i<5;i++){
+    const a=-0.55+i*0.28;
+    g.add(mesh(SPH,new THREE.MeshBasicMaterial({color:0xffe078,transparent:true,opacity:0.75}),Math.sin(a)*3.6,0.85,-Math.cos(a)*4.4,0.16));
+  }
+  for(let i=0;i<8;i++){
+    const a=i/8*TAU;
+    g.add(mesh(SPH,new THREE.MeshBasicMaterial({color:0x5ec8ff,transparent:true,opacity:0.55}),Math.cos(a)*5.0,0.5,Math.sin(a)*5.0,0.11));
+  }
+  // Soft pedestal under Snoozle 4 spot (toward BH) so the final friend reads clearly
+  g.add(mesh(CYL,new THREE.MeshBasicMaterial({color:0xffe078,transparent:true,opacity:0.55}),0,0.55,-2.6,0.9,0.18,0.9));
+  g.add(mesh(SPH,new THREE.MeshBasicMaterial({color:0xffffff,transparent:true,opacity:0.5}),0,1.05,-2.6,0.22));
+  g.userData.landmark=true;g.userData.landable=true;g.userData.observatory=true;
+  g.userData.deck={x,y:y+0.42,z,r:5.0};
+  scene.add(g);levelDecor.push(g);spaceDecorPlanets.push(g);
+  if(!opts.landmarkOnly){
+    g.userData.fullObservatory=true;
+    addSpaceJellyfish(x-4.2,y+2.2,z+2.0);
+    addSpaceJellyfish(x+4.5,y+3.0,z+0.8);
+    addSpaceJellyfish(x-2.0,y+3.8,z+3.2);
+  }
+  return g;
+}
+
+function addSpaceStage5Endpoint(x,y,z){
+  const g=new THREE.Group();g.position.set(x,y,z);
+  g.add(mesh(CYL,new THREE.MeshBasicMaterial({color:0xa8d0ff,transparent:true,opacity:0.38}),0,0.05,0,3.8,0.08,3.8));
+  const ring=new THREE.Mesh(new THREE.TorusGeometry(3.2,0.14,8,32),new THREE.MeshBasicMaterial({color:0xffe078,transparent:true,opacity:0.8}));
+  ring.rotation.x=Math.PI/2;g.add(ring);
+  g.add(mesh(SPH,new THREE.MeshBasicMaterial({color:0x88a8d8,transparent:true,opacity:0.6}),0,1.5,0,0.3));
+  scene.add(g);levelDecor.push(g);
+  spaceStage5Ends.push({g,x,y,z,triggered:false,fxT:0});
+  return g;
+}
+
+function updateSpaceStage5Ends(dt){
+  for(const e of spaceStage5Ends){
+    if(e.triggered){
+      e.fxT+=dt;
+      if(e.fxT>0.08&&e.fxT<0.9){
+        e.pt=(e.pt||0)-dt;if(e.pt<=0){e.pt=0.06;
+          spawnP(e.x+rand(-1.2,1.2),e.y+rand(0.3,2),e.z+rand(-1.2,1.2),rand(-1,1),rand(1,3),rand(-1,1),0.1,Math.random()<0.5?0xa8d0ff:0xffe078,0.5,0.4,0,0.8);
+        }
+      }
+      continue;
+    }
+    if(P.dead||won||isSpaceFinishImmune())continue;
+    if(Math.hypot(P.pos.x-e.x,P.pos.y-e.y,P.pos.z-e.z)<3.5){
+      e.triggered=true;e.fxT=0;e.pt=0;
+      CAM.shake=Math.max(CAM.shake,0.35);CAM.fovKick=Math.max(CAM.fovKick,5);
+      rumble(100,0.35,0.3);SFX.checkpoint();
+      spawnRing(e.x,e.y+0.5,e.z,0xa8d0ff,0.4,6,0.5);
+      showToast('The black hole waits ahead…');
+    }
+  }
+}
+
+function buildFinishVoidScene(bh){
+  const vx=bh.x,vy=bh.y+10,vz=bh.z-48;
+  const g=new THREE.Group();g.position.set(vx,vy,vz);g.visible=false;g.name='finishVoid';
+  // Calm deep starfield — distinct from the ordinary approach black-hole scene.
+  const stars=[];
+  for(let i=0;i<90;i++){
+    const a=rand(0,TAU),el=rand(-0.9,0.9),r=rand(10,58);
+    const sx=Math.cos(a)*Math.cos(el)*r,sy=Math.sin(el)*r*0.7,sz=Math.sin(a)*Math.cos(el)*r-8;
+    const st=mesh(SPH,new THREE.MeshBasicMaterial({color:Math.random()<0.2?0xfff0c8:0xffffff,transparent:true,opacity:rand(0.35,0.95)}),sx,sy,sz,rand(0.05,0.16));
+    g.add(st);stars.push(st);
+  }
+  // Friendly glowing portal-remnant / halo behind the tableau (not scary).
+  const softGlow=mesh(SPH,new THREE.MeshBasicMaterial({color:0x2a1848,transparent:true,opacity:0.55}),0,2.2,-16,5.5,5.5,5.5);
+  g.add(softGlow);
+  const halo=new THREE.Mesh(new THREE.TorusGeometry(7.5,0.55,10,48),new THREE.MeshBasicMaterial({color:0xfff0c8,transparent:true,opacity:0.72}));
+  halo.rotation.x=Math.PI/2;halo.position.set(0,2.2,-16);g.add(halo);
+  const halo2=new THREE.Mesh(new THREE.TorusGeometry(9.2,0.22,8,40),new THREE.MeshBasicMaterial({color:0xc8b0ff,transparent:true,opacity:0.5}));
+  halo2.rotation.x=Math.PI/2;halo2.rotation.z=0.35;halo2.position.set(0,2.2,-16);g.add(halo2);
+  const sparkles=[];
+  for(let i=0;i<18;i++){
+    const a=i/18*TAU;
+    const sp=mesh(SPH,new THREE.MeshBasicMaterial({color:0xffffff,transparent:true,opacity:0.8}),Math.cos(a)*5.5,2.2+Math.sin(a*2)*0.6,Math.sin(a)*5.5-4,0.1);
+    g.add(sp);sparkles.push(sp);
+  }
+  scene.add(g);levelDecor.push(g);
+  bh.voidGroup=g;bh.voidStars=stars;bh.voidHalo=halo;bh.voidHalo2=halo2;bh.voidSparkles=sparkles;
+  bh.voidCenter={x:vx,y:vy,z:vz};bh.voidActive=false;
+}
+
+function buildBlackHoleFinish(x,y,z){
+  const g=new THREE.Group();g.position.set(x,y,z);
+  // Large inactive silhouette — readable from the Observatory (~28m away).
+  const core=mesh(SPH,new THREE.MeshBasicMaterial({color:0x020208}),0,0,0,4.4,4.4,4.4);g.add(core);
+  const darkHalo=mesh(SPH,new THREE.MeshBasicMaterial({color:0x1a1028,transparent:true,opacity:0.55}),0,0,0,5.6,5.6,5.6);g.add(darkHalo);
+  const ring=new THREE.Mesh(new THREE.TorusGeometry(8.4,0.85,10,48),new THREE.MeshBasicMaterial({color:0x3a2858,transparent:true,opacity:0.88}));
+  ring.rotation.x=Math.PI/2;g.add(ring);
+  const ring2=new THREE.Mesh(new THREE.TorusGeometry(10.2,0.35,8,40),new THREE.MeshBasicMaterial({color:0x8878c8,transparent:true,opacity:0.55}));
+  ring2.rotation.x=Math.PI/2;ring2.rotation.z=0.4;g.add(ring2);
+  const portal=new THREE.Mesh(new THREE.TorusGeometry(3.2,0.28,10,40),new THREE.MeshBasicMaterial({color:0x1a1028,transparent:true,opacity:0.35}));
+  portal.rotation.x=Math.PI/2;portal.visible=false;g.add(portal);
+  const portalHalo=new THREE.Mesh(new THREE.TorusGeometry(3.8,0.16,8,36),new THREE.MeshBasicMaterial({color:0xfff0c8,transparent:true,opacity:0}));
+  portalHalo.rotation.x=Math.PI/2;portalHalo.visible=false;g.add(portalHalo);
+  const sparkles=[];
+  for(let i=0;i<20;i++){
+    const a=i/20*TAU;
+    const sp=mesh(SPH,new THREE.MeshBasicMaterial({color:0xffffff,transparent:true,opacity:0.75}),Math.cos(a)*9.4,Math.sin(a*2)*0.5,Math.sin(a)*9.4,0.16);
+    g.add(sp);sparkles.push(sp);
+  }
+  g.userData.landmark=true;g.userData.interactive=true;g.userData.landable=false;g.userData.active=false;
+  scene.add(g);blackHoleLandmark=g;levelDecor.push(g);
+  BLACK_HOLE={
+    g,x,y,z,active:false,activated:false,warping:false,warpT:0,warpDur:7.0,finishImmune:false,
+    portalR:7.2,triggerR:3.0,bounceR:8.5,
+    core,ring,ring2,portal,portalHalo,sparkles,
+    voidReady:true,voidActive:false,voidGroup:null,winBurstT:0,
+    warpFrom:null,warpTo:null,
+    warpGroup:null,warpStreaks:null,warpRings:null,warpPlanets:null
+  };
+  buildFinishVoidScene(BLACK_HOLE);
+  registerFinish({
+    x,z,top:y+14,
+    winMsg:'The stars are singing!',
+    onAllAwake(){activateBlackHolePortal();},
+    onWin(){
+      BLACK_HOLE.finishImmune=true;
+      if(!BLACK_HOLE.voidActive)enterFinishVoid();
+      spaceWinBurst();
+    },
+    update(dt,winT){updateBlackHoleFinish(dt,winT);},
+    camHold(dt){spaceFinishCamHold(dt);}
+  });
+  return g;
+}
+
+function igniteBlackHoleRoute(){
+  // Bright gold path from Observatory toward the Black Hole — no reading required.
+  const ox=10,oy=25,oz=-276,tx=BLACK_HOLE.x,ty=BLACK_HOLE.y,tz=BLACK_HOLE.z;
+  for(let i=0;i<=14;i++){
+    const t=i/14;
+    const px=lerp(ox,tx,t),py=lerp(oy,ty,t)+Math.sin(t*Math.PI)*1.6,pz=lerp(oz,tz,t);
+    const star=mesh(SPH,new THREE.MeshBasicMaterial({color:i%2?0xffffff:0xfff0c8,transparent:true,opacity:0.95}),px,py,pz,0.28+t*0.12);
+    star.userData.routeStar=true;star.userData.pathIgnite=true;star.userData.pulseT=i*0.4;
+    scene.add(star);spaceRouteBeacons.push(star);levelDecor.push(star);
+  }
+  for(const b of spaceRouteBeacons){
+    if(!b.userData)continue;
+    const p=b.position||b;
+    const z=p.z!=null?p.z:(b.position&&b.position.z);
+    if(z==null||z>-278)continue;
+    b.userData.pathIgnite=true;
+    if(b.material&&b.material.color){b.material.color.setHex(0xfff0c8);b.material.opacity=1;}
+    if(b.children)b.children.forEach(c=>{
+      if(c.material&&c.material.color){c.material.color.setHex(0xfff0c8);if(c.material.opacity!=null)c.material.opacity=Math.max(c.material.opacity,0.9);}
+    });
+    if(b.scale&&b.scale.setScalar)b.scale.setScalar(1.55);
+  }
+  spawnRing(ox,oy,oz,0xfff0c8,0.5,8,0.55);
+  spawnRing(BLACK_HOLE.x,BLACK_HOLE.y,BLACK_HOLE.z,0xffffff,0.7,12,0.7);
+}
+
+function activateBlackHolePortal(){
+  if(!BLACK_HOLE||BLACK_HOLE.activated)return;
+  BLACK_HOLE.activated=true;BLACK_HOLE.active=true;BLACK_HOLE.activateT=0;
+  if(blackHoleLandmark)blackHoleLandmark.userData.active=true;
+  if(BLACK_HOLE.portal){
+    BLACK_HOLE.portal.visible=true;
+    if(BLACK_HOLE.portal.material){BLACK_HOLE.portal.material.color.setHex(0xfff0c8);BLACK_HOLE.portal.material.opacity=0.92;}
+  }
+  if(BLACK_HOLE.portalHalo){
+    BLACK_HOLE.portalHalo.visible=true;
+    if(BLACK_HOLE.portalHalo.material)BLACK_HOLE.portalHalo.material.opacity=0.95;
+  }
+  if(BLACK_HOLE.ring&&BLACK_HOLE.ring.material){
+    BLACK_HOLE.ring.material.color.setHex(0xfff0c8);
+    BLACK_HOLE.ring.material.opacity=0.98;
+  }
+  if(BLACK_HOLE.ring2&&BLACK_HOLE.ring2.material){
+    BLACK_HOLE.ring2.material.color.setHex(0xffffff);
+    BLACK_HOLE.ring2.material.opacity=0.85;
+  }
+  if(BLACK_HOLE.sparkles)BLACK_HOLE.sparkles.forEach(sp=>{if(sp.material){sp.material.color.setHex(0xfff0c8);sp.material.opacity=1;}});
+  igniteBlackHoleRoute();
+  SFX.blackHoleOpen();
+  CAM.shake=Math.max(CAM.shake,0.55);CAM.fovKick=Math.max(CAM.fovKick,8);
+  spawnRing(BLACK_HOLE.x,BLACK_HOLE.y,BLACK_HOLE.z,0xfff0c8,0.55,10,0.65);
+  for(let i=0;i<36;i++)spawnP(BLACK_HOLE.x+rand(-4,4),BLACK_HOLE.y+rand(-1,3),BLACK_HOLE.z+rand(-4,4),rand(-2,2),rand(0.5,3.5),rand(-2,2),rand(0.1,0.18),Math.random()<0.5?0xfff0c8:0xffffff,rand(0.55,1.0),0.4,-3,0.95);
+  // Flash visible from Observatory
+  for(let i=0;i<12;i++)spawnP(10+rand(-2,2),25+rand(0,2),-274+rand(-2,2),rand(-1,1),rand(1,3),rand(-3,-1),0.12,0xfff0c8,0.7,0.35,0,0.9);
+  showToast('The portal opened!');
+}
+
+function destroyWarpTunnelVisuals(){
+  if(!BLACK_HOLE)return;
+  const rem=m=>{if(!m)return;if(m.parent&&m.parent.remove)m.parent.remove(m);else if(scene.remove)scene.remove(m);else if(m.visible!=null)m.visible=false;};
+  if(BLACK_HOLE.warpGroup){rem(BLACK_HOLE.warpGroup);BLACK_HOLE.warpGroup=null;}
+  BLACK_HOLE.warpStreaks=null;BLACK_HOLE.warpRings=null;BLACK_HOLE.warpPlanets=null;
+}
+
+function buildWarpTunnelVisuals(){
+  destroyWarpTunnelVisuals();
+  if(!BLACK_HOLE)return;
+  const g=new THREE.Group();g.name='warpTunnel';
+  const streaks=[];
+  for(let i=0;i<160;i++){
+    const a=rand(0,TAU),r=rand(0.7,5.2),d=rand(2,110);
+    const len=rand(1.2,3.6);
+    const st=mesh(BOXG,new THREE.MeshBasicMaterial({color:Math.random()<0.3?0xfff0c8:0xffffff,transparent:true,opacity:rand(0.55,1)}),Math.cos(a)*r,Math.sin(a)*r,d,0.045,0.045,len);
+    g.add(st);streaks.push(st);
+  }
+  const rings=[];
+  for(let i=0;i<16;i++){
+    const col=CONF[i%CONF.length];
+    const ring=new THREE.Mesh(new THREE.TorusGeometry(3.0+((i%3)*0.22),0.22+((i%2)*0.06),8,40),new THREE.MeshBasicMaterial({color:col,transparent:true,opacity:0.92}));
+    ring.position.z=i*6.2+3;
+    ring.rotation.z=i*0.35;
+    g.add(ring);rings.push(ring);
+  }
+  const planets=[];
+  const cols=[0xff8a6a,0x6fd4ff,0xffe078,0xc8b0ff,0x7dff9a,0xff9a3c];
+  for(let i=0;i<7;i++){
+    const pg=new THREE.Group();
+    const rr=rand(0.85,2.0);
+    pg.add(mesh(SPH,new THREE.MeshBasicMaterial({color:cols[i%cols.length]}),0,0,0,rr));
+    if(i%2===0){
+      const tor=new THREE.Mesh(new THREE.TorusGeometry(rr*1.35,rr*0.1,6,24),new THREE.MeshBasicMaterial({color:0xffffff,transparent:true,opacity:0.55}));
+      tor.rotation.x=Math.PI/2;pg.add(tor);
+    }
+    pg.position.set(rand(-7,7),rand(-3.5,3.5),18+i*12);
+    g.add(pg);planets.push(pg);
+  }
+  scene.add(g);
+  BLACK_HOLE.warpGroup=g;BLACK_HOLE.warpStreaks=streaks;BLACK_HOLE.warpRings=rings;BLACK_HOLE.warpPlanets=planets;
+}
+
+function startWarpTunnel(){
+  if(!BLACK_HOLE||BLACK_HOLE.warping||won)return;
+  BLACK_HOLE.warping=true;BLACK_HOLE.warpT=0;BLACK_HOLE.finishImmune=true;
+  BLACK_HOLE.warpFrom={x:P.pos.x,y:P.pos.y,z:P.pos.z,yaw:P.yaw};
+  // Ride ends at the finish-void entry — not the ordinary approach scene.
+  const vc=BLACK_HOLE.voidCenter||{x:BLACK_HOLE.x,y:BLACK_HOLE.y+10,z:BLACK_HOLE.z-48};
+  BLACK_HOLE.warpTo={x:vc.x,y:vc.y+1.5,z:vc.z+10};
+  P.inv=99;P.vel.set(0,0,0);endSpaceThrust();
+  buildWarpTunnelVisuals();
+  SFX.warpWhoosh();CAM.mode='warp';
+  rumble(200,0.5,0.45);
+  applyWarpCamera(P.pos.x,P.pos.y,P.pos.z);
+  const hint=$('hint');if(hint)hint.style.opacity=0;
+  const toast=$('toast');if(toast){toast.style.opacity=0;toast.textContent='';}
+}
+
+function applyWarpCamera(px,py,pz){
+  const yaw=P.yaw;
+  // Behind Pling looking forward along his facing (sin/cos yaw).
+  const fx=Math.sin(yaw),fz=Math.cos(yaw);
+  CAM.look.set(px+fx*2.4,py+0.9,pz+fz*2.4);
+  CAM.pos.set(px-fx*4.6,py+2.0,pz-fz*4.6);
+  CAM.yaw=yaw;CAM.pitch=0.16;CAM.boomDist=5;CAM.targetDist=5;CAM.mode='warp';CAM.collisionPulled=false;
+  CAM.effectiveDist=Math.hypot(CAM.pos.x-CAM.look.x,CAM.pos.y-CAM.look.y,CAM.pos.z-CAM.look.z);
+}
+
+function stageFinishSnoozleTableau(){
+  if(!BLACK_HOLE||!BLACK_HOLE.voidCenter)return;
+  const n=snoozles.length;
+  for(let i=0;i<n;i++){
+    const s=snoozles[i];
+    s.celebOrbit=true;
+    if(s.state==='sleep'){s.state='home';s.g.userData.closed.visible=false;s.g.userData.open.visible=true;}
+    s.orbitA=(i/Math.max(n,1))*TAU;
+    s.orbitR=3.35;
+    s.orbitH=1.15;
+    s.ph=s.ph!=null?s.ph:i;
+  }
+}
+
+function clearFinishSnoozleTableau(){
+  for(const s of snoozles){if(s)s.celebOrbit=false;}
+}
+
+function enterFinishVoid(){
+  if(!BLACK_HOLE)return;
+  destroyWarpTunnelVisuals();
+  BLACK_HOLE.warping=false;
+  BLACK_HOLE.voidActive=true;
+  BLACK_HOLE.finishImmune=true;
+  if(BLACK_HOLE.voidGroup)BLACK_HOLE.voidGroup.visible=true;
+  // Hide ordinary approach black hole — celebration lives in the void scene.
+  if(BLACK_HOLE.g)BLACK_HOLE.g.visible=false;
+  stageSpaceWinPose();
+  stageFinishSnoozleTableau();
+  updateFinishSnoozleTableau(0);
+}
+
+function stageSpaceWinPose(){
+  if(!BLACK_HOLE)return;
+  const c=BLACK_HOLE.voidCenter||{x:BLACK_HOLE.x,y:BLACK_HOLE.y+1.5,z:BLACK_HOLE.z-14};
+  const vx=c.x,vy=c.y+1.2,vz=c.z;
+  P.pos.set(vx,vy,vz);P.vel.set(0,0,0);P.grounded=false;P.yaw=Math.PI;
+  CAM.look.set(vx,vy+1.5,vz);CAM.pos.set(vx+0.4,vy+6.2,vz+16.5);
+  CAM.yaw=0.02;CAM.pitch=0.26;CAM.boomDist=18;CAM.targetDist=18;CAM.mode='finish';CAM.collisionPulled=false;
+}
+
+function spaceWinBurst(){
+  if(!BLACK_HOLE)return;
+  const c=BLACK_HOLE.voidCenter||{x:BLACK_HOLE.x,y:BLACK_HOLE.y,z:BLACK_HOLE.z};
+  spawnRing(c.x,c.y+1,c.z,0xfff0c8,0.55,10,0.7);
+  for(let i=0;i<32;i++){
+    const a=rand(0,TAU),r=rand(2,9);
+    spawnP(c.x+Math.cos(a)*r,c.y+rand(0.5,6),c.z+Math.sin(a)*r,
+      rand(-2,2),rand(1,4),rand(-2,2),rand(0.08,0.16),CONF[Math.floor(Math.random()*CONF.length)],rand(0.6,1.1),0.35,-3,1);
+  }
+}
+
+function spaceFinishCamHold(dt){
+  if(!BLACK_HOLE)return;
+  const c=BLACK_HOLE.voidCenter||{x:BLACK_HOLE.x,y:BLACK_HOLE.y+1.8,z:BLACK_HOLE.z-10};
+  const lookX=c.x,lookY=c.y+1.8,lookZ=c.z;
+  const posX=c.x+0.4,posY=c.y+6.4,posZ=c.z+17.5;
+  CAM.look.x=damp(CAM.look.x,lookX,8,dt);CAM.look.y=damp(CAM.look.y,lookY,8,dt);CAM.look.z=damp(CAM.look.z,lookZ,8,dt);
+  CAM.pos.x=damp(CAM.pos.x,posX,7,dt);CAM.pos.y=damp(CAM.pos.y,posY,7,dt);CAM.pos.z=damp(CAM.pos.z,posZ,7,dt);
+  CAM.yaw=0.02;CAM.pitch=0.26;CAM.boomDist=18;CAM.targetDist=18;CAM.mode='finish';
+  CAM.effectiveDist=Math.hypot(CAM.pos.x-CAM.look.x,CAM.pos.y-CAM.look.y,CAM.pos.z-CAM.look.z);
+  CAM.collisionPulled=false;
+}
+
+function updateFinishSnoozleTableau(dt){
+  if(!BLACK_HOLE||!BLACK_HOLE.voidActive||!BLACK_HOLE.voidCenter)return;
+  const c=BLACK_HOLE.voidCenter;
+  for(const s of snoozles){
+    if(!s.celebOrbit)continue;
+    s.orbitA=(s.orbitA||0)+dt*0.58;
+    const x=c.x+Math.cos(s.orbitA)*s.orbitR;
+    const z=c.z+Math.sin(s.orbitA)*s.orbitR;
+    const y=c.y+s.orbitH+Math.sin(time*2.2+(s.ph||0))*0.38;
+    s.g.position.set(x,y,z);
+    s.baseY=y;
+    s.g.rotation.y+=dt*2.8;
+  }
+}
+
+function repelInactiveBlackHole(dt){
+  if(!BLACK_HOLE||BLACK_HOLE.active||BLACK_HOLE.warping||won||P.dead)return;
+  const dx=P.pos.x-BLACK_HOLE.x,dy=(P.pos.y+0.55)-BLACK_HOLE.y,dz=P.pos.z-BLACK_HOLE.z;
+  const d=Math.hypot(dx,dy,dz);
+  if(d>=BLACK_HOLE.bounceR||d<0.01)return;
+  const nx=dx/d,ny=dy/d,nz=dz/d;
+  const push=(BLACK_HOLE.bounceR-d)*10*dt;
+  P.vel.x+=nx*push;P.vel.y+=ny*push*0.65;P.vel.z+=nz*push;
+  BLACK_HOLE.shimmerT=(BLACK_HOLE.shimmerT||0)-dt;
+  if(BLACK_HOLE.shimmerT<=0){
+    BLACK_HOLE.shimmerT=0.12;
+    spawnP(BLACK_HOLE.x+nx*3.2,BLACK_HOLE.y+ny*1.5,BLACK_HOLE.z+nz*3.2,rand(-0.5,0.5),rand(0.2,1),rand(-0.5,0.5),0.08,0x8878c8,0.45,0.4,0,0.75);
+  }
+}
+
+function updateWarpTunnel(dt){
+  if(!BLACK_HOLE||!BLACK_HOLE.warping||won)return;
+  BLACK_HOLE.warpT+=dt;
+  const k=clamp(BLACK_HOLE.warpT/BLACK_HOLE.warpDur,0,1);
+  const ease=smooth(k);
+  const from=BLACK_HOLE.warpFrom,to=BLACK_HOLE.warpTo;
+  const px=lerp(from.x,to.x,ease),py=lerp(from.y,to.y,ease)+Math.sin(k*Math.PI)*2.5,pz=lerp(from.z,to.z,ease);
+  P.pos.set(px,py,pz);
+  P.yaw=from.yaw+((()=>{let d=Math.atan2(to.x-from.x,to.z-from.z)-from.yaw;while(d>Math.PI)d-=TAU;while(d<-Math.PI)d+=TAU;return d;})())*ease;
+  // Soft steering — child stays involved
+  if(IN.mx||IN.mz){
+    P.pos.x+=IN.mx*dt*2.2;P.pos.y+=IN.mz*dt*1.4;
+  }
+  applyWarpCamera(P.pos.x,P.pos.y,P.pos.z);
+  // Tunnel spectacle: streaking stars, rainbow rings, passing planets travel past the camera.
+  if(BLACK_HOLE.warpGroup){
+    BLACK_HOLE.warpGroup.position.set(P.pos.x,P.pos.y,P.pos.z);
+    BLACK_HOLE.warpGroup.rotation.y=P.yaw;
+    const scroll=-(22+k*26);
+    if(BLACK_HOLE.warpRings){
+      for(let i=0;i<BLACK_HOLE.warpRings.length;i++){
+        const ring=BLACK_HOLE.warpRings[i];
+        ring.position.z+=scroll*dt;
+        ring.rotation.z+=dt*(1.2+i*0.05);
+        if(ring.position.z<-8){
+          ring.position.z+=BLACK_HOLE.warpRings.length*6.2;
+          if(ring.material)ring.material.color.setHex(CONF[(i+Math.floor(BLACK_HOLE.warpT*3))%CONF.length]);
+        }
+      }
+    }
+    if(BLACK_HOLE.warpStreaks){
+      for(const st of BLACK_HOLE.warpStreaks){
+        st.position.z+=-(48+k*40)*dt;
+        if(st.position.z<-10){
+          const a=rand(0,TAU),r=rand(0.7,5.2);
+          st.position.set(Math.cos(a)*r,Math.sin(a)*r,st.position.z+110);
+        }
+      }
+    }
+    if(BLACK_HOLE.warpPlanets){
+      for(let i=0;i<BLACK_HOLE.warpPlanets.length;i++){
+        const pg=BLACK_HOLE.warpPlanets[i];
+        pg.position.z+=-(12+k*12)*dt;
+        pg.rotation.y+=dt*0.8;
+        if(pg.position.z<-12){
+          pg.position.z+=95;
+          pg.position.x=rand(-7,7);pg.position.y=rand(-3.5,3.5);
+        }
+      }
+    }
+  }
+  BLACK_HOLE.ringFxT=(BLACK_HOLE.ringFxT||0)-dt;
+  if(BLACK_HOLE.ringFxT<=0){
+    BLACK_HOLE.ringFxT=0.07;
+    const ringCol=CONF[Math.floor(k*CONF.length)%CONF.length];
+    spawnRing(P.pos.x,P.pos.y,P.pos.z,ringCol,0.2+k*0.3,4+k*3,0.3);
+  }
+  if(k>0.15&&k<0.95&&Math.random()<dt*3)SFX.warpTwinkle();
+  if(BLACK_HOLE.warpT>=BLACK_HOLE.warpDur){
+    enterFinishVoid();
+    triggerWin();
+  }
+}
+
+function updateBlackHoleFinish(dt,winT){
+  if(!BLACK_HOLE)return;
+  const bh=BLACK_HOLE;
+  if(bh.g&&bh.g.visible!==false){
+    if(bh.active){
+      bh.activateT=(bh.activateT||0)+dt;
+      const spin=0.08+bh.activateT*0.04;
+      bh.g.rotation.y+=dt*spin;
+      if(bh.ring)bh.ring.rotation.z+=dt*(0.35+bh.activateT*0.12);
+      if(bh.ring2)bh.ring2.rotation.z-=dt*(0.22+bh.activateT*0.08);
+      const pulse=0.55+Math.sin(time*2.8)*0.15;
+      if(bh.portal&&bh.portal.material)bh.portal.material.opacity=pulse;
+      if(bh.portalHalo&&bh.portalHalo.material)bh.portalHalo.material.opacity=0.35+Math.sin(time*3.2)*0.12;
+      for(const sp of bh.sparkles){
+        if(sp.material)sp.material.opacity=0.55+Math.sin(time*4+sp.position.x)*0.35;
+      }
+    }else{
+      bh.g.rotation.y+=dt*0.08;
+      if(bh.ring)bh.ring.rotation.z+=dt*0.25;
+      if(bh.ring2)bh.ring2.rotation.z-=dt*0.18;
+    }
+  }
+  if(bh.warping){updateWarpTunnel(dt);return;}
+  repelInactiveBlackHole(dt);
+  if(bh.active&&!won&&!bh.warping){
+    const dx=P.pos.x-bh.x,dy=(P.pos.y+0.55)-bh.y,dz=P.pos.z-bh.z;
+    const d=Math.hypot(dx,dy,dz);
+    if(d<bh.triggerR)startWarpTunnel();
+  }
+  if(winT>=0){
+    updateFinishSnoozleTableau(dt);
+    if(bh.voidGroup&&bh.voidGroup.visible){
+      if(bh.voidHalo)bh.voidHalo.rotation.z+=dt*0.35;
+      if(bh.voidHalo2)bh.voidHalo2.rotation.z-=dt*0.22;
+      if(bh.voidSparkles){
+        for(const sp of bh.voidSparkles){
+          if(sp.material)sp.material.opacity=0.5+Math.sin(time*4.5+sp.position.x)*0.4;
+        }
+      }
+    }
+    bh.winBurstT=(bh.winBurstT||0)-dt;
+    if(bh.winBurstT<=0&&winT<14){
+      bh.winBurstT=0.08;
+      spaceWinBurst();
+    }
+  }
+}
+
 
 function addSpaceStage4Endpoint(x,y,z){
   const g=new THREE.Group();g.position.set(x,y,z);
@@ -1120,6 +1693,8 @@ function updateSpaceWorld(dt){
   updateSpaceStage3Ends(dt);
   updateShieldedGates(dt);
   updateSpaceStage4Ends(dt);
+  updateSpaceStage5Ends(dt);
+  updateSpaceJellyfish(dt);
   for(const e of saucers){
     if(e.targetDummy&&e.flashT>0){e.flashT-=dt;if(e.g.userData&&e.g.userData.dome&&e.g.userData.dome.material)e.g.userData.dome.material.color.setHex(e.flashT>0?0xfff06a:0x7dff9a);}
   }
@@ -1129,9 +1704,13 @@ function updateSpaceDecor(dt){
   if(!isSpaceLevel())return;
   for(const b of spaceRouteBeacons){
     if(b.userData&&b.userData.routeStar){
-      const ph=b.userData.pulseT+time*2.4;
-      b.material.opacity=0.55+Math.sin(ph)*0.35;
-      b.scale.setScalar(0.14+Math.sin(ph*1.3)*0.04);
+      const boost=b.userData.pathIgnite?1.55:1;
+      const ph=b.userData.pulseT+time*(b.userData.pathIgnite?4.2:2.4);
+      b.material.opacity=(0.55+Math.sin(ph)*0.35)*Math.min(1,0.65+boost*0.25);
+      b.scale.setScalar((0.14+Math.sin(ph*1.3)*0.04)*boost);
+    }else if(b.userData&&b.userData.pathIgnite&&b.children){
+      const ph=time*3.6;
+      b.children.forEach(c=>{if(c.material&&c.material.opacity!=null)c.material.opacity=0.75+Math.sin(ph)*0.22;});
     }
   }
   for(const t of spaceLandingTargets){
@@ -1144,7 +1723,7 @@ function updateSpaceDecor(dt){
       }
     });
   }
-  if(blackHoleLandmark){
+  if(blackHoleLandmark&&!BLACK_HOLE){
     blackHoleLandmark.rotation.y+=dt*0.08;
     const ch=blackHoleLandmark.children;
     if(ch[1])ch[1].rotation.z+=dt*0.25;
@@ -1176,7 +1755,10 @@ window.__SPACE={
   get stage3Ends(){return spaceStage3Ends;},
   get stage4Ends(){return spaceStage4Ends;},
   get shieldedGates(){return shieldedGates;},
-  openShieldedGate,
+  get stage5Ends(){return spaceStage5Ends;},
+  get blackHoleFinish(){return BLACK_HOLE;},
+  get jellyfish(){return spaceJellyfish;},
+  isSpaceFinishImmune,isSpaceWarpCamera,activateBlackHolePortal,startWarpTunnel,
   get starCrates(){return starCrates;},
   get starBeams(){return starBeams;},
   get crystalInterior(){return crystalInterior;},
@@ -1186,5 +1768,6 @@ window.__SPACE={
   get CANDY_SHELL_ENTER_PAD(){return CANDY_SHELL_ENTER_PAD;},
   get CANDY_SHELL_EXIT_PAD(){return CANDY_SHELL_EXIT_PAD;},
   get cheeseMoonBody(){return cheeseMoonBody;},
+  get STAR_BEAM_COLORS(){return[0xa070ff,0xc8b0ff,0xffffff];},
   asteroidPos,hurtFromAsteroid,hitSaucer,stunSaucer,fireStarBeam,gustCrystalDust,spinHitCracked,spinHitStarCrates,slamHitStarCrates
 };

@@ -9,13 +9,13 @@ function releaseJump(H){H.ku({code:'Space'});}
 // ---- version ----
 {
   const H=boot();
-  ok(H.getCamDiag().VERSION_BASE==='v48 · Saucer Belt gate','version stamp v48');
+  ok(H.getCamDiag().VERSION_BASE==='v51 · Human playtest route','version stamp v51');
 }
 
 // ---- Snoozles 1, 2, and 3 present (Snoozle 4 deferred to Observatory) ----
 {
   const H=boot();H.startLevel(3);H.frames(10);
-  ok(H.W.snoozles.length===3,'Stage 3 slice: three obtainable Snoozles authored');
+  ok(H.W.snoozles.length===4,'Level 4 has four Snoozles (Snoozle 4 on Observatory)');
   ok(H.getLevel().snoozleGoal===4,'snoozleGoal remains 4');
   const cp=H.getSpace().candyPlanet;
   const candySn=H.W.snoozles[1];
@@ -126,7 +126,7 @@ function hurtFromHarness(H){
     +fs.readFileSync(path.join(__dirname,'..','src','space.js'),'utf8');
   ok(/hasStarBeam|starCrate|fireStarBeam/i.test(src),'Star Beam present in Stage 3');
   ok(/shieldedGate|spaceStage4Endpoint/i.test(src),'Stage 4 Saucer Belt authored');
-  ok(!/warpTunnel|blackHoleFinish|blackHoleActive|cometRun/i.test(src),'no Stage 5+ finish systems');
+  ok(!/cometRun/i.test(src),'no Comet Run side route');
 }
 
 // ---- flight tuning preserved ----

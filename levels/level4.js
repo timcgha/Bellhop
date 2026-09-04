@@ -39,9 +39,9 @@ openSpace:{
   takeoffAssistH:3.5
 },
 openSpaceZones:[
-  {x0:-50,y0:-12,x1:130,y1:58,z0:-265,z1:48}
+  {x0:-50,y0:-12,x1:130,y1:58,z0:-320,z1:48}
 ],
-playVolume:{cx:25,cy:12,cz:-130,soft:140,hard:165,recoverDur:0.5,recoverTo:{x:22,y:0.45,z:-10}},
+playVolume:{cx:25,cy:12,cz:-130,soft:155,hard:185,recoverDur:0.5,recoverTo:{x:22,y:0.45,z:-10}},
 voidY:-20,
 voidFloor:-40,
 snoozleGoal:4,
@@ -53,20 +53,24 @@ checks:[
   [0,0,0.45],
   [28,-26,5],
   [28,-104,5],
-  [94,24.0,-195],
-  [102,16.5,-222],
-  [28,18,-254]
+  [94,-195,24.0],
+  [102,-222,16.5],
+  [28,-254,18],
+  [10,-272,24.5]
 ],
 tower:{tx:0,tz:0},
 snoozleHomes:[
   {x:8,y:28,z:-200},
   {x:50,y:28,z:-228},
-  {x:102,y:28,z:-222}
+  {x:102,y:28,z:-222},
+  {x:6,y:32,z:-300}
 ],
 snoozles:[
   [-2.8,0.55,3.2,0,false],
   [98,24.0,-188,1,false],
-  [102,15.5,-219,2,false]
+  [102,15.5,-219,2,false],
+  // On main Observatory deck, facing Black Hole (-Z), clearly above landable surface
+  [10,24.55,-274.8,3,false]
 ],
 trees:[],
 steps:[
@@ -124,8 +128,9 @@ steps:[
   ['candyPlanet',98,18,-198,11],
   // Candy surface — Star Beam teaching
   ['starCrate',92,24.1,-192,true],
-  ['saucerTarget',94,24.0,-196],
-  ['saucer',96,24.0,-202,'mid',true],
+  // Hover above the landable pad (top ~24.27) — readable hover, still pad-attackable.
+  ['saucerTarget',93.5,26.15,-194.0],
+  ['saucer',96.0,26.3,-195.8,'mid',true],
   ['candyCaveMouth',102,18.5,-204],
   ['crystalInterior',102,16.5,-204],
   // Interior mid saucer
@@ -157,15 +162,29 @@ steps:[
   ['saucer',44,20,-250,'small',false,true],
   ['hazardAsteroid',52,21,-247,1.45,'static'],
   ['routeTrail',64,22,-238,46,20,-252,4],
-  // Beat D — mandatory shield gate + renewable star crate
-  ['starCrate',42,20,-248,true],
-  ['shieldedGate',38,20,-254,8,5.5,1.2],
+  // Beat D — mandatory shield gate choke + renewable star crate
+  ['starCrate',42,20.5,-246,true],
+  ['shieldedGate',38,18,-254,7,7,1.4],
   // Beat E — post-gate relief and future-route cue
   ['spaceRestPad',28,18,-256,3.6],
   ['spaceBuoy',28,18,-256,true],
   ['observatoryLandmark',14,22,-262],
   ['routeTrail',28,18,-256,14,22,-262,4],
   ['spaceStage4Endpoint',14,22,-264],
+  // Stage 5 — Star Observatory (calm rest, Snoozle 4, black-hole framing)
+  ['routeTrail',14,22,-264,10,24,-272,5],
+  ['spaceBuoy',10,24,-272,true],
+  ['observatory',10,24,-272],
+  ['note',7.5,25.2,-269.5,false],
+  ['note',12.5,25.0,-269.0,false],
+  ['spaceStage5Endpoint',10,24.5,-278],
+  // Stage 6 — Black Hole finish (bright, dense path from Observatory)
+  ['routeTrail',10,25,-278,8,28,-286,5],
+  ['spaceBuoy',9,27,-282,true],
+  ['routeTrail',8,28,-286,6,30,-294,5],
+  ['spaceBuoy',7,30,-290,true],
+  ['spaceBuoy',6,31,-296,true],
+  ['blackHoleFinish',6,30,-300],
   // Scenery / backdrop
   ['spaceBuoy',-18,2,14],['spaceBuoy',36,3,18],['spaceBuoy',-8,6,32],
   ['backdropAsteroid',12,14,-20,0.55],['backdropAsteroid',42,18,-48,0.7],
@@ -175,7 +194,5 @@ steps:[
   ['backdropAsteroid',60,18,-240,0.45],['backdropAsteroid',22,16,-248,0.5],
   ['backdropPlanet',-55,18,-70,6,0x6a4a9a,true],
   ['backdropPlanet',48,12,-85,5,0xc45a78,false],
-  ['backdropPlanet',-30,8,95,4.5,0x4a8a6a,false],
-  ['blackHoleLandmark',10,35,-210],
-  ['unfinishedFinish',0,0,0]
+  ['backdropPlanet',-30,8,95,4.5,0x4a8a6a,false]
 ]};

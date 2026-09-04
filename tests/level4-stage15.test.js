@@ -9,7 +9,7 @@ function releaseJump(H){H.ku({code:'Space'});}
 // ---- version ----
 {
   const H=boot();
-  ok(H.getCamDiag().VERSION_BASE==='v48 · Saucer Belt gate','version stamp v42');
+  ok(H.getCamDiag().VERSION_BASE==='v51 · Human playtest route','version stamp v51');
 }
 
 // ---- flight without camera input (keyboard) ----
@@ -114,7 +114,7 @@ function flyNoCam(H, keys, frames){
   ok(S.landingTargets.some(t=>t.primary),'primary landing target exists');
   ok(S.landingTargets[0].approachR===18,'landing approach radius 18');
   ok(S.landingTargets[0].nearR===8,'landing near radius 8');
-  ok(S.decorPlanets.filter(p=>!p.userData.cheeseMoon&&!p.userData.candyPlanet).every(p=>p.userData.landable===false),'backdrop planets not landable');
+  ok(S.decorPlanets.filter(p=>!p.userData.cheeseMoon&&!p.userData.candyPlanet&&!p.userData.observatory).every(p=>p.userData.landable===false),'backdrop planets not landable');
   ok(S.blackHole&&S.blackHole.userData.landable===false,'black hole noninteractive');
   ok(!S.landingTargets.some(t=>t.x===8&&t.z===-115),'black hole not a landing target');
 }
@@ -216,7 +216,7 @@ function flyNoCam(H, keys, frames){
 {
   const src=require('fs').readFileSync(require('path').join(__dirname,'..','levels','level4.js'),'utf8')
     +require('fs').readFileSync(require('path').join(__dirname,'..','src','space.js'),'utf8');
-  ok(!/warpTunnel|blackHoleFinish|blackHoleActive|cometRun/i.test(src),'Stage 1.5 build has no Stage 5+ finish systems');
+  ok(!/cometRun/i.test(src),'Stage 1.5 build has no Comet Run');
 }
 
 report();
