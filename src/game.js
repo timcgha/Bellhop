@@ -1,12 +1,12 @@
 let time=0,rescued=0,gotNotes=0;
 let started=false;
-window.__W={solids,gloops,goos,hearts,crates,powers,fires,checks,snoozles,notes,dust,puddles,sharks,fish,spikefish,clams,bubbleShots,kelps,steamVents,lavas,cinders,embers,wisps,salamanders,geysers,scorches,protoEndpoints,steamCurtains,crystalSparks,celebrationParticles:PART,get asteroids(){return typeof asteroids!=='undefined'?asteroids:[];},get saucers(){return typeof saucers!=='undefined'?saucers:[];},get underwaterGroup(){return underwaterGroup;},get won(){return won;},get WM(){return WM;},get RAINBOW(){return RAINBOW;},get FINISH(){return FINISH;},get sfx(){return SFX;},get wreck(){return WRECK;},get conch(){return CONCH;},get organ(){return ORGAN;},get organFireworks(){return organFireworks;},get geodeShell(){return GEODE_SHELL;},get crackedGeode(){return crackedGeodeChamber;}};
+window.__W={solids,gloops,goos,hearts,crates,powers,fires,checks,snoozles,notes,dust,puddles,sharks,fish,spikefish,clams,bubbleShots,kelps,steamVents,lavas,cinders,embers,wisps,salamanders,geysers,scorches,protoEndpoints,steamCurtains,crystalSparks,celebrationParticles:PART,get camels(){return typeof camels!=='undefined'?camels:[];},get cacti(){return typeof cacti!=='undefined'?cacti:[];},get lizards(){return typeof lizards!=='undefined'?lizards:[];},get quicksands(){return typeof quicksands!=='undefined'?quicksands:[];},get asteroids(){return typeof asteroids!=='undefined'?asteroids:[];},get saucers(){return typeof saucers!=='undefined'?saucers:[];},get underwaterGroup(){return underwaterGroup;},get won(){return won;},get WM(){return WM;},get RAINBOW(){return RAINBOW;},get FINISH(){return FINISH;},get sfx(){return SFX;},get wreck(){return WRECK;},get conch(){return CONCH;},get organ(){return ORGAN;},get organFireworks(){return organFireworks;},get geodeShell(){return GEODE_SHELL;},get crackedGeode(){return crackedGeodeChamber;}};
 window.__started=()=>started;
 
 // ---------- camera ----------
 const CAM=window.__CAM={yaw:0,pitch:0.42,dist:8.5,pos:new THREE.Vector3(0,5,19),look:new THREE.Vector3(0,1,10),shake:0,fovKick:0,lastManual:-9,boomDist:8.5,targetDist:8.5,effectiveDist:8.5,collisionPulled:false,mode:'outdoor'};
 // Stage 4.8A — temporary Level 3 landscape camera-distance diagnostic (not a shipping profile).
-const VERSION_BASE='v52 · iPhone playtest polish';
+const VERSION_BASE='v53 · Desert Level 5';
 const CAMDIST_ALLOW={'8.5':8.5,'8.50':8.5,'6.8':6.8,'6.80':6.8,'6.07':6.07,'5':5,'5.0':5,'5.00':5,'3.93':3.93};
 const CAMDIST_STEPS=[8.5,6.8,6.07,5,3.93];
 function parseCamDistQuery(search){
@@ -108,6 +108,14 @@ function updateCamera(dt){
     if(camDistParam!=null)updateCamDiagUI();
     return;
   }
+  // The Level 5 final quicksand owns a short cinematic sink/portal frame before winning.
+  if(typeof desertFinishCamera==='function'&&desertFinishCamera(dt)){
+    CAM.shake=Math.max(0,CAM.shake-dt*2.2);const sh=CAM.shake*CAM.shake*0.35;
+    camera.position.set(CAM.pos.x+rand(-sh,sh),CAM.pos.y+rand(-sh,sh),CAM.pos.z+rand(-sh,sh));camera.lookAt(CAM.look);
+    CAM.fovKick=damp(CAM.fovKick,0,9,dt);const fov=66+CAM.fovKick;
+    if(Math.abs(camera.fov-fov)>0.01){camera.fov=fov;camera.updateProjectionMatrix();}
+    return;
+  }
   // Authored screenshot / cinematic hold — pos/look stay put.
   if(CAM.mode==='shot'){
     CAM.collisionPulled=false;
@@ -142,7 +150,7 @@ function updateCamera(dt){
   const sp=Math.hypot(P.vel.x,P.vel.z);
   if(sp>2&&time-CAM.lastManual>1.2){const mvx=P.vel.x/sp,mvz=P.vel.z/sp;const fx=-Math.sin(CAM.yaw),fz=-Math.cos(CAM.yaw);const d=mvx*fx+mvz*fz;if(d>-0.3)CAM.yaw=angDamp(CAM.yaw,Math.atan2(-mvx,-mvz),1.2*(0.5+d*0.5),dt);}
   // Prefer a slightly higher look target and a longer boom in tight spaces.
-  const tx=P.pos.x,ty=P.pos.y+(tight?1.6:1.1),tz=P.pos.z;
+  const tx=P.pos.x,ty=P.pos.y+(tight?1.6:(P.camel?2.2:1.1)),tz=P.pos.z;
   const cp=Math.cos(CAM.pitch),spp=Math.sin(CAM.pitch);
   let want;
   if(inConch){want=12.2;CAM.boomDist=12.2;CAM.mode='conch';}
@@ -189,6 +197,7 @@ function frame(now){requestAnimationFrame(frame);let dt=(now-last)/1000;last=now
   updatePeak(dt);
   updateSpaceDecor(dt);
   updateSpaceWorld(dt);
+  updateDesertWorld(dt);
   updateSharks(dt);updateFish(dt);updateSpikefish(dt);updateBubbleShots(dt);updateClams(dt);updateKelp(dt);
   updateWin(dt);if(FINISH)FINISH.update(dt,won?winT:-1);
   updateParticles(dt);updateRings(dt);updateZ(dt);updateCamera(dt);updatePlayerVisual(dt);

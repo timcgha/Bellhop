@@ -81,6 +81,7 @@ const THREE = new Proxy({}, {
 const HOOKS = [];
 
 function resolveLevelIdx(level) {
+  if (level === 'LEVEL5' || level === 4 || level === 'level5') return 4;
   if (level === 'LEVEL4' || level === 3 || level === 'level4') return 3;
   if (level === 'LEVEL3' || level === 2 || level === 'level3') return 2;
   if (level === 'LEVEL2' || level === 1 || level === 'level2') return 1;
@@ -110,7 +111,7 @@ module.exports = function boot(opts = {}) {
   }
   function el(id) {
     if (!els[id]) {
-      const isCanvas = id === 'art0' || id === 'art1' || id === 'art2' || id === 'art3';
+      const isCanvas = id === 'art0' || id === 'art1' || id === 'art2' || id === 'art3' || id === 'art4';
       els[id] = isCanvas ? canvasStub() : {
         id, listeners: {}, style: {}, textContent: '',
         classList: { add() {}, remove() {}, toggle() {} },

@@ -44,7 +44,7 @@ window.__touchArmed=()=>touchArmed;
 window.__setPickerIdx=setPickerIdx;
 
 function drawLevelArt(){
-  [[$('art0'),'meadow'],[$('art1'),'deep'],[$('art2'),'peak'],[$('art3'),'space']].forEach(([cv,kind])=>{
+  [[$('art0'),'meadow'],[$('art1'),'deep'],[$('art2'),'peak'],[$('art3'),'space'],[$('art4'),'desert']].forEach(([cv,kind])=>{
     if(!cv||typeof cv.getContext!=='function')return;
     const w=160,h=100;
     const g=cv.getContext('2d');if(!g)return;
@@ -81,6 +81,14 @@ function drawLevelArt(){
       g.fillStyle='#020208';g.beginPath();g.arc(w*0.55,h*0.18,7,0,TAU);g.fill();
       g.strokeStyle='rgba(136,120,200,0.7)';g.lineWidth=2;g.beginPath();g.ellipse(w*0.55,h*0.18,12,4,0,0,TAU);g.stroke();
       g.fillStyle='#5ec8ff';g.fillRect(w*0.46,h*0.62,w*0.08,h*0.06);
+    }else if(kind==='desert'){
+      const sky=g.createLinearGradient(0,0,0,h);sky.addColorStop(0,'#8ed4f2');sky.addColorStop(0.48,'#ffd27c');sky.addColorStop(1,'#f4ad4f');g.fillStyle=sky;g.fillRect(0,0,w,h);
+      g.fillStyle='#e99d42';g.beginPath();g.ellipse(w*0.16,h*0.74,66,27,0,0,TAU);g.fill();g.beginPath();g.ellipse(w*0.86,h*0.77,62,24,0,0,TAU);g.fill();
+      g.fillStyle='#f4c568';g.fillRect(0,h*0.68,w,h*0.34);
+      g.fillStyle='#7c4930';g.beginPath();g.ellipse(w*0.52,h*0.77,25,9,0,0,TAU);g.fill();g.fillStyle='#b57138';g.beginPath();g.ellipse(w*0.52,h*0.77,17,6,0,0,TAU);g.fill();
+      g.fillStyle='#458b3d';g.fillRect(w*0.14,h*0.37,7,35);g.beginPath();g.arc(w*0.17,h*0.36,4,0,TAU);g.fill();g.fillRect(w*0.08,h*0.5,22,6);
+      g.fillStyle='#d59b5c';g.beginPath();g.ellipse(w*0.73,h*0.63,24,12,0,0,TAU);g.fill();g.fillRect(w*0.76,h*0.38,7,27);g.beginPath();g.arc(w*0.795,h*0.37,8,0,TAU);g.fill();
+      g.fillStyle='#249ab4';g.fillRect(w*0.82,h*0.76,31,8);
     }
   });
 }
@@ -90,7 +98,7 @@ for(let i=0;i<LEVELS.length;i++){
 }
 
 function startGame(){if(started)return;loadLevel(LEVELS[pickerIdx]);started=true;document.body.classList.add('playing');$('start').style.display='none';initAudio();IN.jump=false;IN.b=false;IN.y=false;updateHUD();
-  const msg=pickerIdx===0?'Follow the path. Wake all four Snoozles!':(pickerIdx===1?'Dive in. Wake four Snoozles on the ocean floor!':(pickerIdx===2?'Try the long leap. Jump, then puff again!':'Hold jump to fly. Let go to glide.'));
+  const msg=pickerIdx===0?'Follow the path. Wake all four Snoozles!':(pickerIdx===1?'Dive in. Wake four Snoozles on the ocean floor!':(pickerIdx===2?'Try the long leap. Jump, then puff again!':(pickerIdx===3?'Hold jump to fly. Let go to glide.':'Try A or Space beside a camel. B hops off!')));
   setTimeout(()=>showToast(msg),600);setTimeout(()=>{$('hint').style.opacity=0;},12000);}
 window.__startGame=startGame;
 updatePickerUI();

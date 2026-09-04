@@ -89,11 +89,23 @@ function spaceVoice(i,sib,s,chord,t){
   else if(i===2)tone(hz(chord[0],110),0.65,{at:t,type:'sine',gain:0.04,attack:0.05});
   else tone(hz(chord[0]+[0,3,7,10][s%4]+12,261.63),0.45,{at:t,type:'sine',gain:0.035,attack:0.03});
 }
+function desertBed(sib,chord,t){
+  if(sib===0||sib===4)tone(hz(chord[0],73.42),0.32,{at:t,type:'triangle',gain:0.08,attack:0.02});
+  if(sib===2||sib===6)noise(0.055,{at:t,type:'lowpass',freq:520,gain:0.07});
+}
+function desertVoice(i,sib,s,chord,t){
+  const pats=[[1,5],[0,3,6],[2,4,7],[1,4,6]];
+  if(pats[i%4].indexOf(sib)<0)return;
+  if(i===0)tone(hz(chord[(s+sib)%3]+12,293.66),0.34,{at:t,type:'triangle',gain:0.055,attack:0.01});
+  else if(i===1)tone(hz(chord[1]+[0,3,5,7][s%4]+12,220),0.42,{at:t,type:'sine',gain:0.045,attack:0.025});
+  else tone(hz(chord[2]+12,329.63),0.22,{at:t,type:'sine',gain:0.035,attack:0.02});
+}
 const SONGS={
   meadow:{id:'meadow',bpm:112,chords:[[0,4,7],[-3,0,4],[-7,-3,0],[-5,-1,2]],bed:meadowBed,voice:meadowVoice},
   deep:{id:'deep',bpm:84,chords:[[0,3,7],[-2,2,5],[-5,0,3],[2,5,9]],bed:deepBed,voice:deepVoice},
   peak:{id:'peak',bpm:96,chords:[[0,4,7],[-2,2,5],[-5,0,4],[3,7,10]],bed:peakBed,voice:peakVoice},
-  space:{id:'space',bpm:78,chords:[[0,3,7],[-3,0,5],[-5,2,7],[2,5,9]],bed:spaceBed,voice:spaceVoice}
+  space:{id:'space',bpm:78,chords:[[0,3,7],[-3,0,5],[-5,2,7],[2,5,9]],bed:spaceBed,voice:spaceVoice},
+  desert:{id:'desert',bpm:102,chords:[[0,4,7],[-2,3,7],[-5,0,4],[-3,2,7]],bed:desertBed,voice:desertVoice}
 };
 AU.song=SONGS.meadow;
 // Kept as aliases so older call sites / mental model still match meadow.
@@ -199,8 +211,11 @@ const SFX={
   starPower(){if(!AU.ctx)return;[0,4,7,12,16].forEach((n,i)=>tone(hz(n,440),0.32,{at:AU.ctx.currentTime+i*0.07,type:'sine',gain:0.11}));},
   blackHoleOpen(){if(!AU.ctx)return;const c=AU.ctx.currentTime;tone(55,1.2,{at:c,type:'sine',gain:0.14,slide:82,attack:0.06});tone(110,0.9,{at:c+0.08,type:'triangle',gain:0.1,attack:0.08});[0,4,7,12].forEach((n,i)=>tone(hz(n,110),0.65,{at:c+0.12+i*0.1,type:'sine',gain:0.08}));noise(0.8,{at:c,type:'bandpass',freq:400,fslide:1200,gain:0.1,attack:0.08});},
   warpWhoosh(){if(!AU.ctx)return;const c=AU.ctx.currentTime;noise(1.8,{at:c,type:'bandpass',freq:600,fslide:4200,gain:0.18,attack:0.04});tone(220,1.4,{at:c,type:'sine',gain:0.12,slide:880,attack:0.02});[0,3,7,12].forEach((n,i)=>tone(hz(n,220),0.5,{at:c+0.1+i*0.12,type:'triangle',gain:0.07}));},
-  warpTwinkle(){if(!AU.ctx)return;tone(hz(chordNow()[Math.floor(Math.random()*3)]+24,523.25),0.22,{type:'sine',gain:0.06,attack:0.01});}
+  warpTwinkle(){if(!AU.ctx)return;tone(hz(chordNow()[Math.floor(Math.random()*3)]+24,523.25),0.22,{type:'sine',gain:0.06,attack:0.01});},
+  camelMount(){tone(294,0.16,{type:'triangle',gain:0.09,slide:392});tone(587,0.22,{at:AU.ctx?AU.ctx.currentTime+0.08:0,type:'sine',gain:0.06});},
+  lizardReward(){tone(1046,0.12,{type:'sine',gain:0.08,slide:1568});tone(1318,0.24,{at:AU.ctx?AU.ctx.currentTime+0.06:0,type:'triangle',gain:0.06});},
+  quicksand(){noise(0.35,{type:'lowpass',freq:360,fslide:120,gain:0.13});tone(180,0.28,{type:'sine',gain:0.06,slide:92});},
+  sandPortal(){noise(0.7,{type:'bandpass',freq:560,fslide:2600,gain:0.1,attack:0.04});tone(220,0.7,{type:'sine',gain:0.08,slide:880});}
 };
 function toggleMute(){AU.muted=!AU.muted;if(AU.master)AU.master.gain.value=AU.muted?0:0.6;$('mute').textContent=AU.muted?'🔇':'🔊';}
 $('mute').addEventListener('pointerdown',e=>{e.stopPropagation();e.preventDefault();toggleMute();});
-

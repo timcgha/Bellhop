@@ -31,7 +31,7 @@ function fireBeamAt(H,target){
 // ---- version ----
 {
   const H=boot();
-  ok(H.getCamDiag().VERSION_BASE==='v52 · iPhone playtest polish','version stamp v52');
+  ok(H.getCamDiag().VERSION_BASE==='v53 · Desert Level 5','version stamp v53');
 }
 
 // ---- Snoozles: four authored (Snoozle 4 on Observatory) ----

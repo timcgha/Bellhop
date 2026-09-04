@@ -79,7 +79,7 @@ function shadowOpacityForHeight(h){
 }
 function shadowScaleForHeight(h){return clamp(1-h*SHADOW_SCALE_RATE,SHADOW_SCALE_MIN,1);}
 
-const P=window.__P={spawn:{x:0,y:0,z:10},pos:new THREE.Vector3(0,0,10),vel:new THREE.Vector3(),yaw:Math.PI,grounded:false,wasGrounded:false,lastGround:-9,jumpBuf:-9,jumping:false,puff:true,slam:0,hangT:0,gustCD:0,bonkCD:0,bonkT:0,sq:1,sqV:0,sqT:1,footT:0,surf:'grass',run:0,mouthT:0,blinkT:2,blinkAnim:0,inFan:false,splT:0,puffAir:0,hover:false,hovT:0,hoverS:null,hp:4,maxHp:4,inv:0,dead:false,deadT:0,inGoo:false,fire:false,bubble:false,hasSkyBlast:false,hasStarBeam:false,leapBoost:new THREE.Vector3(),glideT:0,glideArmed:false,wingsOut:false,lavaRecT:0,lavaRecMax:0,anchorSettleT:0,safeAnchor:new THREE.Vector3(0,0,10),lavaRecFrom:new THREE.Vector3(),jetT:0,jetP:0,jetHits:[],moveZone:'grounded',spaceThrust:false,spaceThrustS:null,spaceThrustY:0};
+const P=window.__P={spawn:{x:0,y:0,z:10},pos:new THREE.Vector3(0,0,10),vel:new THREE.Vector3(),yaw:Math.PI,grounded:false,wasGrounded:false,lastGround:-9,jumpBuf:-9,jumping:false,puff:true,slam:0,hangT:0,gustCD:0,bonkCD:0,bonkT:0,sq:1,sqV:0,sqT:1,footT:0,surf:'grass',run:0,mouthT:0,blinkT:2,blinkAnim:0,inFan:false,splT:0,puffAir:0,hover:false,hovT:0,hoverS:null,hp:4,maxHp:4,inv:0,dead:false,deadT:0,inGoo:false,fire:false,bubble:false,hasSkyBlast:false,hasStarBeam:false,leapBoost:new THREE.Vector3(),glideT:0,glideArmed:false,wingsOut:false,lavaRecT:0,lavaRecMax:0,quicksandRecT:0,quicksandRecMax:0,quicksandRecFrom:new THREE.Vector3(),camel:null,anchorSettleT:0,safeAnchor:new THREE.Vector3(0,0,10),lavaRecFrom:new THREE.Vector3(),jetT:0,jetP:0,jetHits:[],moveZone:'grounded',spaceThrust:false,spaceThrustS:null,spaceThrustY:0};
 let R=0.36,H=1.15,SPEED=6.8,ACC=44,DEC=60,AIRACC=20,GRAV=-30,JUMPV=10.5,PUFFV=9.4,MAXFALL=-32,COYOTE=0.12,BUFFER=0.15,STEP=0.42;
 let HOVER_HELD=1.0,HOVER_REL=0.5,HOVER_DRIFT=-1.6,SLAM_HANG=0.14,SLAM_FALL=-34,SLAM_REBOUND=8,JET_T=0.38,BONKR=2.05,BONK_CD=0.5;
 // Sky Blast tuning — inactive until a level supplies skyBlast (Level 3). Separate from ordinary SPEED/PUFFV.
@@ -511,6 +511,9 @@ function updatePlayer(dt){const p=P.pos,v=P.vel;
   P.inv-=dt;if(P.dead){P.deadT-=dt;if(P.deadT<=0)respawn();}
   // Lava recovery owns motion briefly — skip normal move/input so a live boost cannot fight the fling.
   if(updateLavaRecovery(dt))return;
+  // Desert finish and ordinary quicksand recovery own motion before any player input.
+  if(typeof updateDesertFinishPlayer==='function'&&updateDesertFinishPlayer(dt))return;
+  if(typeof updateDesertQuicksandRecovery==='function'&&updateDesertQuicksandRecovery(dt))return;
   const cy=CAM.yaw,fx=-Math.sin(cy),fz=-Math.cos(cy),rx=Math.cos(cy),rz=-Math.sin(cy);
   let wx=fx*(-IN.mz)+rx*IN.mx,wz=fz*(-IN.mz)+rz*IN.mx;let wl=Math.hypot(wx,wz);if(wl>1){wx/=wl;wz/=wl;wl=1;}if(P.dead){wx=0;wz=0;wl=0;}
   if(isSpaceLevel()){
@@ -518,12 +521,16 @@ function updatePlayer(dt){const p=P.pos,v=P.vel;
     if(P.moveZone==='openSpace'){updateOpenSpacePlayer(dt,IN.mx,IN.mz);return;}
     P.moveZone='grounded';
   }else P.moveZone='grounded';
-  // Ordinary movement stays SPEED-capped. leapBoost is applied separately so stick reverse cannot cancel it.
-  if(P.slam===0){const a=P.grounded?(wl>0.05?ACC:DEC):(wl>0.05?AIRACC:3);v.x=moveTo(v.x,wx*SPEED,a*dt);v.z=moveTo(v.z,wz*SPEED,a*dt);if(wl>0.05)P.yaw=angDamp(P.yaw,Math.atan2(wx,wz),14,dt);}
+  // A/Space remains jump except within an intentional camel interaction radius.
+  const desertAction=typeof desertHandleJumpAction==='function'&&desertHandleJumpAction();
+  if(desertAction)IN.jump=false;
+  // Ordinary movement stays SPEED-capped. Camel riding adds a forgiving stride without changing base physics.
+  const rideMul=P.camel?1.38:1,rideJump=P.camel?1.55:0;
+  if(P.slam===0){const a=P.grounded?(wl>0.05?ACC:DEC):(wl>0.05?AIRACC:3);v.x=moveTo(v.x,wx*SPEED*rideMul,a*dt);v.z=moveTo(v.z,wz*SPEED*rideMul,a*dt);if(wl>0.05)P.yaw=angDamp(P.yaw,Math.atan2(wx,wz),14,dt);}
   decayLeapBoost(dt);
   if(IN.jump)P.jumpBuf=time;
   const canJump=(P.grounded||time-P.lastGround<COYOTE)&&P.slam===0;
-  if(!P.dead&&time-P.jumpBuf<BUFFER&&canJump){v.y=JUMPV;P.grounded=false;P.lastGround=-9;P.jumpBuf=-9;P.jumping=true;P.sq=1.25;SFX.jump();fireJet();for(let i=0;i<3;i++)spawnP(p.x,p.y+0.05,p.z,rand(-1,1),rand(0.5,1),rand(-1,1),0.09,0xffffff,0.3,0.8,0,0.5);}
+  if(!P.dead&&time-P.jumpBuf<BUFFER&&canJump){v.y=JUMPV+rideJump;P.grounded=false;P.lastGround=-9;P.jumpBuf=-9;P.jumping=true;P.sq=1.25;SFX.jump();fireJet();for(let i=0;i<3;i++)spawnP(p.x,p.y+0.05,p.z,rand(-1,1),rand(0.5,1),rand(-1,1),0.09,0xffffff,0.3,0.8,0,0.5);}
   else if(!P.dead&&IN.jump&&!P.grounded&&!canJump&&P.puff&&P.slam===0){
     const puffV=PUFFV*(P.hasSkyBlast?SKY.puffVMul:1);
     v.y=Math.max(v.y,0)*0.35+puffV;P.puff=false;P.puffAir=1;P.jumping=true;P.jumpBuf=-9;P.sq=1.35;
@@ -533,6 +540,8 @@ function updatePlayer(dt){const p=P.pos,v=P.vel;
   if(P.jumping&&!IN.jumpHeld&&v.y>0){v.y*=0.5;P.jumping=false;}
   if(v.y<=0)P.jumping=false;
   P.gustCD-=dt;P.bonkCD-=dt;
+  const desertDismount=typeof desertHandleDismountAction==='function'&&desertHandleDismountAction();
+  if(desertDismount)IN.b=false;
   const uw=isUnderwater();
   if(!P.dead&&IN.b&&P.slam===0&&!P.inFan){
     if(uw){if(P.gustCD<=0){doGust();P.gustCD=0.45;}}
@@ -603,7 +612,7 @@ function updatePlayer(dt){const p=P.pos,v=P.vel;
 function updatePlayerVisual(dt){const u=player.userData;if(P.dead)P.sqT=0.45;
   P.sqV+=((P.sqT-P.sq)*220-P.sqV*16)*dt;P.sq+=P.sqV*dt;P.sq=clamp(P.sq,0.4,1.6);
   u.bel.scale.y=P.sq;u.head.position.y=0.3+0.57*P.sq;
-  player.position.copy(P.pos);player.rotation.y=P.yaw;
+  player.position.copy(P.pos);if(P.camel)player.position.y+=1.55+Math.sin(time*5+(P.camel.ph||0))*0.04;player.rotation.y=P.yaw;
   const sp=Math.hypot(P.vel.x,P.vel.z);
   if(P.grounded){P.run+=dt*sp*2.2;const a=Math.sin(P.run)*Math.min(sp/6,1)*0.7;u.legL.rotation.x=a;u.legR.rotation.x=-a;u.armL.rotation.x=-a*0.6;u.armR.rotation.x=a*0.6;u.head.rotation.x=sp<0.5?Math.sin(time*2)*0.03:Math.min(sp/6,1)*0.12;}
   else{const k=1-Math.exp(-8*dt);u.legL.rotation.x=lerp(u.legL.rotation.x,0.5,k);u.legR.rotation.x=lerp(u.legR.rotation.x,0.5,k);u.armL.rotation.x=lerp(u.armL.rotation.x,-1.2,k);u.armR.rotation.x=lerp(u.armR.rotation.x,-1.2,k);u.head.rotation.x=0;}
@@ -668,5 +677,3 @@ function updatePlayerVisual(dt){const u=player.userData;if(P.dead)P.sqT=0.45;
     S.state.x=P.pos.x;S.state.z=P.pos.z;
   }
 }
-
-

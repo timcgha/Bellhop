@@ -8,7 +8,7 @@ H.startLevel(2);
 const L=H.getLevel();
 const R=L.route;
 ok(L&&L.id==='level3','boots Level 3');
-ok(H.getCamDiag().VERSION_BASE==='v52 · iPhone playtest polish','version stamp');
+ok(H.getCamDiag().VERSION_BASE==='v53 · Desert Level 5','version stamp');
 ok(L.snoozleGoal===4&&W.snoozles.length===4,'Snoozles = 4');
 ok(W.notes.length===10,'notes frozen at 10');
 ok(L.mandatoryLeaps.length===11,'mandatory leaps preserved');

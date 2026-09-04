@@ -8,7 +8,7 @@ let SNOOZLE_GOAL=0;
 function snoozleGoalCount(){return SNOOZLE_GOAL>0?SNOOZLE_GOAL:snoozles.length;}
 window.__snoozleGoal=()=>snoozleGoalCount();
 const checks=[];let won=false,winT=0,confT=0;
-const LEVELS=[LEVEL1,LEVEL2,LEVEL3,LEVEL4];
+const LEVELS=[LEVEL1,LEVEL2,LEVEL3,LEVEL4,LEVEL5];
 let CURRENT_LEVEL=null;
 function isUnderwater(){return !!(CURRENT_LEVEL&&CURRENT_LEVEL.underwater);}
 const POND={x0:-6,x1:6,z0:-33,z1:-25};
@@ -175,6 +175,7 @@ function clearLevelWorld(){
   for(const o of lavas){rem(o.g);if(o.edge)rem(o.edge);}lavas.length=0;
   clearPeakWorld();
   clearSpaceWorld();
+  clearDesertWorld();
   for(const o of clouds)rem(o.g);clouds.length=0;
   for(const o of gloops)rem(o.g);gloops.length=0;
   for(const o of hearts)rem(o.g);hearts.length=0;
@@ -402,8 +403,9 @@ function loadLevel(L){
   if(L.underwater)beginUnderwaterLevel(L);
   else if(L.peakAtmosphere)beginPeakLevel();
   else if(L.spaceAtmosphere)beginSpaceLevel(L);
+  else if(L.desertAtmosphere)beginDesertLevel(L);
   else beginLandLevel();
-  P.fire=false;P.bubble=false;P.hasSkyBlast=false;P.hasStarBeam=false;clearLeapBoost();clearGlide();endSpaceThrust();P.puff=true;P.puffAir=0;endHover();P.slam=0;P.lavaRecT=0;P.anchorSettleT=0;P.moveZone='grounded';P.spaceThrust=false;
+  P.fire=false;P.bubble=false;P.hasSkyBlast=false;P.hasStarBeam=false;clearLeapBoost();clearGlide();endSpaceThrust();P.puff=true;P.puffAir=0;endHover();P.slam=0;P.lavaRecT=0;P.quicksandRecT=0;P.camel=null;P.anchorSettleT=0;P.moveZone='grounded';P.spaceThrust=false;
   if(L.spawn){P.spawn.x=L.spawn.x;P.spawn.y=L.spawn.y;P.spawn.z=L.spawn.z;P.pos.set(L.spawn.x,L.spawn.y,L.spawn.z);P.vel.set(0,0,0);initSafeAnchor(L.spawn.x,L.spawn.y,L.spawn.z);
     if(L.spaceAtmosphere&&typeof landableSurfaceAt==='function'){const land=landableSurfaceAt(L.spawn.x,L.spawn.z);if(land&&L.spawn.y<=land.y+STEP+0.3){P.pos.y=land.y;P.grounded=true;P.moveZone='grounded';P.surf=land.surf||'pad';P.lastGround=time;}}}
   const fence=L.fence;
@@ -415,6 +417,16 @@ function loadLevel(L){
   for(const step of L.steps){
     const k=step[0];
     if(k==='solid')addSolid(step[1],step[2],step[3],step[4],step[5],step[6],step[7],step[8]||undefined);
+    else if(k==='desertDune')addDesertDune(step[1],step[2],step[3],step[4],step[5]);
+    else if(k==='desertRamp')addDesertRamp(step[1],step[2],step[3],step[4],step[5],step[6]);
+    else if(k==='desertCliff')addDesertCliff(step[1],step[2],step[3],step[4],step[5],step[6]);
+    else if(k==='cactus')addCactus(step[1],step[2],step[3],step[4]);
+    else if(k==='camel')addCamel(step[1],step[2],step[3],step[4]);
+    else if(k==='lizard')addLizard(step[1],step[2],step[3],step[4]);
+    else if(k==='quicksand')addQuicksand(step[1],step[2],step[3],step[4],step[5],step[6]);
+    else if(k==='finalQuicksand')addFinalQuicksand(step[1],step[2],step[3],step[4],step[5]);
+    else if(k==='desertMarker')addDesertMarker(step[1],step[2],step[3],step[4]);
+    else if(k==='oasis')addOasis(step[1],step[2],step[3]);
     else if(k==='note')addNote(step[1],step[2],step[3],step[4]);
     else if(k==='crate')addCrate(step[1],step[2],step[3],step[4]);
     else if(k==='cupPyramid')addCupPyramid(step[1],step[2],step[3]);
@@ -512,4 +524,4 @@ function loadLevel(L){
 window.__LEVEL=()=>CURRENT_LEVEL;
 window.__LEVELS=LEVELS;
 window.__isUnderwater=isUnderwater;
-
+window.__isDesert=isDesertLevel;
