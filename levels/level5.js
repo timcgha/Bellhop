@@ -38,8 +38,8 @@ steps:[
   ['lizard',4.2,0,-58,'note'],
   ['desertDune',-12,0,-68,5.0,1.4],['desertDune',12,0,-73,5.5,1.5],
 
-  // Stage 5 — a climb onto a visible sandstone cliff.
-  ['desertRamp',0,0,-66,14,18,0.38],
+  // Stage 5 — a walkable terraced climb joins directly onto the sandstone cliff top.
+  ['desertRamp',0,0,-69,14,18,7.22],
   ['desertCliff',0,0,-85,18,7.22,14],
   ['cactus',-8.4,7.22,-83,1.0],['cactus',8.4,7.22,-83,1.0],
   ['desertMarker',0,7.22,-87,'cliff'],
