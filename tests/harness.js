@@ -157,6 +157,7 @@ module.exports = function boot(opts = {}) {
     setTimeout(f) { timeouts.push(f); return 1; },
     clearTimeout() {}
   };
+  if (opts.AudioContext) window.AudioContext = opts.AudioContext;
 
   const ctx = vm.createContext(Object.assign({}, window, { window, console, Math }));
   Object.defineProperty(ctx, 'innerWidth', { get() { return viewW; }, set(v) { viewW = v; }, configurable: true });
@@ -201,8 +202,10 @@ module.exports = function boot(opts = {}) {
 
   function firePointer(id, type) {
     const node = el(id);
-    const fn = node.listeners && node.listeners.pointerdown && node.listeners.pointerdown[0];
-    if (!fn) throw new Error(`no pointerdown on #${id}`);
+    const pointer = node.listeners && node.listeners.pointerdown && node.listeners.pointerdown[0];
+    const click = node.listeners && node.listeners.click && node.listeners.click[0];
+    const fn = pointer || click;
+    if (!fn) throw new Error(`no pointerdown or click on #${id}`);
     fn({ stopPropagation() {}, preventDefault() {}, pointerType: 'touch', pointerId: 1, clientX: 0, clientY: 0 });
   }
   function tapCard(idx) { firePointer('lvl' + idx); }
