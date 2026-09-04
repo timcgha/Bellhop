@@ -87,7 +87,7 @@ function spaceVoice(i,sib,s,chord,t){
   if(i===0)tone(hz(chord[sib%3]+12,329.63),0.5,{at:t,type:'sine',gain:0.045,attack:0.02});
   else if(i===1)tone(hz(chord[(s+sib)%3]+7,196),0.38,{at:t,type:'triangle',gain:0.035,attack:0.015});
   else if(i===2)tone(hz(chord[0],110),0.65,{at:t,type:'sine',gain:0.04,attack:0.05});
-  else tone(hz(chord[0]+[0,3,7,10][s%4]+12,261.63),0.45,{at:t,type:'sine',gain:0.035,attack:0.02});
+  else tone(hz(chord[0]+[0,3,7,10][s%4]+12,261.63),0.45,{at:t,type:'sine',gain:0.035,attack:0.03});
 }
 function desertBed(sib,chord,t){
   if(sib===0||sib===4)tone(hz(chord[0],73.42),0.32,{at:t,type:'triangle',gain:0.08,attack:0.02});
