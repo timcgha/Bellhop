@@ -1,0 +1,262 @@
+[
+  {
+    "label": "390x844",
+    "width": 390,
+    "height": 844,
+    "farReveal": {
+      "rockAlpha": 0,
+      "shieldAlpha": 0,
+      "dist": 83.00352040726948,
+      "px": 91.6,
+      "py": 24.27,
+      "pz": -190.7
+    },
+    "tutorialKill": {
+      "alive": false,
+      "state": "dying",
+      "hp": 0,
+      "visible": false
+    },
+    "midReveal": {
+      "rockAlpha": 0.5,
+      "shieldAlpha": 0.7839999999999999,
+      "dist": 34,
+      "px": 38,
+      "py": 21.15,
+      "pz": -220
+    },
+    "nearReveal": {
+      "rockAlpha": 1,
+      "shieldAlpha": 1,
+      "dist": 12,
+      "px": 38,
+      "py": 21.15,
+      "pz": -242
+    },
+    "win": {
+      "ok": true,
+      "title": "CONGRATULATIONSYOU WIN!",
+      "subtitle": "The stars are singing!",
+      "hint": "Tap A to pick a level",
+      "winW": 390,
+      "winH": 844,
+      "big": {
+        "left": 26.42344093322754,
+        "right": 363.5765781402588,
+        "top": 375.5112609863281,
+        "bottom": 437.4887390136719,
+        "width": 337.15313720703125,
+        "height": 61.97747802734375
+      },
+      "sm": {
+        "left": 17.433420181274414,
+        "right": 372.5665988922119,
+        "top": 442.4596252441406,
+        "bottom": 468.1966247558594,
+        "width": 355.1331787109375
+      },
+      "fontSize": "25.74px",
+      "overflowX": true,
+      "firstLetterVisible": true,
+      "lastLetterVisible": true,
+      "centered": true,
+      "vw": 390,
+      "vh": 844
+    }
+  },
+  {
+    "label": "430x932",
+    "width": 430,
+    "height": 932,
+    "farReveal": {
+      "rockAlpha": 0,
+      "shieldAlpha": 0,
+      "dist": 83.00352040726948,
+      "px": 91.6,
+      "py": 24.27,
+      "pz": -190.7
+    },
+    "tutorialKill": {
+      "alive": false,
+      "state": "dying",
+      "hp": 0,
+      "visible": false
+    },
+    "midReveal": {
+      "rockAlpha": 0.5,
+      "shieldAlpha": 0.7839999999999999,
+      "dist": 34,
+      "px": 38,
+      "py": 21.15,
+      "pz": -220
+    },
+    "nearReveal": {
+      "rockAlpha": 1,
+      "shieldAlpha": 1,
+      "dist": 12,
+      "px": 38,
+      "py": 21.15,
+      "pz": -242
+    },
+    "win": {
+      "ok": true,
+      "title": "CONGRATULATIONSYOU WIN!",
+      "subtitle": "The stars are singing!",
+      "hint": "Tap A to pick a level",
+      "winW": 430,
+      "winH": 932,
+      "big": {
+        "left": 28.218406677246094,
+        "right": 401.78157806396484,
+        "top": 414.5012512207031,
+        "bottom": 483.4987487792969,
+        "width": 373.56317138671875,
+        "height": 68.99749755859375
+      },
+      "sm": {
+        "left": 18.69799041748047,
+        "right": 411.30199432373047,
+        "top": 487.4501647949219,
+        "bottom": 517.2373657226562,
+        "width": 392.60400390625
+      },
+      "fontSize": "28.38px",
+      "overflowX": true,
+      "firstLetterVisible": true,
+      "lastLetterVisible": true,
+      "centered": true,
+      "vw": 430,
+      "vh": 932
+    }
+  },
+  {
+    "label": "844x390",
+    "width": 844,
+    "height": 390,
+    "farReveal": {
+      "rockAlpha": 0,
+      "shieldAlpha": 0,
+      "dist": 83.00352040726948,
+      "px": 91.6,
+      "py": 24.27,
+      "pz": -190.7
+    },
+    "tutorialKill": {
+      "alive": false,
+      "state": "dying",
+      "hp": 0,
+      "visible": false
+    },
+    "midReveal": {
+      "rockAlpha": 0.5,
+      "shieldAlpha": 0.7839999999999999,
+      "dist": 34,
+      "px": 38,
+      "py": 21.15,
+      "pz": -220
+    },
+    "nearReveal": {
+      "rockAlpha": 1,
+      "shieldAlpha": 1,
+      "dist": 12,
+      "px": 38,
+      "py": 21.15,
+      "pz": -242
+    },
+    "win": {
+      "ok": true,
+      "title": "CONGRATULATIONSYOU WIN!",
+      "subtitle": "The stars are singing!",
+      "hint": "Tap A to pick a level",
+      "winW": 844,
+      "winH": 390,
+      "big": {
+        "left": 33.36546325683594,
+        "right": 810.6345062255859,
+        "top": 117.9195785522461,
+        "bottom": 236.08042907714844,
+        "width": 777.26904296875,
+        "height": 118.16085052490234
+      },
+      "sm": {
+        "left": 27.936588287353516,
+        "right": 816.063419342041,
+        "top": 244.93508911132812,
+        "bottom": 274.9711608886719,
+        "width": 788.1268310546875
+      },
+      "fontSize": "54.6px",
+      "overflowX": true,
+      "firstLetterVisible": true,
+      "lastLetterVisible": true,
+      "centered": true,
+      "vw": 844,
+      "vh": 390
+    }
+  },
+  {
+    "label": "1280x720",
+    "width": 1280,
+    "height": 720,
+    "farReveal": {
+      "rockAlpha": 0,
+      "shieldAlpha": 0,
+      "dist": 83.00352040726948,
+      "px": 91.6,
+      "py": 24.27,
+      "pz": -190.7
+    },
+    "tutorialKill": {
+      "alive": false,
+      "state": "dying",
+      "hp": 0,
+      "visible": false
+    },
+    "midReveal": {
+      "rockAlpha": 0.5,
+      "shieldAlpha": 0.7839999999999999,
+      "dist": 34,
+      "px": 38,
+      "py": 21.15,
+      "pz": -220
+    },
+    "nearReveal": {
+      "rockAlpha": 1,
+      "shieldAlpha": 1,
+      "dist": 12,
+      "px": 38,
+      "py": 21.15,
+      "pz": -242
+    },
+    "win": {
+      "ok": true,
+      "title": "CONGRATULATIONSYOU WIN!",
+      "subtitle": "The stars are singing!",
+      "hint": "Tap A to pick a level",
+      "winW": 1280,
+      "winH": 720,
+      "big": {
+        "left": 51.203125,
+        "right": 1228.796875,
+        "top": 271.90625,
+        "bottom": 404.09375,
+        "width": 1177.59375,
+        "height": 132.1875
+      },
+      "sm": {
+        "left": 64,
+        "right": 1216,
+        "top": 416.09375,
+        "bottom": 448.09375,
+        "width": 1152
+      },
+      "fontSize": "61.2px",
+      "overflowX": true,
+      "firstLetterVisible": true,
+      "lastLetterVisible": true,
+      "centered": true,
+      "vw": 1280,
+      "vh": 720
+    }
+  }
+]
