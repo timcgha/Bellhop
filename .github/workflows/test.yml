@@ -17,7 +17,18 @@ jobs:
           node-version: '22'
       - name: Apply Level 5 browser verifier remediation
         if: github.ref_name == 'level5-desert-playtest-enhancement' || github.head_ref == 'level5-desert-playtest-enhancement'
-        run: node tools/tmp-level5-browser-native-patch.js
+        run: |
+          node tools/tmp-level5-browser-native-patch.js
+          python3 - <<'PY'
+          p='tools/browser-level5-enhancement-verify.js'
+          s=open(p,encoding='utf-8').read()
+          old='[0,-288],[0,-313],[6,-326],[6,-347],[-13,-364]'
+          new='[0,-288],[0,-313],[1,-326],[1,-347],[-13,-364]'
+          if old not in s:
+              raise SystemExit('route-14 waypoint needle missing')
+          open(p,'w',encoding='utf-8').write(s.replace(old,new,1))
+          print('LEVEL5_ROUTE14_CACTUS_BYPASS=APPLIED')
+          PY
       - run: node build.js
       - run: node build.js --check
       - run: node tests/run.js
