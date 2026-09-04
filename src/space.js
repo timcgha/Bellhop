@@ -531,11 +531,11 @@ function updateSaucers(dt){
     if(canSee){e.spitT-=dt;if(e.spitT<=0&&e.wind<=0)e.wind=SAUCER_WIND;}
     else e.wind=0;
     if(e.wind>0){e.wind-=dt;if(e.wind<=0){lobSaucerSpark(e);e.spitT=SAUCER_CD;}}
-    // Body contact — target dummy is beam practice only
+    // Body contact — tutorial dummy takes hits but never damages Pling
     const CR=0.75*e.size;
-    if(!e.targetDummy&&!P.dead&&d3<CR+0.35){
+    if(!P.dead&&d3<CR+0.35){
       if(P.bonkT>0){hitSaucer(e,1);}
-      else if(P.inv<=0){
+      else if(!e.targetDummy&&P.inv<=0){
         const nx=dx/(d3||1),nz=dz/(d3||1);
         hurtPlayer(nx||0.1,nz||0.1,0x7dff6a);
         P.vel.y+=Math.sign(dy||1)*2.5;
@@ -847,8 +847,9 @@ function updateStarCrates(dt){
 }
 
 function addSaucerTarget(x,y,z){
+  // Tutorial Candy saucer: passive (no aggro) but genuinely killable — same hp as a small saucer.
   const e=addSaucer(x,y,z,'small',false);
-  e.targetDummy=true;e.alive=true;e.hp=999;e.maxHp=999;
+  e.targetDummy=true;e.alive=true;e.surfaceGate=true;
   return e;
 }
 
@@ -892,14 +893,9 @@ function updateStarBeams(dt){
     }
     for(const e of saucers){
       if(!e.alive||e.state==='dying'||b.hit.has(e))continue;
-      if(e.targetDummy){
-        if(beamHitPoint(b,e.x,e.y+0.3,e.z,0.9*e.size)){
-          b.hit.add(e);e.flashT=0.45;SFX.tick();
-          for(let j=0;j<8;j++)spawnP(e.x,e.y+0.5,e.z,rand(-2,2),rand(0.5,2),rand(-2,2),0.08,Math.random()<0.5?0xa070ff:0xc8b0ff,0.5,0.4,0,0.85);
-        }
-        continue;
-      }
-      if(beamHitPoint(b,e.x,e.y+0.35,e.z,0.75*e.size)){b.hit.add(e);hitSaucer(e,e.hp);}
+      // Tutorial dummy uses the same kill path as real saucers (Star Beam one-shots).
+      const hitR=(e.targetDummy?0.9:0.75)*e.size;
+      if(beamHitPoint(b,e.x,e.y+(e.targetDummy?0.3:0.35),e.z,hitR)){b.hit.add(e);hitSaucer(e,e.hp);}
     }
     for(const a of asteroids){
       if(!a.cracked||a.broken||b.hit.has(a))continue;
@@ -1005,6 +1001,45 @@ function addSpaceStage3Endpoint(x,y,z){
   return g;
 }
 
+// Gate choke proximity reveal — collision stays on; visuals fade in before contact.
+const GATE_ROCK_FAR=42,GATE_ROCK_NEAR=26,GATE_SHIELD_FAR=48,GATE_SHIELD_NEAR=28;
+function gateRevealAlpha(dist,far,near){
+  if(dist>=far)return 0;
+  if(dist<=near)return 1;
+  return smooth((far-dist)/(far-near));
+}
+function forEachGateMat(root,fn){
+  if(!root)return;
+  if(root.material)fn(root.material);
+  const kids=root.children||[];
+  for(let i=0;i<kids.length;i++){
+    const c=kids[i];
+    if(c.material)fn(c.material);
+    if(c.children&&c.children.length)forEachGateMat(c,fn);
+  }
+}
+function prepGateFadeMat(mat,baseOp){
+  if(!mat)return;
+  mat.transparent=true;
+  mat.opacity=0;
+  mat.userData=mat.userData||{};
+  mat.userData.gateBaseOp=baseOp!=null?baseOp:1;
+  mat.depthWrite=false;
+}
+function setGateMeshReveal(m,alpha){
+  if(!m)return;
+  const seen=typeof Set!=='undefined'?new Set():null;
+  const apply=mat=>{
+    if(!mat)return;
+    if(seen){if(seen.has(mat))return;seen.add(mat);}
+    const base=(mat.userData&&mat.userData.gateBaseOp!=null)?mat.userData.gateBaseOp:1;
+    mat.opacity=base*alpha;
+    mat.depthWrite=alpha>=0.99;
+  };
+  forEachGateMat(m,apply);
+  m.visible=alpha>0.02;
+}
+
 function addShieldedGate(x,y,z,w,h,d){
   w=w||7;h=h||7;d=d||1.4;
   const g=new THREE.Group();g.position.set(x,y,z);
@@ -1021,6 +1056,9 @@ function addShieldedGate(x,y,z,w,h,d){
   const pillarR=mesh(CYL,new THREE.MeshBasicMaterial({color:0x5ec8ff,transparent:true,opacity:0.7}),w*0.52,0,0,0.28,h*1.08,0.28);
   g.add(pillarL);g.add(pillarR);
   g.userData.landmark=true;g.userData.shieldGate=true;
+  // Start hidden — proximity reveal brings the purple opening in slightly earlier than rocks.
+  forEachGateMat(g,mat=>prepGateFadeMat(mat,mat.opacity!=null?mat.opacity:1));
+  g.visible=false;
   scene.add(g);levelDecor.push(g);
   // Thin-but-wide asteroid WALL with a single hole. Barriers stay after the beam clears the opening.
   // Keep Z thickness modest so the post-gate rest pad (z≈gate.z-2) stays clear.
@@ -1029,30 +1067,38 @@ function addShieldedGate(x,y,z,w,h,d){
   const spanL=70,spanR=70;
   const below=14,totalH=42;
   const left=addSolid(x-w*0.5-spanL*0.5,y-below,z,spanL,totalH,thick,rock,{surf:'stone',invisible:false});
-  if(left.mesh&&left.mesh.material)left.mesh.material.color.setHex(0x7a6a58);
+  if(left.mesh&&left.mesh.material){left.mesh.material.color.setHex(0x7a6a58);prepGateFadeMat(left.mesh.material,1);}
   const right=addSolid(x+w*0.5+spanR*0.5,y-below,z,spanR,totalH,thick,rock,{surf:'stone',invisible:false});
-  if(right.mesh&&right.mesh.material)right.mesh.material.color.setHex(0x7a6a58);
+  if(right.mesh&&right.mesh.material){right.mesh.material.color.setHex(0x7a6a58);prepGateFadeMat(right.mesh.material,1);}
   const floor=addSolid(x,y-below,z,w+0.6,below,thick,rock,{surf:'stone',invisible:false});
-  if(floor.mesh&&floor.mesh.material)floor.mesh.material.color.setHex(0x5a4a3a);
+  if(floor.mesh&&floor.mesh.material){floor.mesh.material.color.setHex(0x5a4a3a);prepGateFadeMat(floor.mesh.material,1);}
   const ceilH=Math.max(8,totalH-below-h);
   const ceil=addSolid(x,y+h,z,w+0.6,ceilH,thick,rock,{surf:'stone',invisible:false});
-  if(ceil.mesh&&ceil.mesh.material)ceil.mesh.material.color.setHex(0x5a4a3a);
+  if(ceil.mesh&&ceil.mesh.material){ceil.mesh.material.color.setHex(0x5a4a3a);prepGateFadeMat(ceil.mesh.material,1);}
   // Readable boulder face along the wall so the choke is obvious, not an invisible slab.
+  const rockMeshes=[];
   for(const side of[-1,1]){
     for(let i=0;i<6;i++){
       const bx=x+side*(w*0.5+1.8+i*3.1),by=y+0.6+i*1.35,bz=z+((i%2)?1.1:-1.1);
       const boulder=mesh(SPH,lam(0x8a7a68),bx,by,bz,1.55+i*0.12,1.2+i*0.08,1.4+i*0.1);
-      scene.add(boulder);levelDecor.push(boulder);
+      prepGateFadeMat(boulder.material,1);
+      scene.add(boulder);levelDecor.push(boulder);rockMeshes.push(boulder);
     }
   }
   for(let i=0;i<4;i++){
     const bx=x-w*0.35+i*(w*0.25),by=y-1.2-i*0.4,bz=z+((i%2)?0.9:-0.9);
     const sill=mesh(SPH,lam(0x6a5a48),bx,by,bz,1.1,0.85,1.0);
-    scene.add(sill);levelDecor.push(sill);
+    prepGateFadeMat(sill.material,1);
+    scene.add(sill);levelDecor.push(sill);rockMeshes.push(sill);
   }
   const solid=addSolid(x,y,z,w,h,d,0x442266,{surf:'stone',role:'shieldGate',invisible:true});
   const gate={g,x,y,z,w,h,d,hitR:Math.max(w,h)*0.55,solid,opened:false,openT:0,fxT:0,
-    barriers:[left,right,ceil,floor],opening:{x0:x-w/2,x1:x+w/2,y0:y,y1:y+h,z0:z-thick/2,z1:z+thick/2}};
+    barriers:[left,right,ceil,floor],rockMeshes,
+    reveal:{rockFar:GATE_ROCK_FAR,rockNear:GATE_ROCK_NEAR,shieldFar:GATE_SHIELD_FAR,shieldNear:GATE_SHIELD_NEAR,rockAlpha:0,shieldAlpha:0},
+    opening:{x0:x-w/2,x1:x+w/2,y0:y,y1:y+h,z0:z-thick/2,z1:z+thick/2}};
+  // Start fully hidden until the player approaches.
+  for(const b of gate.barriers){if(b.mesh){b.mesh.visible=false;}}
+  for(const m of rockMeshes)m.visible=false;
   shieldedGates.push(gate);
   return gate;
 }
@@ -1075,14 +1121,26 @@ function openShieldedGate(gate){
 
 function updateShieldedGates(dt){
   for(const gate of shieldedGates){
-    if(!gate.opened)continue;
-    gate.openT+=dt;gate.fxT+=dt;
-    if(gate.g){
-      const k=Math.max(0,1-gate.openT/0.85);
-      gate.g.scale.set(1,Math.max(0.05,k),1);
-      gate.g.rotation.y=gate.openT*2.4;
-      gate.g.children.forEach(c=>{if(c.material&&c.material.opacity!=null)c.material.opacity*=0.985;});
-      if(gate.openT>=0.85)gate.g.visible=false;
+    const cy=gate.y+gate.h*0.45;
+    const dist=Math.hypot(P.pos.x-gate.x,P.pos.y-cy,P.pos.z-gate.z);
+    const rockA=gateRevealAlpha(dist,GATE_ROCK_FAR,GATE_ROCK_NEAR);
+    // Purple opening becomes readable a little earlier than the darkest rocks.
+    let shieldA=gateRevealAlpha(dist,GATE_SHIELD_FAR,GATE_SHIELD_NEAR);
+    if(gate.reveal){gate.reveal.rockAlpha=rockA;gate.reveal.shieldAlpha=shieldA;gate.reveal.dist=dist;}
+    // Collision stays active; only presentation fades.
+    for(const b of gate.barriers){if(b.mesh)setGateMeshReveal(b.mesh,rockA);}
+    if(gate.rockMeshes)for(const m of gate.rockMeshes)setGateMeshReveal(m,rockA);
+    if(gate.opened){
+      gate.openT+=dt;gate.fxT+=dt;
+      if(gate.g){
+        const k=Math.max(0,1-gate.openT/0.85);
+        gate.g.scale.set(1,Math.max(0.05,k),1);
+        gate.g.rotation.y=gate.openT*2.4;
+        gate.g.children.forEach(c=>{if(c.material&&c.material.opacity!=null)c.material.opacity*=0.985;});
+        if(gate.openT>=0.85)gate.g.visible=false;
+      }
+    }else if(gate.g){
+      setGateMeshReveal(gate.g,shieldA);
     }
   }
 }
@@ -1695,9 +1753,6 @@ function updateSpaceWorld(dt){
   updateSpaceStage4Ends(dt);
   updateSpaceStage5Ends(dt);
   updateSpaceJellyfish(dt);
-  for(const e of saucers){
-    if(e.targetDummy&&e.flashT>0){e.flashT-=dt;if(e.g.userData&&e.g.userData.dome&&e.g.userData.dome.material)e.g.userData.dome.material.color.setHex(e.flashT>0?0xfff06a:0x7dff9a);}
-  }
 }
 
 function updateSpaceDecor(dt){
@@ -1769,5 +1824,7 @@ window.__SPACE={
   get CANDY_SHELL_EXIT_PAD(){return CANDY_SHELL_EXIT_PAD;},
   get cheeseMoonBody(){return cheeseMoonBody;},
   get STAR_BEAM_COLORS(){return[0xa070ff,0xc8b0ff,0xffffff];},
+  get GATE_REVEAL(){return{rockFar:GATE_ROCK_FAR,rockNear:GATE_ROCK_NEAR,shieldFar:GATE_SHIELD_FAR,shieldNear:GATE_SHIELD_NEAR};},
+  gateRevealAlpha,
   asteroidPos,hurtFromAsteroid,hitSaucer,stunSaucer,fireStarBeam,gustCrystalDust,spinHitCracked,spinHitStarCrates,slamHitStarCrates
 };

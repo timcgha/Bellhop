@@ -39,7 +39,7 @@ function saucerClearance(e,cp){
 // ---- version ----
 {
   const H=boot();
-  ok(H.getCamDiag().VERSION_BASE==='v51 · Human playtest route','version stamp v51');
+  ok(H.getCamDiag().VERSION_BASE==='v52 · iPhone playtest polish','version stamp v52');
 }
 
 // ---- Issue 1: Candy surface enemies clear of landable pad ----
