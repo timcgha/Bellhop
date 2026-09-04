@@ -20,16 +20,25 @@ function desertMat(){
 }
 function beginDesertLevel(){
   if(landGround)landGround.visible=false;if(peakGround)peakGround.visible=false;if(underwaterGroup)underwaterGroup.visible=false;
-  scene.background=new THREE.Color(0xffc36f);scene.fog=new THREE.Fog(0xffc36f,46,138);
+  scene.background=new THREE.Color(0xffc36f);scene.fog=new THREE.Fog(0xffc36f,48,154);
   if(!desertGroup){desertGroup=new THREE.Group();desertGroup.name='desertGround';scene.add(desertGroup);}
   desertGroup.visible=true;removeChildren(desertGroup);
-  const floor=new THREE.Mesh(new THREE.PlaneGeometry(44,176),desertMat());floor.rotation.x=-Math.PI/2;floor.position.set(0,-0.025,-45);desertGroup.add(floor);
+  // Level 5 is now a genuine journey rather than a short demo. Keep one continuous
+  // desert floor under the authored route and the post-portal oasis tableau.
+  const floor=new THREE.Mesh(new THREE.PlaneGeometry(44,560),desertMat());floor.rotation.x=-Math.PI/2;floor.position.set(0,-0.025,-190);desertGroup.add(floor);
   const edgeMat=lam(0xd88f45);
-  for(const q of[[-25,-15,10,1.0,28], [25,-42,11,1.1,38],[-26,-86,13,1.2,42],[26,-108,12,1.15,34]]){
+  for(const q of[
+    [-25,-15,10,1.0,28],[25,-42,11,1.1,38],[-26,-86,13,1.2,42],[26,-108,12,1.15,34],
+    [-26,-156,12,1.1,38],[26,-205,13,1.2,44],[-26,-258,12,1.1,40],[26,-312,13,1.2,44],
+    [-26,-370,12,1.15,38],[26,-430,13,1.15,42]
+  ]){
     const d=mesh(SPH,edgeMat,q[0],q[3]*0.45,q[1],q[2],q[3],q[4]);desertGroup.add(d);
   }
-  // A few broad, non-colliding background mesas frame the route without cluttering it.
-  for(const q of[[-15,-88,3.8],[15,-112,3.3],[-17,-120,2.8],[16,18,2.4]]){
+  // Broad, non-colliding background mesas frame the route without becoming walls.
+  for(const q of[
+    [-15,-88,3.8],[15,-112,3.3],[-17,-150,2.8],[16,18,2.4],
+    [16,-194,3.2],[-17,-242,3.6],[15,-288,3.1],[-16,-322,3.5],[17,-414,3.0]
+  ]){
     const g=new THREE.Group();g.position.set(q[0],0,q[1]);g.add(mesh(CYL,lam(0xc96f45),0,q[2]*0.55,0,q[2]*0.66,q[2]*1.1,q[2]*0.7));g.add(mesh(SPH,lam(0xea9d5a),0,q[2]*1.1,0,q[2]*0.84,q[2]*0.34,q[2]*0.78));desertGroup.add(g);
   }
   DESERT={finish:null,final:null,portal:null,oasis:null,oasisGroup:null,finishCam:false};
@@ -81,9 +90,12 @@ function buildCamel(){
   const g=new THREE.Group(),fur=lam(0xd9a060),dark=lam(0x8a522e),cream=lam(0xf2d18a),saddle=lam(0x2b9bb0),trim=lam(0xf3bb45);
   g.add(mesh(SPH,fur,0,1.16,0,1.0,0.56,0.48));
   for(const sx of[-0.68,0.68])for(const sz of[-0.28,0.28])g.add(mesh(CYL,dark,sx,0.5,sz,0.105,1.0,0.105));
-  const neck=new THREE.Group();neck.position.set(0,1.5,-0.34);neck.rotation.x=-0.25;neck.add(mesh(CYL,fur,0,0.5,0,0.22,1.3,0.22));neck.add(mesh(SPH,fur,0,1.15,-0.02,0.36,0.28,0.32));neck.add(mesh(SPH,dark,-0.13,1.2,-0.27,0.05));neck.add(mesh(SPH,dark,0.13,1.2,-0.27,0.05));g.add(neck);
+  // Pling's movement/yaw convention treats local +Z as forward. Author the camel's
+  // head on that same axis so the nose, rider and velocity all agree in every turn.
+  const neck=new THREE.Group();neck.position.set(0,1.5,0.34);neck.rotation.x=0.25;neck.add(mesh(CYL,fur,0,0.5,0,0.22,1.3,0.22));neck.add(mesh(SPH,fur,0,1.15,0.02,0.36,0.28,0.32));neck.add(mesh(SPH,dark,-0.13,1.2,0.27,0.05));neck.add(mesh(SPH,dark,0.13,1.2,0.27,0.05));g.add(neck);
   const seat=mesh(BOXG,saddle,0,1.72,0.08,0.9,0.18,0.62);g.add(seat);g.add(mesh(BOXG,trim,0,1.82,0.08,0.98,0.04,0.7));
-  g.add(mesh(SPH,cream,0,1.66,0.43,0.22,0.18,0.12));
+  // Small rear roll remains behind the now-correct +Z head.
+  g.add(mesh(SPH,cream,0,1.66,-0.43,0.22,0.18,0.12));
   g.userData={seat,neck};return g;
 }
 function addCamel(x,y,z,rideable){
@@ -183,19 +195,48 @@ function addDesertMarker(x,y,z,kind){
 }
 function addOasis(ox,oy,oz){
   const g=new THREE.Group();g.position.set(ox,oy,oz);g.visible=false;scene.add(g);
-  const grass=lam(0x6bbd4b),water=new THREE.MeshBasicMaterial({color:0x3bb8d8,transparent:true,opacity:0.88}),palm=lam(0x6a4a28),leaf=lam(0x3b993f);
-  g.add(mesh(SPH,grass,0,0.1,0,13,0.4,9));g.add(mesh(SPH,lam(0x91d862),-5,0.16,-1,7,0.22,4.7));
-  const pool=new THREE.Mesh(new THREE.CylinderGeometry(4.8,5.1,0.08,32),water);pool.position.set(0,0.22,0);g.add(pool);
-  for(let i=0;i<7;i++){const a=i/7*TAU+0.22,r=7.1;const px=Math.cos(a)*r,pz=Math.sin(a)*r*0.65,h=3.8+(i%3)*0.55;g.add(mesh(CYL,palm,px,h*0.5,pz,0.16,h,0.16));for(let j=0;j<5;j++){const fr=mesh(CONE,leaf,px,h,pz,0.5,1.9,0.18);fr.rotation.z=(j/5*TAU);fr.rotation.y=j/5*TAU;g.add(fr);}}
-  for(let i=0;i<18;i++){const a=rand(0,TAU),r=rand(3.5,10);g.add(mesh(SPH,lam(i%2?0xf3c75e:0xff8c6b),Math.cos(a)*r,0.38,Math.sin(a)*r*0.62,0.13,0.12,0.13));}
+  const grass=lam(0x4ea946),grassLight=lam(0x78ca58),grassDeep=lam(0x2f8b3e);
+  const water=new THREE.MeshBasicMaterial({color:0x35c9e8,transparent:true,opacity:0.92}),palm=lam(0x6a4a28),leaf=lam(0x2f9b45),leafLight=lam(0x55ba52);
+  // Layered green mounds create an immediate dry-desert → paradise contrast without
+  // raising foliage into the victory camera sightline.
+  const mounds=[
+    [0,0.10,0,13.6,0.46,9.4,grass],
+    [-6.0,0.15,-1.0,7.6,0.28,5.2,grassLight],
+    [5.4,0.14,-1.8,7.0,0.25,4.8,grassDeep],
+    [-1.8,0.13,-5.1,6.4,0.24,3.5,grassLight],
+    [2.0,0.12,4.4,5.4,0.22,2.8,grass]
+  ];
+  for(const m of mounds)g.add(mesh(SPH,m[6],m[0],m[1],m[2],m[3],m[4],m[5]));
+  const pool=new THREE.Mesh(new THREE.CylinderGeometry(5.15,5.45,0.09,36),water);pool.position.set(0,0.24,0);g.add(pool);
+
+  const palmAngles=[0.10,0.72,2.18,2.72,3.28,3.88,4.48,5.10,5.72];
+  for(let i=0;i<palmAngles.length;i++){const a=palmAngles[i],r=7.4+(i%2)*0.7;const px=Math.cos(a)*r,pz=Math.sin(a)*r*0.65,h=3.8+(i%3)*0.5;g.add(mesh(CYL,palm,px,h*0.5,pz,0.16,h,0.16));for(let j=0;j<6;j++){const fr=mesh(CONE,j%2?leaf:leafLight,px,h,pz,0.5,1.95,0.18);fr.rotation.z=(j/6*TAU);fr.rotation.y=j/6*TAU;g.add(fr);}}
+
+  const shrubs=[];
+  for(let i=0;i<18;i++){const a=i/18*TAU+0.12,r=6.1+(i%3)*1.25,px=Math.cos(a)*r,pz=Math.sin(a)*r*0.63;if(Math.abs(px)<2.1&&pz>2.8)continue;const s=mesh(SPH,i%3===0?grassDeep:grass,px,0.42+(i%2)*0.08,pz,0.75+(i%2)*0.24,0.38,0.62+(i%3)*0.12);g.add(s);shrubs.push(s);}
+
+  const reeds=[];
+  for(let i=0;i<18;i++){const a=i/18*TAU+0.08,r=5.45,px=Math.cos(a)*r,pz=Math.sin(a)*r,stem=mesh(CYL,lam(0x5e9e3d),px,0.52,pz,0.035,0.66+(i%3)*0.11,0.035);stem.rotation.z=(i%2?-0.08:0.08);g.add(stem);reeds.push(stem);}
+
+  const flowers=[];
+  const flowerCols=[0xff8c6b,0xf3c75e,0xff6fae,0x8ad7ff,0xffffff];
+  for(let i=0;i<32;i++){const a=(i*2.39996)%TAU,r=rand(3.8,10.4),f=mesh(SPH,lam(flowerCols[i%flowerCols.length]),Math.cos(a)*r,0.4+(i%3)*0.03,Math.sin(a)*r*0.62,0.12+(i%2)*0.03,0.11,0.12+(i%2)*0.03);g.add(f);flowers.push(f);}
+
+  const stones=[];
+  for(let i=0;i<14;i++){const a=i/14*TAU+0.18,r=5.65+(i%2)*0.22,s=mesh(SPH,lam(i%2?0xb89b6f:0xd2b987),Math.cos(a)*r,0.3,Math.sin(a)*r,0.28+(i%3)*0.06,0.13,0.22+(i%2)*0.05);g.add(s);stones.push(s);}
+
+  const sparkles=[];
+  for(let i=0;i<12;i++){const a=i/12*TAU+0.25,r=2.4+(i%4)*1.65,sy=1.0+(i%3)*0.72,s=new THREE.Mesh(SPH,new THREE.MeshBasicMaterial({color:i%3===0?0xfff2a6:0xd8ffe0,transparent:true,opacity:0.58,depthWrite:false}));s.position.set(Math.cos(a)*r,sy,Math.sin(a)*r*0.7);s.scale.setScalar(0.045+(i%2)*0.018);s.userData.baseY=sy;s.userData.ph=i*0.73;g.add(s);sparkles.push(s);}
+
   const portal=new THREE.Group();portal.position.set(0,0.4,8);const halo=new THREE.Mesh(new THREE.TorusGeometry(2.25,0.24,10,36),new THREE.MeshBasicMaterial({color:0xffd264,transparent:true,opacity:0.82}));halo.rotation.x=Math.PI/2;portal.add(halo);portal.add(mesh(SPH,new THREE.MeshBasicMaterial({color:0xffc05a,transparent:true,opacity:0.34}),0,0.28,0,1.9,0.22,1.9));portal.visible=false;desertGroup.add(portal);
-  if(DESERT){DESERT.oasis={x:ox,y:oy,z:oz,g,pool,portalHalo:halo};DESERT.oasisGroup=g;DESERT.portal=portal;}
+  if(DESERT){DESERT.oasis={x:ox,y:oy,z:oz,g,pool,portalHalo:halo,sparkles,lushness:{grassMounds:mounds.length,palms:palmAngles.length,shrubs:shrubs.length,reeds:reeds.length,flowers:flowers.length,stones:stones.length,sparkles:sparkles.length}};DESERT.oasisGroup=g;DESERT.portal=portal;}
   registerFinish({x:ox,z:oz,top:oy+5.2,winMsg:'You found the green oasis!',onAllAwake(){},onWin(){if(DESERT&&DESERT.oasisGroup)DESERT.oasisGroup.visible=true;},update(dt,winT){updateOasisCelebration(dt,winT);},camHold(dt){oasisCameraHold(dt);}});
   return g;
 }
 function updateOasisCelebration(dt,winT){
   if(!DESERT||!DESERT.oasis||!DESERT.oasisGroup||!DESERT.oasisGroup.visible)return;const o=DESERT.oasis;if(o.portalHalo){o.portalHalo.rotation.z+=dt*0.8;if(o.portalHalo.material)o.portalHalo.material.opacity=0.58+Math.sin(time*3)*0.22;}
-  if(o.pool&&o.pool.material)o.pool.material.opacity=0.72+Math.sin(time*2)*0.12;
+  if(o.pool&&o.pool.material)o.pool.material.opacity=0.78+Math.sin(time*2)*0.10;
+  if(o.sparkles)for(let i=0;i<o.sparkles.length;i++){const s=o.sparkles[i],ph=s.userData.ph||0;s.position.y=(s.userData.baseY||1)+Math.sin(time*1.8+ph)*0.16;if(s.material)s.material.opacity=0.38+Math.sin(time*2.4+ph)*0.22;}
   if(winT>=0){DESERT.oasisBurstT=(DESERT.oasisBurstT||0)-dt;if(DESERT.oasisBurstT<=0&&winT<14){DESERT.oasisBurstT=0.08;const a=rand(0,TAU),r=rand(1.2,9);spawnP(o.x+Math.cos(a)*r,o.y+rand(0.8,5.5),o.z+Math.sin(a)*r*0.65,rand(-1.2,1.2),rand(0.8,3.2),rand(-1.2,1.2),rand(0.08,0.15),[0xffffff,0x7dd95a,0x4fc9e8,0xffd15a][Math.floor(rand(0,4))],1.2,0.3,-1.6,0.95);}}
 }
 function oasisCameraHold(dt){
@@ -214,7 +255,8 @@ function updateDesertFinishPlayer(dt){
   return true;
 }
 function desertFinishCamera(dt){
-  if(!DESERT||!DESERT.finish||DESERT.finish.phase==='oasis')return false;const f=DESERT.finish,q=f.q;const px=P.pos.x,py=P.pos.y,pz=P.pos.z;CAM.look.x=damp(CAM.look.x,px,10,dt);CAM.look.y=damp(CAM.look.y,py+0.5,10,dt);CAM.look.z=damp(CAM.look.z,pz-0.6,10,dt);CAM.pos.x=damp(CAM.pos.x,px+0.3,8,dt);CAM.pos.y=damp(CAM.pos.y,py+3.2,8,dt);CAM.pos.z=damp(CAM.pos.z,pz+7.0,8,dt);CAM.yaw=0;CAM.pitch=0.22;CAM.boomDist=7;CAM.targetDist=7;CAM.mode='sandPortal';CAM.collisionPulled=false;CAM.effectiveDist=Math.hypot(CAM.pos.x-CAM.look.x,CAM.pos.y-CAM.look.y,CAM.pos.z-CAM.look.z);return true;}
+  if(!DESERT||!DESERT.finish||DESERT.finish.phase==='oasis')return false;const f=DESERT.finish,q=f.q;const px=P.pos.x,py=P.pos.y,pz=P.pos.z;CAM.look.x=damp(CAM.look.x,px,10,dt);CAM.look.y=damp(CAM.look.y,py+0.5,10,dt);CAM.look.z=damp(CAM.look.z,pz-0.6,10,dt);CAM.pos.x=damp(CAM.pos.x,px+0.3,8,dt);CAM.pos.y=damp(CAM.pos.y,py+3.2,8,dt);CAM.pos.z=damp(CAM.pos.z,pz+7.0,8,dt);CAM.yaw=0;CAM.pitch=0.22;CAM.boomDist=7;CAM.targetDist=7;CAM.mode='sandPortal';CAM.collisionPulled=false;CAM.effectiveDist=Math.hypot(CAM.pos.x-CAM.look.x,CAM.pos.y-CAM.look.y,CAM.pos.z-CAM.look.z);return true;
+}
 function updateDesertWorld(dt){
   if(!isDesertLevel())return;updateCamels(dt);updateLizards(dt);updateQuicksandVisuals(dt);
   if(!DESERT||DESERT.finish||P.quicksandRecT>0||P.dead||won)return;

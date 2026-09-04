@@ -1,0 +1,21 @@
+name: level5-build-artifact
+on:
+  push:
+    branches:
+      - cursor/level5-desert-human-playtest-enhancement
+
+jobs:
+  build-index-artifact:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - run: node build.js
+      - uses: actions/upload-artifact@v4
+        with:
+          name: level5-generated-index
+          path: index.html
+          if-no-files-found: error
