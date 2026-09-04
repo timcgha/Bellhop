@@ -181,6 +181,7 @@ function updateCamera(dt){
 camera.position.copy(CAM.pos);camera.lookAt(CAM.look);
 let last=performance.now();
 function frame(now){requestAnimationFrame(frame);let dt=(now-last)/1000;last=now;if(dt>0.05)dt=0.05;
+  if(paused){renderer.render(scene,camera);return;}
   pollGamepad(dt);
   if(!started){updateClouds(dt);updateSnoozles(dt);updateZ(dt);updatePlayerVisual(dt);renderer.render(scene,camera);return;}
   time+=dt;
@@ -195,5 +196,6 @@ function frame(now){requestAnimationFrame(frame);let dt=(now-last)/1000;last=now
   IN.jump=IN.b=IN.y=false;IN.jumpHeld=IN.bHeld=false;IN.camDX=IN.camDY=0;IN.mx=IN.mz=0;
   renderer.render(scene,camera);}
 requestAnimationFrame(frame);
+window.__gameTime=()=>time;
 updateHUD();
 updateCamDiagUI();

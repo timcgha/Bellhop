@@ -8,7 +8,8 @@ function updateTouchLabels(){
   if(isUnderwater())lbl.textContent=P.bubble?'bubble':'gust';
   else lbl.textContent='slam · gust';
 }
-let toastTO=null;function showToast(t){const el=$('toast');el.textContent=t;el.style.opacity=1;clearTimeout(toastTO);toastTO=setTimeout(()=>{el.style.opacity=0;},2400);}
+let toastTO=null,gameplaySession=0;function showToast(t){const el=$('toast');el.textContent=t;el.style.opacity=1;clearTimeout(toastTO);toastTO=setTimeout(()=>{el.style.opacity=0;},2400);}
+function resetGameplayUI(){gameplaySession++;clearTimeout(toastTO);const toast=$('toast');if(toast){toast.textContent='';toast.style.opacity=0;}}
 const CTLTEXT=isTouch?'Left thumb moves · right thumb looks · A jump — blue jet burns anything under him (tap again in the air for an air-puff, hold to float) · B slam in the air, gust on the ground · Y spin':'WASD or arrows move · Space jumps — the blue jet burns anything under him (again in the air for an air-puff, hold to float) · J or Shift: slam in the air, gust on the ground · K spins · drag or Q/E turns the camera · M mutes';
 const PICKHINT=isTouch?'Tap a picture · tap it again to play':'← → choose a level · Space or A to start';
 $('ctlText').textContent=CTLTEXT;$('hint').textContent=CTLTEXT;$('pickHint').textContent=PICKHINT;
@@ -89,8 +90,11 @@ for(let i=0;i<LEVELS.length;i++){
   $('lvl'+i).addEventListener('pointerdown',e=>{e.stopPropagation();e.preventDefault();tapLevelCard(i);});
 }
 
-function startGame(){if(started)return;loadLevel(LEVELS[pickerIdx]);started=true;document.body.classList.add('playing');$('start').style.display='none';initAudio();IN.jump=false;IN.b=false;IN.y=false;updateHUD();
+function startGame(){if(started)return;const session=++gameplaySession;loadLevel(LEVELS[pickerIdx]);started=true;document.body.classList.remove('finished');document.body.classList.add('playing');$('start').style.display='none';initAudio();startLevelAudio();IN.jump=false;IN.b=false;IN.y=false;updateHUD();
   const msg=pickerIdx===0?'Follow the path. Wake all four Snoozles!':(pickerIdx===1?'Dive in. Wake four Snoozles on the ocean floor!':(pickerIdx===2?'Try the long leap. Jump, then puff again!':'Hold jump to fly. Let go to glide.'));
-  setTimeout(()=>showToast(msg),600);setTimeout(()=>{$('hint').style.opacity=0;},12000);}
+  setTimeout(()=>{if(started&&gameplaySession===session)showToast(msg);},600);setTimeout(()=>{if(started&&gameplaySession===session)$('hint').style.opacity=0;},12000);}
 window.__startGame=startGame;
+$('pauseBtn').addEventListener('click',e=>{e.stopPropagation();e.preventDefault();pauseGame();});
+$('resumeLevel').addEventListener('click',e=>{e.stopPropagation();e.preventDefault();resumeGame();});
+$('exitLevel').addEventListener('click',e=>{e.stopPropagation();e.preventDefault();exitLevel();});
 updatePickerUI();

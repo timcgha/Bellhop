@@ -177,6 +177,9 @@ function clearLevelWorld(){
   clearSpaceWorld();
   for(const o of clouds)rem(o.g);clouds.length=0;
   for(const o of gloops)rem(o.g);gloops.length=0;
+  for(const o of goos){o.alive=false;o.life=0;o.m.visible=false;}
+  for(const o of puddles){o.alive=false;o.life=0;o.m.visible=false;}
+  for(const o of fires){o.alive=false;o.life=0;o.m.visible=false;}
   for(const o of hearts)rem(o.g);hearts.length=0;
   for(const o of crates)rem(o.g);crates.length=0;
   for(const o of powers)rem(o.g);powers.length=0;
@@ -184,8 +187,12 @@ function clearLevelWorld(){
   for(const o of fish)rem(o.g);fish.length=0;
   for(const o of spikefish)rem(o.g);spikefish.length=0;
   for(const o of clams)rem(o.g);clams.length=0;
+  for(const o of bubbleShots){o.alive=false;o.life=0;o.m.visible=false;}
   for(const o of kelps)rem(o.g);kelps.length=0;
   for(const o of checks)rem(o.g);checks.length=0;
+  for(const o of PART){o.life=0;o.m.visible=false;}
+  for(const o of RINGS){o.life=0;o.m.visible=false;}
+  for(const o of ZS){o.life=0;o.s.visible=false;}
   for(const m of levelDecor)rem(m);levelDecor.length=0;
   decorKelps.length=0;suspendMotes.length=0;biolumGlows.length=0;
   if(underwaterGroup)while(underwaterGroup.children.length)underwaterGroup.remove(underwaterGroup.children[0]);
@@ -218,23 +225,30 @@ function registerUnfinishedFinish(x,z,top){
     update(){}
   });
 }
-// Soft return used by the Stage 4 temporary Peak endpoint — no win banner, no level-complete mark.
-function softReturnToPicker(){
-  if(!started)return;
+function resetToLevelPicker(){
+  leavePauseForExit();endHover();endSpaceThrust();
   clearLevelWorld();
   won=false;winT=0;confT=0;started=false;rescued=0;gotNotes=0;time=0;
-  AU.win=false;
-  P.hp=P.maxHp;P.dead=false;P.inv=0;P.fire=false;P.bubble=false;P.hasSkyBlast=false;P.hasStarBeam=false;clearLeapBoost();P.vel.set(0,0,0);
+  stopLevelAudio();CURRENT_LEVEL=null;
+  CAM.mode='outdoor';CAM.collisionPulled=false;
+  P.hp=P.maxHp;P.dead=false;P.inv=0;P.fire=false;P.bubble=false;P.hasSkyBlast=false;P.hasStarBeam=false;P.puff=true;P.puffAir=0;P.slam=0;P.grounded=false;P.moveZone='grounded';clearLeapBoost();clearGlide();P.vel.set(0,0,0);
   P.pos.set(P.spawn.x,P.spawn.y,P.spawn.z);
   beginLandLevel();
   const w=$('win');if(w){w.style.display='none';w.style.opacity=1;}
   $('start').style.display='flex';
-  document.body.classList.remove('playing');
+  document.body.classList.remove('playing');document.body.classList.remove('finished');
   touchArmed=false;updatePickerUI();
   const hint=$('hint');if(hint){hint.textContent=CTLTEXT;hint.style.opacity=0.95;}
+  resetGameplayUI();
   updateHUD();
+  return true;
 }
+// Soft return used by authored non-winning endpoints.
+function softReturnToPicker(){if(!started)return false;return resetToLevelPicker();}
+// Player-requested exit: deliberately separate from the win-only return guard.
+function exitLevel(){if(!started||won)return false;return resetToLevelPicker();}
 window.__softReturnToPicker=softReturnToPicker;
+window.__exitLevel=exitLevel;
 function buildBoat(x,z){const g=new THREE.Group();g.add(mesh(BOXG,lam(0x8b5a2b),0,0.15,0,0.9,0.3,1.7));g.add(mesh(BOXG,lam(0xa86b32),0,0.32,0,1.0,0.06,1.8));g.add(mesh(CYL,lam(0x5b3a1a),0,1.0,-0.1,0.04,1.4,0.04));
   g.add(mesh(BOXG,lam(0xffffff),0,1.15,-0.1,0.9,0.9,0.02));g.add(mesh(BOXG,lam(0xe74c3c),0,1.15,-0.1,0.9,0.25,0.021));scene.add(g);g.position.set(x,-0.1,z);
   BOAT={g,pos:new THREE.Vector3(x,0,z),vel:new THREE.Vector3(),yaw:0};}
@@ -357,27 +371,15 @@ function applyWinMessage(){
   const sm=$('win')&&$('win').querySelector('.sm');
   if(sm)sm.textContent=(FINISH&&FINISH.winMsg)||'Everyone is awake. Look at that rainbow!';
 }
-function triggerWin(){if(won)return;won=true;winT=0;AU.win=true;SFX.fanfare();FINISH.onWin();
+function triggerWin(){if(won)return;won=true;winT=0;AU.win=true;document.body.classList.add('finished');SFX.fanfare();FINISH.onWin();
   applyWinMessage();
   const w=$('win');w.style.display='flex';w.style.opacity=1;
   CAM.fovKick=Math.max(CAM.fovKick,7);CAM.shake=Math.max(CAM.shake,0.4);rumble(500,0.6,0.7);
   const hint=$('hint');if(hint){hint.textContent=isTouch?'Tap A to pick a level':'Press Space or A to pick a level';hint.style.opacity=1;}
 }
 function returnToLevelSelect(){
-  if(!won||!started)return;
-  clearLevelWorld();
-  won=false;winT=0;confT=0;started=false;rescued=0;gotNotes=0;time=0;
-  AU.win=false;
-  CAM.mode='outdoor';CAM.collisionPulled=false;
-  P.hp=P.maxHp;P.dead=false;P.inv=0;P.fire=false;P.bubble=false;P.hasSkyBlast=false;P.hasStarBeam=false;clearLeapBoost();P.vel.set(0,0,0);
-  P.pos.set(P.spawn.x,P.spawn.y,P.spawn.z);
-  beginLandLevel();
-  const w=$('win');if(w){w.style.display='none';w.style.opacity=1;}
-  $('start').style.display='flex';
-  document.body.classList.remove('playing');
-  touchArmed=false;updatePickerUI();
-  const hint=$('hint');if(hint){hint.textContent=CTLTEXT;hint.style.opacity=0.95;}
-  updateHUD();
+  if(!won||!started)return false;
+  return resetToLevelPicker();
 }
 window.__returnToLevelSelect=returnToLevelSelect;
 function updateWin(dt){if(!won)return;winT+=dt;
@@ -512,4 +514,3 @@ function loadLevel(L){
 window.__LEVEL=()=>CURRENT_LEVEL;
 window.__LEVELS=LEVELS;
 window.__isUnderwater=isUnderwater;
-
