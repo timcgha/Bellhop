@@ -65,7 +65,7 @@ function dist(a,b){return Math.hypot(a.x-b.x,a.z-b.z);}
 {
   const H=boot();H.startLevel(4);H.frames(3);
   const cliff=H.W.solids.find(s=>s.role==='cliff');
-  const ramp=H.W.solids.filter(s=>s.role==='desertRamp').sort((a,b)=>b.min.z-a.min.z);
+  const ramp=H.W.solids.filter(s=>s.role==='desertRamp'&&s.min.z<-700).sort((a,b)=>b.min.z-a.min.z);
   ok(!!cliff,'sandstone cliff is collision-authored before the finale');
   ok(ramp.length>=18,'cliff approach uses enough shallow terraces for ordinary step-up movement');
   let maxRise=0;

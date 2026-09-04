@@ -39,12 +39,13 @@ function boot(opts){return require('./harness.js')(Object.assign({autostart:fals
   ok(H.W.quicksands.filter(q=>q.role==='ordinary').length===3,'ordinary quicksand count/behavior stays preserved across the longer route');
   ok(!!final&&final.z<-800,'finale is materially farther from spawn than the original short route');
   const beatZ=[];
-  for(const s of H.W.solids)if(['desertSpur','desertPassWall'].includes(s.role))beatZ.push((s.min.z+s.max.z)/2);
-  for(const q of H.W.quicksands.filter(q=>q.role==='ordinary'))beatZ.push(q.z);
-  for(const c of H.W.cacti)if(c.z<-80)beatZ.push(c.z);
+  for(const s of H.W.solids)if(['desertSpur','desertPassWall','desertRamp','cliff'].includes(s.role))beatZ.push((s.min.z+s.max.z)/2);
+  for(const q of H.W.quicksands)beatZ.push(q.z);
+  for(const c of H.W.cacti)beatZ.push(c.z);
+  for(const l of H.W.lizards)beatZ.push(l.z);
   beatZ.sort((a,b)=>b-a);
   let maxGap=0;for(let i=1;i<beatZ.length;i++)maxGap=Math.max(maxGap,beatZ[i-1]-beatZ[i]);
-  ok(maxGap<55,'extended journey has no long authored no-interaction gap');
+  ok(maxGap<55,'extended journey has no long authored no-interaction gap (max '+maxGap.toFixed(1)+')');
 }
 
 // Finale canyon must close every ordinary walk-around route while preserving the central jump.

@@ -41,7 +41,7 @@ steps:[
   ['solid',-7,0,-175,26,3.6,7,0xc97848,{surf:'stone',role:'desertSpur'}],['desertDune',-14,0,-175,5.8,1.7],
   ['solid',7,0,-210,26,3.6,7,0xd78952,{surf:'stone',role:'desertSpur'}],['desertDune',14,0,-210,5.2,1.55],
   ['solid',-7,0,-245,26,3.6,7,0xc97848,{surf:'stone',role:'desertSpur'}],['desertDune',-14,0,-245,5.7,1.65],
-  ['cactus',12,0,-116,1.0],['cactus',-12,0,-151,1.1],['cactus',12,0,-186,1.0],['cactus',-12,0,-221,1.1],
+  ['cactus',12,0,-116,1.0],['cactus',-12,0,-151,1.1],['cactus',12,0,-186,1.0],['cactus',-12,0,-221,1.1],['cactus',12,0,-272,1.05],
 
   // Beat 3 — a central terraced pass, then an offset quicksand crossing and second switchback run.
   ['solid',-14.5,0,-300,11,3.6,18,0xbc6c43,{surf:'stone',role:'desertPassWall'}],
@@ -61,7 +61,7 @@ steps:[
   ['quicksand',6,0,-575,5.4,6.4,'ordinary'],
   ['cactus',-11,0,-588,1.15],['cactus',1,0,-600,1.05],['cactus',11,0,-614,1.2],
   ['cactus',-4,0,-632,1.15],['cactus',10,0,-648,1.05],['cactus',-11,0,-665,1.2],
-  ['cactus',3,0,-684,1.05],['cactus',12,0,-700,1.15],
+  ['cactus',3,0,-684,1.05],['cactus',12,0,-700,1.15],['cactus',-10,0,-735,1.1],
   ['desertDune',-13,0,-610,4.8,1.35],['desertDune',13,0,-645,5.0,1.45],
   ['desertDune',-13,0,-682,5.3,1.55],['desertDune',13,0,-718,5.0,1.4],
   ['desertMarker',0,0,-728,'cliff'],
