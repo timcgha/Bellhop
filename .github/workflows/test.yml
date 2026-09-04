@@ -14,3 +14,13 @@ jobs:
           node-version: '22'
       - run: node build.js --check
       - run: node tests/run.js
+      - name: Level 5 browser acceptance
+        if: github.ref_name == 'level5-desert-playtest-enhancement' || github.head_ref == 'level5-desert-playtest-enhancement'
+        run: node tools/browser-level5-enhancement-verify.js
+      - name: Upload Level 5 browser evidence
+        if: always() && (github.ref_name == 'level5-desert-playtest-enhancement' || github.head_ref == 'level5-desert-playtest-enhancement')
+        uses: actions/upload-artifact@v4
+        with:
+          name: level5-browser-evidence
+          path: artifacts/browser-level5-enhancement/
+          if-no-files-found: warn
