@@ -61,11 +61,25 @@ function dist(a,b){return Math.hypot(a.x-b.x,a.z-b.z);}
   ok(!H.W.won,'ordinary recovery remains non-winning after completion');
 }
 
-// ---- cliff destination, final sand trap, portal, oasis and clean return ----
+// ---- cliff ascent is actually walkable and joins the dramatic drop ----
 {
   const H=boot();H.startLevel(4);H.frames(3);
-  const cliff=H.W.solids.find(s=>s.role==='cliff'),final=H.W.quicksands.find(q=>q.role==='final');
-  ok(cliff&&cliff.mesh===undefined||!!cliff,'sandstone cliff is collision-authored before the finale');
+  const cliff=H.W.solids.find(s=>s.role==='cliff');
+  const ramp=H.W.solids.filter(s=>s.role==='desertRamp').sort((a,b)=>b.min.z-a.min.z);
+  ok(!!cliff,'sandstone cliff is collision-authored before the finale');
+  ok(ramp.length>=18,'cliff approach uses enough shallow terraces for ordinary step-up movement');
+  let maxRise=0;
+  for(let i=1;i<ramp.length;i++)maxRise=Math.max(maxRise,ramp[i].max.y-ramp[i-1].max.y);
+  ok(maxRise<=0.42+1e-6,'each cliff terrace rise stays within the Level 5 STEP height');
+  const highest=ramp[ramp.length-1];
+  ok(!!highest&&Math.abs(highest.max.y-cliff.max.y)<=0.08,'terraced climb reaches the authored cliff-top height');
+  ok(!!highest&&highest.min.z<=cliff.max.z+0.25&&highest.max.z>=cliff.max.z-0.25,'highest terrace joins the cliff instead of leaving an impassable gap');
+}
+
+// ---- final sand trap, portal, oasis and clean return ----
+{
+  const H=boot();H.startLevel(4);H.frames(3);
+  const final=H.W.quicksands.find(q=>q.role==='final');
   H.P.pos.set(final.x,0,final.z);H.P.vel.set(0,0,0);H.P.grounded=true;H.P.hp=4;
   H.frames(3);
   ok(H.window.__DESERT.state&&H.window.__DESERT.state.finish&&H.window.__DESERT.state.finish.phase==='sink','final quicksand begins the distinct sink sequence');
