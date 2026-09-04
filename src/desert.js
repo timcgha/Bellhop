@@ -49,9 +49,16 @@ function addDesertDune(x,y,z,r,h){
   desertGroup.add(g);return g;
 }
 function addDesertRamp(x,y,z,w,d,h){
-  // Five shallow steps make the cliff climb forgiving on foot and while mounted.
-  const n=5;for(let i=0;i<n;i++){const t=(i+0.5)/n,yy=y+h*(i+1)/n-h/n;addSolid(x,yy,z+d*0.5-t*d,w,h/n+0.05,d/n+0.35,0xd88a45,{surf:'sand',role:'desertRamp'});}
-  const g=new THREE.Group();g.position.set(x,y,z);g.add(mesh(BOXG,lam(0xe3a052),0,h*0.5,0,w*0.92,h,d));desertGroup.add(g);return g;
+  // Keep every terrace within the ordinary STEP height so Pling and the camel can
+  // walk the climb instead of facing a hidden vertical wall before the finale.
+  const n=Math.max(5,Math.ceil(h/0.34)),stepH=h/n+0.05,stepD=d/n+0.35;
+  const g=new THREE.Group();g.position.set(x,y,z);const mat=lam(0xe3a052);
+  for(let i=0;i<n;i++){
+    const t=(i+0.5)/n,yy=y+h*i/n,zz=z+d*0.5-t*d;
+    addSolid(x,yy,zz,w,stepH,stepD,0xd88a45,{surf:'sand',role:'desertRamp',invisible:true});
+    g.add(mesh(BOXG,mat,0,(yy-y)+stepH*0.5,zz-z,w*0.92,stepH,stepD));
+  }
+  desertGroup.add(g);return g;
 }
 function addDesertCliff(x,y,z,w,h,d){
   const sol=addSolid(x,y,z,w,h,d,0xbc6c43,{surf:'stone',role:'cliff'});sol.mesh.visible=false;
@@ -90,7 +97,7 @@ function nearbyCamel(){
 function mountCamel(c){
   if(!c||P.camel||P.dead)return false;
   c.mounted=true;c.postMountT=0;P.camel=c;P.vel.set(0,0,0);P.puffAir=0;endHover();clearLeapBoost();clearGlide();
-  SFX.camelMount();showToast('Ride the camel! A again to hop off.');spawnRing(P.pos.x,P.pos.y+0.1,P.pos.z,0x58c6c7,0.35,5,0.45);return true;
+  SFX.camelMount();showToast('Ride the camel! A jumps. B hops off.');spawnRing(P.pos.x,P.pos.y+0.1,P.pos.z,0x58c6c7,0.35,5,0.45);return true;
 }
 function dismountCamel(silent){
   if(!P||!P.camel)return false;const c=P.camel;c.mounted=false;c.postMountT=0;c.x=P.pos.x+0.85;c.y=P.pos.y;c.z=P.pos.z;c.g.position.set(c.x,c.y,c.z);P.camel=null;
