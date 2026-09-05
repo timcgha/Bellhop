@@ -1,7 +1,7 @@
 #!/usr/bin/env node
-// Level 6 Snowbound real-browser acceptance. The journey uses the real picker,
-// keyboard movement/actions, common Snoozle progression, sled lifecycle and victory flow.
-// It does not teleport Pling or force progress/win flags.
+// Level 6 Snowbound real-browser acceptance. Uses the real picker, keyboard actions,
+// normal Snoozle progression, cooldown combat, spin combat, steerable sled and victory flow.
+// It does not teleport Pling or directly mutate combat/progression/win state.
 const {spawn}=require('child_process');
 const {mkdirSync,writeFileSync,existsSync,rmSync}=require('fs');
 const {join}=require('path');
@@ -43,8 +43,22 @@ async function driveTo(cdp,ev,tx,tz,label,timeout=45000){
 async function wakeSnoozle(cdp,ev,idx,label){
   const q=await ev(`(()=>{const s=__W.snoozles[${idx}];return {x:s.g.position.x,z:s.g.position.z};})()`);await driveTo(cdp,ev,q.x,q.z,label);const before=await ev(`__W.snoozles.filter(s=>s.state!=='sleep').length`);await tap(cdp,'KeyK',70);await waitEval(ev,`__W.snoozles[${idx}].state!=='sleep'`,3500);const after=await ev(`__W.snoozles.filter(s=>s.state!=='sleep').length`);assert(after===before+1,label+' wake count');return {idx,before,after};
 }
-async function defeatFirstSnowman(cdp,ev){
-  const e=await ev(`(()=>{const e=__WINTER.snowmen[0];return {x:e.x,z:e.z};})()`);await driveTo(cdp,ev,e.x,e.z+5.1,'snowman approach');await waitEval(ev,'__P.grounded===true',3000);await cameraForward(ev);await hold(cdp,['KeyW'],90);await tap(cdp,'KeyJ',70);await waitEval(ev,'__WINTER.snowmen[0].hp===1',3500);const burst1=await ev('__WINTER.state.bursts');await waitEval(ev,'!__WINTER.snowballs.some(s=>s.alive)',3500);await sleep(550);await cameraForward(ev);await tap(cdp,'KeyJ',70);await waitEval(ev,'__WINTER.snowmen[0].alive===false',4000);const burst2=await ev('__WINTER.state.bursts');assert(burst2>burst1,'second snowball burst not observed');return {burst1,burst2};
+async function exerciseSnowballCooldown(cdp,ev){
+  await cameraForward(ev);const startCount=await ev('__WINTER.snowballs.length'),burst0=await ev('__WINTER.state.bursts');
+  await tap(cdp,'KeyJ',70);await sleep(100);assert((await ev('__WINTER.snowballs.length'))===startCount+1,'first snowball shot missing');assert((await ev('__WINTER.snowballs.filter(s=>s.alive).length'))>=1,'first snowball is not live');
+  const afterFirst=await ev('__WINTER.snowballs.length');await tap(cdp,'KeyJ',70);await sleep(120);assert((await ev('__WINTER.snowballs.length'))===afterFirst,'premature snowball bypassed cooldown');
+  await waitEval(ev,'__WINTER.cooldownRemaining()<=0.01',1800);assert(await ev('__WINTER.snowballs.some(s=>s.alive)'),'first snowball did not remain alive through cooldown');
+  await tap(cdp,'KeyJ',70);await sleep(120);assert((await ev('__WINTER.snowballs.length'))===afterFirst+1,'post-cooldown snowball did not fire');assert((await ev('__WINTER.snowballs.filter(s=>s.alive).length'))>=2,'post-cooldown shot did not coexist with first live snowball');
+  await waitEval(ev,`__WINTER.state.bursts>${burst0}`,3500);return {startCount,afterFirst,afterSecond:await ev('__WINTER.snowballs.length'),burstCount:await ev('__WINTER.state.bursts')};
+}
+async function exerciseSnowman(cdp,ev){
+  const home=await ev(`(()=>{const e=__WINTER.snowmen[0];return {x:e.x,z:e.z};})()`);await driveTo(cdp,ev,home.x,home.z+6.2,'snowman pursuit approach');
+  const before=await ev(`(()=>{const e=__WINTER.snowmen[0];return {x:e.x,z:e.z,d:Math.hypot(e.x-__P.pos.x,e.z-__P.pos.z)};})()`);await hold(cdp,['KeyA'],220);await sleep(650);
+  const after=await ev(`(()=>{const e=__WINTER.snowmen[0];return {x:e.x,z:e.z,d:Math.hypot(e.x-__P.pos.x,e.z-__P.pos.z),chasing:!!e.chasing};})()`);const travel=Math.hypot(after.x-before.x,after.z-before.z);assert(after.chasing&&travel>1.0,'snowman pursuit did not materially move toward active player');
+  let spun=false;for(let i=0;i<4&&!spun;i++){const q=await ev(`(()=>{const e=__WINTER.snowmen[0];return {x:e.x,z:e.z,hp:e.hp};})()`);await driveTo(cdp,ev,q.x,q.z+1.55,'snowman spin approach '+i,12000);await tap(cdp,'KeyK',70);await sleep(180);spun=(await ev('__WINTER.snowmen[0].hp'))===1;}
+  assert(spun,'genuine spin attack did not damage snowman');
+  await waitEval(ev,'__WINTER.cooldownRemaining()<=0.01',2500);await cameraForward(ev);await tap(cdp,'KeyJ',70);await waitEval(ev,'__WINTER.snowmen[0].alive===false',4500);assert((await ev('__WINTER.snowmen[0].defeatedBy'))==='snowball','snowball did not finish spin-damaged snowman');
+  return {pursuitTravel:travel,spinHp:1,defeated:true};
 }
 async function main(){
   rmSync(userData,{recursive:true,force:true});
@@ -59,21 +73,31 @@ async function main(){
     await cdp.evaluate(`__setPickerIdx(5)`);await tap(cdp,'Space',80);await waitEval(cdp.evaluate,`__started()&&__LEVEL().id==='level6'&&__isWinter()`,6000);
     assert(await cdp.evaluate(`__WINTER.snowTrees.length===20&&__WINTER.snowmen.length===4`),'winter scene population mismatch');assert(await cdp.evaluate(`__WINTER.reindeer.length===6&&__WINTER.reindeer.filter(r=>r.redNosed).length===1`),'reindeer/red-nose population mismatch');
     await cdp.screenshot('02-winter-load-desktop.png');
+
     await driveTo(cdp,cdp.evaluate,0,8,'snowball power');await waitEval(cdp.evaluate,'__WINTER.state.snowballUnlocked===true',3000);result.route.push('snowball-power');
-    const singleBefore=await cdp.evaluate('__WINTER.snowballs.length');await cameraForward(cdp.evaluate);await tap(cdp,'KeyJ',70);await sleep(120);const live=await cdp.evaluate('__WINTER.snowballs.filter(s=>s.alive).length');assert(live===1,'B attack did not create exactly one snowball');await waitEval(cdp.evaluate,'!__WINTER.snowballs.some(s=>s.alive)',3500);assert((await cdp.evaluate('__WINTER.state.bursts'))>=1,'snowball expiry/impact burst not observed');result.route.push('single-snowball-burst');
+    result.cooldown=await exerciseSnowballCooldown(cdp,cdp.evaluate);result.route.push('snowball-cooldown-overlap');result.route.push('snowball-burst');
+    result.combat=await exerciseSnowman(cdp,cdp.evaluate);result.route.push('snowman-pursuit');result.route.push('snowman-spin-hit');result.route.push('snowman-snowball-finish');
+
     await wakeSnoozle(cdp,cdp.evaluate,0,'snoozle 1');result.route.push('snoozle-1');
-    result.combat=await defeatFirstSnowman(cdp,cdp.evaluate);result.route.push('snowman-defeat');
     await wakeSnoozle(cdp,cdp.evaluate,1,'snoozle 2');result.route.push('snoozle-2');
     await wakeSnoozle(cdp,cdp.evaluate,2,'hilltop snoozle');result.route.push('hilltop-snoozle');
+
     await driveTo(cdp,cdp.evaluate,0,-182.5,'sled top');await waitEval(cdp.evaluate,'__P.pos.y>5.2',5000);await tap(cdp,'Space',70);await waitEval(cdp.evaluate,'!!__P.sled&&__WINTER.sled.phase===\'sliding\'',3500);result.route.push('sled-entry');
-    await waitEval(cdp.evaluate,'__WINTER.sled.progress>0.38',6000);await viewport(cdp,844,390);result.viewports.push('844x390');const deer=await cdp.evaluate(`(()=>{const r=__WINTER.reindeer.find(r=>r.redNosed);return {visible:r.g.visible!==false,d:Math.hypot(__P.pos.x-r.g.position.x,__P.pos.z-r.g.position.z)};})()`);assert(deer.visible&&deer.d<25,'red-nosed reindeer not visibly near sled route');await cdp.screenshot('03-sled-red-reindeer-844x390.png');
+    await waitEval(cdp.evaluate,'__WINTER.sled.progress>0.15',4000);await viewport(cdp,844,390);result.viewports.push('844x390');
+    const sx0=await cdp.evaluate('__WINTER.sled.x');await hold(cdp,['KeyA'],700);const sxL=await cdp.evaluate('__WINTER.sled.x');assert(sxL<sx0-0.35,'live sled did not steer left');result.route.push('sled-steer-left');
+    await hold(cdp,['KeyD'],1400);const steer=await cdp.evaluate('({x:__WINTER.sled.x,limit:__WINTER.sled.steerLimit,phase:__WINTER.sled.phase})');assert(steer.x>sxL+0.7,'live sled did not steer right');assert(Math.abs(steer.x)<=steer.limit+0.05,'sled steering escaped authored slope bounds');result.route.push('sled-steer-right');
+    const deer=await cdp.evaluate(`(()=>{const r=__WINTER.reindeer.find(r=>r.redNosed);return {visible:r.g.visible!==false,d:Math.hypot(__P.pos.x-r.g.position.x,__P.pos.z-r.g.position.z)};})()`);assert(deer.visible&&deer.d<28,'red-nosed reindeer not visibly near sled route');await cdp.screenshot('03-steerable-sled-844x390.png');
     await waitEval(cdp.evaluate,'__WINTER.sled.phase===\'bottom\'&&__WINTER.sled.completed',7000);await tap(cdp,'KeyJ',70);await waitEval(cdp.evaluate,'!__P.sled',2500);result.route.push('sled-exit');
+
     await wakeSnoozle(cdp,cdp.evaluate,3,'snoozle 4');await wakeSnoozle(cdp,cdp.evaluate,4,'snoozle 5');result.route.push('all-snoozles');assert(await cdp.evaluate(`__W.snoozles.every(s=>s.state!=='sleep')&&__WINTER.winterReady()`),'all-Snoozles finish predicate not ready');
-    await driveTo(cdp,cdp.evaluate,0,-462.5,'Christmas tree finale');await waitEval(cdp.evaluate,'__W.won===true',5000);assert(await cdp.evaluate('__WINTER.tree.lights.length===30&&!!__WINTER.tree.star&&__WINTER.tree.party'),'Christmas-tree victory tableau incomplete');
-    await viewport(cdp,390,844);result.viewports.push('390x844');await cdp.screenshot('04-victory-phone-390x844.png');result.route.push('victory');
-    await sleep(3800);await tap(cdp,'Space',70);await waitEval(cdp.evaluate,'!__started()&&document.getElementById(\'start\').style.display!==\'none\'',4000);await cdp.screenshot('05-return-picker-phone.png');result.route.push('picker-return');
+    await driveTo(cdp,cdp.evaluate,0,-456,'decorated Christmas tree approach');const decor=await cdp.evaluate(`(()=>{const t=__WINTER.tree;return {lights:t.lights.length,bright:!!t.brightLights,ornaments:t.ornaments.length,garlands:t.garlands.length,presents:t.presents.length,star:!!t.star};})()`);assert(decor.star&&decor.bright&&decor.lights>=42&&decor.ornaments>=20&&decor.garlands>=3&&decor.presents>=6,'polished Christmas-tree decorations/presents incomplete');await cdp.screenshot('04-decorated-finale-844x390.png');result.route.push('decorated-tree');
+    await driveTo(cdp,cdp.evaluate,0,-462.5,'Christmas tree finale');await waitEval(cdp.evaluate,'__W.won===true',5000);assert(await cdp.evaluate('__WINTER.tree.party'),'Christmas-tree victory celebration did not activate');result.route.push('victory');
+
+    await viewport(cdp,390,844);result.viewports.push('390x844');await cdp.screenshot('05-victory-phone-390x844.png');
+    await sleep(3800);await tap(cdp,'Space',70);await waitEval(cdp.evaluate,'!__started()&&document.getElementById(\'start\').style.display!==\'none\'',4000);await cdp.screenshot('06-return-picker-phone.png');result.route.push('picker-return');
     await tap(cdp,'Space',80);await waitEval(cdp.evaluate,"__started()&&__LEVEL().id==='level6'&&__WINTER.sled.phase==='top'",5000);result.route.push('restart');
-    result.redNosedCount=await cdp.evaluate('__WINTER.reindeer.filter(r=>r.redNosed).length');result.awakeBeforeRestart=5;result.status='PASS';writeFileSync(join(outDir,'result.json'),JSON.stringify(result,null,2));console.log('LEVEL6_BROWSER_VERIFY=PASS');console.log(JSON.stringify(result));
+
+    result.redNosedCount=await cdp.evaluate('__WINTER.reindeer.filter(r=>r.redNosed).length');result.awakeBeforeRestart=5;result.decor=decor;result.sled={left:sxL,right:steer.x,limit:steer.limit};result.status='PASS';writeFileSync(join(outDir,'result.json'),JSON.stringify(result,null,2));console.log('LEVEL6_BROWSER_VERIFY=PASS');console.log(JSON.stringify(result));
   }finally{if(cdp)cdp.close();try{cp.kill('SIGKILL');}catch(e){}try{server.kill('SIGKILL');}catch(e){}rmSync(userData,{recursive:true,force:true});}
 }
 main().catch(e=>{console.error('LEVEL6_BROWSER_VERIFY=FAIL');console.error(e&&e.stack||e);process.exit(1);});
