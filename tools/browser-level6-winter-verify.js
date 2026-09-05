@@ -57,7 +57,8 @@ async function exerciseSnowman(cdp,ev){
   const after=await ev(`(()=>{const e=__WINTER.snowmen[0];return {x:e.x,z:e.z,d:Math.hypot(e.x-__P.pos.x,e.z-__P.pos.z),chasing:!!e.chasing};})()`);const travel=Math.hypot(after.x-before.x,after.z-before.z);assert(after.chasing&&travel>1.0,'snowman pursuit did not materially move toward active player');
   let spun=false;for(let i=0;i<4&&!spun;i++){const q=await ev(`(()=>{const e=__WINTER.snowmen[0];return {x:e.x,z:e.z,hp:e.hp};})()`);await driveTo(cdp,ev,q.x,q.z+1.55,'snowman spin approach '+i,12000);await tap(cdp,'KeyK',70);await sleep(180);spun=(await ev('__WINTER.snowmen[0].hp'))===1;}
   assert(spun,'genuine spin attack did not damage snowman');
-  await waitEval(ev,'__WINTER.cooldownRemaining()<=0.01',2500);await cameraForward(ev);await tap(cdp,'KeyJ',70);await waitEval(ev,'__WINTER.snowmen[0].alive===false',4500);assert((await ev('__WINTER.snowmen[0].defeatedBy'))==='snowball','snowball did not finish spin-damaged snowman');
+  await waitEval(ev,'__WINTER.cooldownRemaining()<=0.01',2500);
+  const finishTarget=await ev(`(()=>{const e=__WINTER.snowmen[0];return {x:e.x,z:e.z};})()`);await driveTo(cdp,ev,finishTarget.x,finishTarget.z+3.8,'snowman snowball finish',12000);await waitEval(ev,'__P.grounded===true',3000);await cameraForward(ev);await tap(cdp,'KeyJ',70);await waitEval(ev,'__WINTER.snowmen[0].alive===false',4500);assert((await ev('__WINTER.snowmen[0].defeatedBy'))==='snowball','snowball did not finish spin-damaged snowman');
   return {pursuitTravel:travel,spinHp:1,defeated:true};
 }
 async function main(){
