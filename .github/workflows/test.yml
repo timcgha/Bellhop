@@ -22,6 +22,17 @@ jobs:
         run: node build.js --check
       - name: Run deterministic suites
         run: node tests/run.js
+      - name: Run Pling visual real-browser verification
+        env:
+          CHROME_BIN: /usr/bin/google-chrome
+        run: node tools/browser-player-visual-redesign-verify.js
+      - name: Upload Pling visual browser evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: pling-visual-browser
+          path: artifacts/browser-player-visual-redesign/
+          if-no-files-found: error
       - name: Run Level 6 real-browser verification
         env:
           CHROME_BIN: /usr/bin/google-chrome
