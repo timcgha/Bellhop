@@ -1,0 +1,110 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<title>Bellhop v6</title>
+<style>
+html,body{margin:0;height:100%;overflow:hidden;background:#9fdcff;font-family:-apple-system,"SF Pro Rounded",system-ui,"Segoe UI",Roboto,sans-serif;-webkit-user-select:none;user-select:none;-webkit-touch-callout:none;touch-action:none;overscroll-behavior:none}
+canvas{display:block;touch-action:none}
+#ctl{position:fixed;inset:0;touch-action:none}
+#hud{position:fixed;left:12px;top:10px;display:flex;gap:8px;pointer-events:none;color:#fff;font-weight:800;text-shadow:0 2px 0 rgba(20,60,80,.45);font-size:17px}
+.pill{background:rgba(20,60,80,.42);border-radius:999px;padding:6px 12px}
+#mute{position:fixed;right:12px;top:10px;background:rgba(20,60,80,.42);color:#fff;border:0;border-radius:999px;padding:6px 12px;font-size:16px;font-weight:800;touch-action:none}
+#toast{position:fixed;left:50%;top:13%;transform:translateX(-50%);background:#fff8e6;color:#1e7f85;border:3px solid #f5b400;border-radius:16px;padding:8px 18px;font-weight:800;font-size:18px;opacity:0;transition:opacity .25s;pointer-events:none;white-space:nowrap}
+#hint{position:fixed;left:50%;bottom:14px;transform:translateX(-50%);color:#fff;font-size:13px;font-weight:600;text-shadow:0 1px 0 rgba(20,60,80,.5);opacity:.95;transition:opacity 1.5s;pointer-events:none;white-space:nowrap;max-width:96vw;overflow:hidden;text-overflow:ellipsis}
+#win{position:fixed;inset:0;display:none;align-items:center;justify-content:center;flex-direction:column;pointer-events:none;z-index:4;transition:opacity .6s;box-sizing:border-box;width:100%;max-width:100vw;padding:max(12px,env(safe-area-inset-top)) max(16px,env(safe-area-inset-right)) max(12px,env(safe-area-inset-bottom)) max(16px,env(safe-area-inset-left));overflow:hidden}
+#win .big{font-size:clamp(22px,min(11vw,8.5vh),72px);font-weight:900;color:#fff3c4;-webkit-text-stroke:clamp(1.25px,0.35vw,3px) #1e7f85;paint-order:stroke fill;text-shadow:0 8px 0 rgba(30,127,133,.35);letter-spacing:0.02em;text-align:center;line-height:1.08;animation:pop .7s cubic-bezier(.2,1.6,.4,1);max-width:min(100%,92vw);width:100%;box-sizing:border-box;padding:0 4px;overflow-wrap:break-word;word-break:normal;hyphens:manual}
+#win .sm{margin-top:12px;font-size:clamp(13px,min(4.5vw,3.2vh),23px);font-weight:800;color:#fff;text-align:center;text-shadow:0 3px 0 rgba(20,60,80,.55);animation:pop .7s .18s backwards cubic-bezier(.2,1.6,.4,1);max-width:min(100%,90vw);width:100%;box-sizing:border-box;padding:0 6px}
+@keyframes pop{from{transform:scale(.2) rotate(-8deg);opacity:0}to{transform:scale(1) rotate(0);opacity:1}}
+@media (orientation:portrait) and (max-width:500px){
+#win{padding:max(16px,env(safe-area-inset-top)) max(22px,env(safe-area-inset-right)) max(18px,env(safe-area-inset-bottom)) max(22px,env(safe-area-inset-left))}
+#win .big{font-size:clamp(18px,6.6vw,36px);letter-spacing:0.4px;-webkit-text-stroke:1.25px #1e7f85;text-shadow:0 4px 0 rgba(30,127,133,.3);line-height:1.14;max-width:min(100%,84vw);padding:0 8px}
+#win .sm{font-size:clamp(12px,3.6vw,17px);margin-top:10px;max-width:min(100%,84vw)}
+}
+@media (orientation:landscape) and (max-height:500px){
+#win .big{font-size:clamp(26px,min(9.5vw,14vh),72px);letter-spacing:0.04em;-webkit-text-stroke:clamp(1.5px,0.28vw,3px) #1e7f85}
+#win .sm{font-size:clamp(14px,min(3.8vw,4.5vh),23px)}
+}
+#start{position:fixed;inset:0;display:flex;align-items:flex-start;justify-content:center;background:rgba(159,220,255,.55);z-index:5;pointer-events:none;overflow-y:auto;-webkit-overflow-scrolling:touch;overscroll-behavior:contain;touch-action:pan-y;box-sizing:border-box;min-height:100dvh;height:100dvh;max-height:100dvh;padding:max(12px,env(safe-area-inset-top)) max(10px,env(safe-area-inset-right)) max(12px,env(safe-area-inset-bottom)) max(10px,env(safe-area-inset-left))}
+#start .card{background:#fff8e6;border:4px solid #1e7f85;border-radius:26px;padding:22px 26px;max-width:min(560px,96vw);text-align:center;box-shadow:0 14px 40px rgba(10,60,90,.28);pointer-events:auto;margin:auto 0;flex-shrink:0;touch-action:pan-y}
+#start h1{margin:0;font-size:38px;letter-spacing:2px;color:#1e7f85;font-weight:900}
+#start .sub{margin:2px 0 10px;color:#1c2b33;font-weight:700;font-size:13px;letter-spacing:.5px;text-transform:uppercase}
+#start p{margin:6px 0;line-height:1.35;color:#1c2b33;font-size:15px}
+#start .keys{font-size:13px;color:#3d5560;background:#e9f6f7;border-radius:12px;padding:8px 10px}
+#start .level-pick{display:flex;gap:12px;justify-content:center;margin:14px 0 8px;flex-wrap:wrap}
+#start .lvl-card{flex:1 1 120px;max-width:168px;padding:8px;border-radius:18px;border:4px solid #b8d4d8;background:#e9f6f7;cursor:pointer;transition:border-color .15s,box-shadow .15s,transform .1s}
+#start .lvl-card.sel{border-color:#f5b400;background:#fff3c4;box-shadow:0 0 0 3px rgba(245,180,0,.35),0 6px 16px rgba(10,60,90,.2);transform:scale(1.04)}
+#start .lvl-card.sel.pulse{animation:lvlPulse .38s cubic-bezier(.2,1.4,.4,1)}
+@keyframes lvlPulse{0%{transform:scale(1.04)}40%{transform:scale(1.12)}100%{transform:scale(1.04)}}
+#start .lvl-card:active{transform:scale(0.98)}
+#start .lvl-card.sel:active{transform:scale(1.0)}
+#start .lvl-art{display:block;width:100%;height:auto;border-radius:10px;background:#fff}
+#start .lvl-label{display:block;margin-top:6px;font-size:12px;font-weight:800;color:#1e7f85;letter-spacing:.3px}
+#start .pick-hint{font-size:14px;font-weight:800;color:#1e7f85;margin:4px 0 10px}
+#start small{display:block;margin-top:10px;font-size:11px;color:#3d5560}
+#start .radio-badge{display:inline-block;margin-top:10px;padding:3px 10px;font-size:10px;font-weight:700;letter-spacing:.35px;color:#1e7f85;background:#e9f6f7;border:1px solid #b8d4d8;border-radius:999px}
+.tbtn{position:fixed;width:66px;height:66px;border-radius:50%;background:rgba(255,255,255,.28);border:3px solid rgba(255,255,255,.75);color:#fff;font-weight:900;font-size:22px;display:none;align-items:center;justify-content:center;flex-direction:column;line-height:1;touch-action:none;text-shadow:0 1px 0 rgba(0,0,0,.3);z-index:6}
+.tbtn small{font-size:9px;font-weight:700;opacity:.95;margin-top:2px}
+body.touch.playing .tbtn{display:flex}
+body:not(.playing) #hint{opacity:0!important;pointer-events:none}
+#bA{right:max(22px,env(safe-area-inset-right));bottom:max(30px,env(safe-area-inset-bottom));background:rgba(70,190,120,.5)}
+#bB{right:max(104px,calc(22px + env(safe-area-inset-right) + 66px));bottom:max(64px,env(safe-area-inset-bottom));background:rgba(235,85,85,.5)}
+#bY{right:max(44px,calc(22px + env(safe-area-inset-right) + 22px));bottom:max(114px,env(safe-area-inset-bottom));background:rgba(245,180,0,.55)}
+#stick{position:fixed;width:120px;height:120px;border-radius:50%;border:3px solid rgba(255,255,255,.55);background:rgba(255,255,255,.12);display:none;pointer-events:none}
+#knob{position:absolute;left:35px;top:35px;width:50px;height:50px;border-radius:50%;background:rgba(255,255,255,.65)}
+@media (max-height:520px){
+#start{padding:max(6px,env(safe-area-inset-top)) max(8px,env(safe-area-inset-right)) max(8px,env(safe-area-inset-bottom)) max(8px,env(safe-area-inset-left))}
+#start .card{padding:10px 12px;border-radius:18px;border-width:3px}
+#start h1{font-size:24px;letter-spacing:1px}
+#start .sub{margin:0 0 4px;font-size:11px}
+#start p{margin:4px 0;font-size:12px;line-height:1.25}
+#start .keys{font-size:11px;padding:6px 8px}
+#start .level-pick{gap:6px;margin:6px 0 4px}
+#start .lvl-card{flex:1 1 68px;max-width:108px;padding:4px;border-radius:12px;border-width:3px}
+#start .lvl-label{margin-top:3px;font-size:10px}
+#start .pick-hint{font-size:12px;margin:2px 0 4px}
+#start small{margin-top:6px;font-size:10px}
+#start .radio-badge{margin-top:6px;font-size:9px;padding:2px 8px}
+}
+</style>
+</head>
+<body>
+<div id="ctl"></div>
+<div id="stick"><div id="knob"></div></div>
+<div id="bA" class="tbtn">A<small>jump</small></div>
+<div id="bB" class="tbtn">B<small id="bBLbl">slam · gust</small></div>
+<div id="bY" class="tbtn">Y<small>spin</small></div>
+<div id="hud"><span class="pill" id="hp">❤️❤️❤️❤️</span><span class="pill" id="snz">😴 0/4</span><span class="pill" id="nts">♪ 0/12</span><span class="pill" id="fire" style="display:none">🔥 0</span><span class="pill" id="bubble" style="display:none">🫧</span><span class="pill" id="starbeam" style="display:none">⭐</span></div>
+<button id="mute">🔊</button>
+<div id="toast"></div>
+<div id="win"><div class="big">CONGRATULATIONS<br>YOU WIN!</div><div class="sm">Everyone is awake. Look at that rainbow!</div></div>
+<div id="hint"></div>
+<div id="start"><div class="card">
+<h1>BELLHOP</h1>
+<div class="sub" id="ver">{{RELEASE_DISPLAY}}</div>
+<div class="level-pick">
+<div class="lvl-card sel" id="lvl0"><canvas class="lvl-art" id="art0" width="160" height="100"></canvas><span class="lvl-label">Meadow</span></div>
+<div class="lvl-card" id="lvl1"><canvas class="lvl-art" id="art1" width="160" height="100"></canvas><span class="lvl-label">The Deep</span></div>
+<div class="lvl-card" id="lvl2"><canvas class="lvl-art" id="art2" width="160" height="100"></canvas><span class="lvl-label">The Peak</span></div>
+<div class="lvl-card" id="lvl3"><canvas class="lvl-art" id="art3" width="160" height="100"></canvas><span class="lvl-label">Space</span></div>
+<div class="lvl-card" id="lvl4"><canvas class="lvl-art" id="art4" width="160" height="100"></canvas><span class="lvl-label">Desert</span></div>
+</div>
+<p class="pick-hint" id="pickHint"></p>
+<p class="keys" id="ctlText"></p>
+<small>Phones: turn to landscape. Bluetooth or USB gamepads work too.</small>
+<span class="radio-badge">Radio v2</span>
+</div></div>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+<script>
+(function(){
+'use strict';
+const $=id=>document.getElementById(id);
+if(!window.THREE){$('ctlText').textContent='Three.js did not load. Check the connection and reload.';return;}
+
+{{BUILD_CONTENT}}
+})();
+</script>
+</body>
+</html>
