@@ -1,0 +1,52 @@
+const LEVEL6={
+id:'level6',
+music:'meadow',
+winterAtmosphere:true,
+spawn:{x:0,y:0,z:28},
+physics:{
+  speed:6.8,acc:44,dec:60,airAcc:20,
+  grav:-30,maxFall:-32,jumpV:10.5,puffV:9.4,
+  coyote:0.12,buffer:0.15,step:0.42,r:0.36,h:1.15,
+  hoverHeld:1.0,hoverReleased:0.5,hoverDrift:-1.6,
+  slamHang:0.14,slamFall:-34,slamRebound:8,
+  jetTime:0.38,bonkR:2.05,bonkCD:0.5
+},
+fence:0xb9d7e8,
+fenceSolids:[
+  [0,0,36,40,3.2,0.7],[0,0,-492,40,3.2,0.7],
+  [-20,0,-228,0.7,3.2,528],[20,0,-228,0.7,3.2,528]
+],
+pathTiles:[],hedges:[],trees:[],
+checks:[[0,26],[0,-104],[0,-174,6.95],[0,-322],[0,-414]],
+tower:{tx:0,tz:0},
+snoozleGoal:5,
+snoozleHomes:[
+  {x:-5,y:0,z:-458},{x:-2.5,y:0,z:-459},{x:0,y:0,z:-460},{x:2.5,y:0,z:-459},{x:5,y:0,z:-458}
+],
+snoozles:[
+  [-7,0,-42,0,false],
+  [8,0,-112,1,false],
+  [-5,6.95,-174,2,false],
+  [7,0,-337,3,false],
+  [-7,0,-411,4,false]
+],
+// Generic loader gets an invisible finish contract first. winter.js replaces it with
+// the authored Christmas-tree finish after the common level/Snoozle setup completes.
+steps:[['unfinishedFinish',0,-466,14]],
+winter:{
+  power:{x:0,y:0.65,z:8},
+  snowTrees:[
+    [-14,-8,1.0],[13,-18,1.15],[-15,-35,1.2],[14,-52,1.05],[-13,-72,1.1],[15,-92,1.25],
+    [-14,-118,1.15],[13,-139,1.05],[-15,-158,1.2],[14,-171,1.0],[-15,-208,1.15],[15,-235,1.1],
+    [-14,-267,1.2],[14,-297,1.0],[-15,-330,1.15],[15,-356,1.2],[-14,-386,1.05],[14,-417,1.15],
+    [-15,-442,1.25],[15,-452,1.1]
+  ],
+  snowmen:[[-5,-66],[7,-126],[-7,-350],[6,-399]],
+  reindeer:[
+    [-15,-28,false], [14,-82,false], [-15,-242,true], [14,-286,false], [-15,-382,false], [14,-432,false]
+  ],
+  hill:{startZ:-132,topZ:-184,topY:6.95,width:15,terraces:22},
+  sled:{x:0,y:6.95,z:-184,endZ:-318,duration:7.8},
+  finale:{x:0,y:0,z:-466,scale:1.55}
+}
+};

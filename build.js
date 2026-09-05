@@ -8,7 +8,7 @@
 const fs=require('fs'),path=require('path');
 
 const ROOT=__dirname;
-const ORDER=['util.js','audio.js','input.js','render.js','fx.js','entities.js','player.js','enemies.js','peak.js','deep.js','space.js','desert.js','hud.js','game.js'];
+const ORDER=['util.js','audio.js','input.js','render.js','fx.js','entities.js','player.js','enemies.js','peak.js','deep.js','space.js','desert.js','winter.js','winter-aim.js','winter-picker.js','hud.js','winter-ui.js','game.js'];
 const SRC=path.join(ROOT,'src'),LEVELS=path.join(ROOT,'levels');
 const TEMPLATE=path.join(ROOT,'index.template.html');
 const RELEASE=path.join(ROOT,'release.json');
