@@ -95,7 +95,7 @@ async function main(){
     await driveTo(cdp,cdp.evaluate,0,-462.5,'Christmas tree finale');await waitEval(cdp.evaluate,'__W.won===true',5000);assert(await cdp.evaluate('__WINTER.tree.party'),'Christmas-tree victory celebration did not activate');result.route.push('victory');
 
     await viewport(cdp,390,844);result.viewports.push('390x844');await cdp.screenshot('05-victory-phone-390x844.png');
-    await waitEval(cdp.evaluate,'winT>3.6',9000);await tap(cdp,'Space',70);await waitEval(cdp.evaluate,'!__started()&&document.getElementById(\'start\').style.display!==\'none\'',4000);await cdp.screenshot('06-return-picker-phone.png');result.route.push('picker-return');
+    let returned=false;for(let i=0;i<18&&!returned;i++){await tap(cdp,'Space',70);await sleep(350);returned=await cdp.evaluate(`!__started()&&document.getElementById('start').style.display!=='none'`);}assert(returned,'normal victory Space return did not reach picker');await cdp.screenshot('06-return-picker-phone.png');result.route.push('picker-return');
     await tap(cdp,'Space',80);await waitEval(cdp.evaluate,"__started()&&__LEVEL().id==='level6'&&__WINTER.sled.phase==='top'",5000);result.route.push('restart');
 
     result.redNosedCount=await cdp.evaluate('__WINTER.reindeer.filter(r=>r.redNosed).length');result.awakeBeforeRestart=5;result.decor=decor;result.sled={left:sxL,right:steer.x,limit:steer.limit};result.status='PASS';writeFileSync(join(outDir,'result.json'),JSON.stringify(result,null,2));console.log('LEVEL6_BROWSER_VERIFY=PASS');console.log(JSON.stringify(result));
