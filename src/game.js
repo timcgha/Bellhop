@@ -205,4 +205,4 @@ function frame(now){requestAnimationFrame(frame);let dt=(now-last)/1000;last=now
   renderer.render(scene,camera);}
 requestAnimationFrame(frame);
 updateHUD();
-updateCamDiagUI();
+if(camDistParam!=null)updateCamDiagUI();

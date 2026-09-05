@@ -1,116 +1,16 @@
-name: v54 release publication gate
+name: test
 
 on:
   push:
-
-permissions:
-  contents: write
+  pull_request:
 
 jobs:
-  publish-label:
+  test:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-        with:
-          fetch-depth: 4
       - uses: actions/setup-node@v4
         with:
           node-version: '22'
-      - name: Verify exact authorized source
-        shell: bash
-        run: |
-          set -euo pipefail
-          test "$GITHUB_REPOSITORY" = "timcgha/Bellhop"
-          test "$GITHUB_REF_NAME" = "level5-desert-playtest-enhancement"
-          test "$(git rev-parse HEAD^)" = "a85f352cf59e92893091049289c3eb3ead09fe42"
-          test "$(git remote get-url origin)" = "https://github.com/timcgha/Bellhop"
-          git fetch origin main --depth=1
-          test "$(git rev-parse origin/main)" = "dc626f6774c86d534898246a136b821884476a47"
-          test -z "$(git diff --name-only af3266183811f727c47088cd77a504d5368371cd HEAD -- ':!.github/workflows/test.yml')"
-          grep -Fq '<div class="sub" id="ver">v53 · Desert Level 5</div>' index.html
-          grep -Fq "const VERSION_BASE='v53 · Desert Level 5';" src/game.js
-          grep -Fq 'requestAnimationFrame(frame);' src/game.js
-          grep -Fq 'updateHUD();' src/game.js
-          test "$(tail -n 1 src/game.js)" = 'updateCamDiagUI();'
-      - name: Apply minimal visible-release fix
-        shell: bash
-        run: |
-          set -euo pipefail
-          python3 - <<'PY'
-          from pathlib import Path
-          p=Path('index.html')
-          s=p.read_text()
-          old='<div class="sub" id="ver">v53 · Desert Level 5</div>'
-          new='<div class="sub" id="ver">v54 · Desert Level 5</div>'
-          assert s.count(old)==1, s.count(old)
-          assert s.count(new)==0, s.count(new)
-          p.write_text(s.replace(old,new,1))
-          p=Path('src/game.js')
-          s=p.read_text()
-          old='requestAnimationFrame(frame);\nupdateHUD();\nupdateCamDiagUI();'
-          new='requestAnimationFrame(frame);\nupdateHUD();\nif(camDistParam!=null)updateCamDiagUI();'
-          assert s.count(old)==1, s.count(old)
-          p.write_text(s.replace(old,new,1))
-          PY
-          node build.js
-          node build.js --check
-          test "$(git diff --name-only)" = $'index.html\nsrc/game.js'
-          test "$(git diff --numstat -- index.html)" = $'2\t2\tindex.html'
-          test "$(git diff --numstat -- src/game.js)" = $'1\t1\tsrc/game.js'
-          grep -Fq '<div class="sub" id="ver">v54 · Desert Level 5</div>' index.html
-          grep -Fq "const VERSION_BASE='v53 · Desert Level 5';" index.html
-          grep -Fq "const VERSION_BASE='v53 · Desert Level 5';" src/game.js
-          grep -Fq 'if(camDistParam!=null)updateCamDiagUI();' src/game.js
-          git diff --unified=2 -- index.html src/game.js
-      - name: Validate deterministic tests
-        run: |
-          set -euo pipefail
-          node tests/run.js
-      - name: Lightweight rendered v54 start-screen check
-        shell: bash
-        run: |
-          set -euo pipefail
-          CHROME="$(command -v google-chrome || command -v chromium || command -v chromium-browser)"
-          test -n "$CHROME"
-          python3 -m http.server 8765 --bind 127.0.0.1 >/tmp/bellhop-v54-http.log 2>&1 &
-          SERVER_PID=$!
-          trap 'kill $SERVER_PID 2>/dev/null || true' EXIT
-          for i in $(seq 1 30); do curl -fsS http://127.0.0.1:8765/index.html >/dev/null && break; sleep 0.2; done
-          "$CHROME" --headless=new --no-sandbox --disable-dev-shm-usage --virtual-time-budget=2500 --dump-dom http://127.0.0.1:8765/index.html > /tmp/bellhop-v54-dom.html
-          grep -F '<div class="sub" id="ver">v54 · Desert Level 5</div>' /tmp/bellhop-v54-dom.html
-          grep -F 'id="lvl4"' /tmp/bellhop-v54-dom.html
-          grep -F '<span class="lvl-label">Desert</span>' /tmp/bellhop-v54-dom.html
-          grep -F '<h1>BELLHOP</h1>' /tmp/bellhop-v54-dom.html
-          ! grep -F '<div class="sub" id="ver">v53 · Desert Level 5</div>' /tmp/bellhop-v54-dom.html
-          echo 'V54_RENDERED_START_RESULT=PASS'
-      - name: Restore normal workflow and publish cleaned release tree
-        shell: bash
-        run: |
-          set -euo pipefail
-          cat > .github/workflows/test.yml <<'YAML'
-          name: test
-
-          on:
-            push:
-            pull_request:
-
-          jobs:
-            test:
-              runs-on: ubuntu-latest
-              steps:
-                - uses: actions/checkout@v4
-                - uses: actions/setup-node@v4
-                  with:
-                    node-version: '22'
-                - run: node build.js --check
-                - run: node tests/run.js
-          YAML
-          test -z "$(git diff --name-only af3266183811f727c47088cd77a504d5368371cd -- .github/workflows/test.yml)"
-          test "$(git diff --name-only af3266183811f727c47088cd77a504d5368371cd --)" = $'index.html\nsrc/game.js'
-          git diff --unified=2 af3266183811f727c47088cd77a504d5368371cd -- index.html src/game.js
-          git config user.name "github-actions[bot]"
-          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add index.html src/game.js .github/workflows/test.yml
-          git commit -m "chore: bump Bellhop visible version to v54"
-          test "$(git diff --name-only af3266183811f727c47088cd77a504d5368371cd HEAD)" = $'index.html\nsrc/game.js'
-          git push origin HEAD:level5-desert-playtest-enhancement
+      - run: node build.js --check
+      - run: node tests/run.js
