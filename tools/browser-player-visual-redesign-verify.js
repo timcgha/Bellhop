@@ -87,10 +87,13 @@ async function main(){
     assert(vis.rootScale===0.72&&vis.keepsJet&&vis.keepsFlame,'root/effect preservation mismatch');
     assertFramed(await projection(cdp.evaluate),'Level 1 desktop');await cdp.screenshot('02-level1-idle-1280x720.png');
 
-    const p0=await state(cdp.evaluate);await hold(cdp,['KeyW'],550);const p1=await state(cdp.evaluate);
-    assert(Math.hypot(p1.x-p0.x,p1.z-p0.z)>0.8,'walking/running did not move Pling');result.actions.push('walk/run');
-    const yaw0=p1.yaw;await hold(cdp,['KeyD'],420);const p2=await state(cdp.evaluate);
-    let yd=Math.abs(((p2.yaw-yaw0+Math.PI)%(Math.PI*2))-Math.PI);assert(yd>0.2,'facing yaw did not respond to turn/movement');
+    // Move sideways first so the authored lamp immediately behind the spawn cannot
+    // turn a valid movement check into a collision-specific false negative.
+    const p0=await state(cdp.evaluate);await hold(cdp,['KeyD'],700);const p1=await state(cdp.evaluate);
+    const moved=Math.hypot(p1.x-p0.x,p1.z-p0.z);
+    assert(moved>0.8,`walking/running did not move Pling (${moved.toFixed(2)}m; ${p0.x.toFixed(2)},${p0.z.toFixed(2)} -> ${p1.x.toFixed(2)},${p1.z.toFixed(2)})`);result.actions.push('walk/run');
+    const yaw0=p1.yaw;await hold(cdp,['KeyW'],500);const p2=await state(cdp.evaluate);
+    let yd=Math.abs(((p2.yaw-yaw0+Math.PI)%(Math.PI*2))-Math.PI);assert(yd>0.2,`facing yaw did not respond to turn/movement (${yaw0.toFixed(2)} -> ${p2.yaw.toFixed(2)})`);
     assert(await cdp.evaluate(`Math.abs(__PLAYER().rotation.y-__P.yaw)<0.001`),'rendered facing detached from gameplay yaw');result.actions.push('facing');
 
     await key(cdp,'Space',true);await sleep(180);const jump=await state(cdp.evaluate);await key(cdp,'Space',false);
