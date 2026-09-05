@@ -22,7 +22,7 @@ const path = require('path');
 const vm = require('vm');
 const { loadGameScript } = require('../tools/load-game.js');
 
-const GAME_HTML = path.join(__dirname, '..', 'index.html');
+const GAME_HTML = path.join(__dirname, '..', 'dist', 'index.html');
 
 // --- permissive proxy: stands in for any THREE class or DOM object we don't model
 const handler = {
