@@ -83,7 +83,7 @@ async function main(){
     await wakeSnoozle(cdp,cdp.evaluate,1,'snoozle 2');result.route.push('snoozle-2');
     await wakeSnoozle(cdp,cdp.evaluate,2,'hilltop snoozle');result.route.push('hilltop-snoozle');
 
-    await driveTo(cdp,cdp.evaluate,0,-182.5,'sled top');await waitEval(cdp.evaluate,'__P.pos.y>5.2',5000);await tap(cdp,'Space',70);await waitEval(cdp.evaluate,'!!__P.sled&&__WINTER.sled.phase===\'sliding\'',3500);result.route.push('sled-entry');
+    const sledTop=await cdp.evaluate(`({x:__WINTER.sled.x,z:__WINTER.sled.z})`);await driveTo(cdp,cdp.evaluate,sledTop.x,sledTop.z+0.65,'sled top');await waitEval(cdp.evaluate,`__P.pos.y>5.2&&Math.hypot(__P.pos.x-__WINTER.sled.x,__P.pos.z-__WINTER.sled.z)<2.0`,5000);await tap(cdp,'Space',70);await waitEval(cdp.evaluate,'!!__P.sled&&__WINTER.sled.phase===\'sliding\'',3500);result.route.push('sled-entry');
     await waitEval(cdp.evaluate,'__WINTER.sled.progress>0.15',4000);await viewport(cdp,844,390);result.viewports.push('844x390');
     const sx0=await cdp.evaluate('__WINTER.sled.x');await hold(cdp,['KeyA'],700);const sxL=await cdp.evaluate('__WINTER.sled.x');assert(sxL<sx0-0.35,'live sled did not steer left');result.route.push('sled-steer-left');
     await hold(cdp,['KeyD'],1400);const steer=await cdp.evaluate('({x:__WINTER.sled.x,limit:__WINTER.sled.steerLimit,phase:__WINTER.sled.phase})');assert(steer.x>sxL+0.7,'live sled did not steer right');assert(Math.abs(steer.x)<=steer.limit+0.05,'sled steering escaped authored slope bounds');result.route.push('sled-steer-right');
