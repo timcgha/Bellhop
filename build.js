@@ -49,8 +49,8 @@ function render(){
   exactlyOnce(template,BUILD_TOKEN,'index.template.html');
   exactlyOnce(template,RELEASE_TOKEN,'index.template.html');
   if(template.includes(START)||template.includes(END))fail('index.template.html must not contain generated BUILD markers');
-  const body=sourceParts().join('\n\n');
   const release=readRelease();
+  const body=`const BELLHOP_RELEASE=${JSON.stringify(release)};\n\n${sourceParts().join('\n\n')}`;
   return template
     .replace(RELEASE_TOKEN,release)
     .replace(BUILD_TOKEN,`${START}\n${body}\n${END}`);
@@ -61,6 +61,7 @@ function validate(html){
   if(si<0||ei<0||si>=ei)fail('generated artifact has invalid BUILD markers');
   const release=readRelease();
   if(!html.includes(`<div class="sub" id="ver">${release}</div>`))fail('generated artifact does not contain canonical release display');
+  if(!html.includes(`const BELLHOP_RELEASE=${JSON.stringify(release)};`))fail('generated artifact does not expose canonical release to runtime code');
   for(const f of fs.readdirSync(LEVELS).filter(f=>f.endsWith('.js')).sort()){
     if(!html.includes(`// ===== levels/${f} =====`))fail(`generated artifact is missing levels/${f}`);
   }
