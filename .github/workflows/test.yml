@@ -22,3 +22,7 @@ jobs:
         run: node build.js --check
       - name: Run deterministic suites
         run: node tests/run.js
+      - name: Run Level 6 real-browser verification
+        env:
+          CHROME_BIN: /usr/bin/google-chrome
+        run: node tools/browser-level6-winter-verify.js
