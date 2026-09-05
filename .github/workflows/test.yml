@@ -1,16 +1,105 @@
-name: test
+name: v54 release publication gate
 
 on:
   push:
-  pull_request:
+
+permissions:
+  contents: write
 
 jobs:
-  test:
+  publish-label:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+        with:
+          fetch-depth: 2
       - uses: actions/setup-node@v4
         with:
           node-version: '22'
-      - run: node build.js --check
-      - run: node tests/run.js
+      - name: Verify exact authorized source
+        shell: bash
+        run: |
+          set -euo pipefail
+          test "$GITHUB_REPOSITORY" = "timcgha/Bellhop"
+          test "$GITHUB_REF_NAME" = "level5-desert-playtest-enhancement"
+          test "$(git rev-parse HEAD^)" = "af3266183811f727c47088cd77a504d5368371cd"
+          test "$(git remote get-url origin)" = "https://github.com/timcgha/Bellhop"
+          git fetch origin main --depth=1
+          test "$(git rev-parse origin/main)" = "dc626f6774c86d534898246a136b821884476a47"
+          test "$(grep -F -c 'v53 · Desert Level 5' index.html)" -eq 2
+          test "$(grep -F -c "const VERSION_BASE='v53 · Desert Level 5';" src/game.js)" -eq 1
+      - name: Apply release-version metadata only
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          from pathlib import Path
+          old='v53 · Desert Level 5'
+          new='v54 · Desert Level 5'
+          p=Path('index.html'); s=p.read_text()
+          assert s.count(old)==2, s.count(old)
+          p.write_text(s.replace(old,new))
+          p=Path('src/game.js'); s=p.read_text()
+          assert s.count(old)==1, s.count(old)
+          p.write_text(s.replace(old,new))
+          PY
+          test "$(grep -F -c 'v54 · Desert Level 5' index.html)" -eq 2
+          test "$(grep -F -c "const VERSION_BASE='v54 · Desert Level 5';" src/game.js)" -eq 1
+          test "$(git diff --name-only)" = $'index.html\nsrc/game.js'
+          git diff --word-diff=porcelain -- index.html src/game.js
+          test "$(git diff --numstat -- index.html)" = $'2\t2\tindex.html'
+          test "$(git diff --numstat -- src/game.js)" = $'1\t1\tsrc/game.js'
+      - name: Validate deterministic build and tests
+        run: |
+          set -euo pipefail
+          node build.js --check
+          node tests/run.js
+      - name: Lightweight rendered v54 start-screen check
+        shell: bash
+        run: |
+          set -euo pipefail
+          CHROME="$(command -v google-chrome || command -v chromium || command -v chromium-browser)"
+          test -n "$CHROME"
+          python3 -m http.server 8765 --bind 127.0.0.1 >/tmp/bellhop-v54-http.log 2>&1 &
+          SERVER_PID=$!
+          trap 'kill $SERVER_PID 2>/dev/null || true' EXIT
+          for i in $(seq 1 30); do curl -fsS http://127.0.0.1:8765/index.html >/dev/null && break; sleep 0.2; done
+          "$CHROME" --headless=new --no-sandbox --disable-dev-shm-usage --virtual-time-budget=2500 --dump-dom http://127.0.0.1:8765/index.html > /tmp/bellhop-v54-dom.html
+          grep -F '<div class="sub" id="ver">v54 · Desert Level 5</div>' /tmp/bellhop-v54-dom.html
+          grep -F 'id="lvl4"' /tmp/bellhop-v54-dom.html
+          grep -F '<span class="lvl-label">Desert</span>' /tmp/bellhop-v54-dom.html
+          grep -F '<h1>BELLHOP</h1>' /tmp/bellhop-v54-dom.html
+          ! grep -F '<div class="sub" id="ver">v53 · Desert Level 5</div>' /tmp/bellhop-v54-dom.html
+          echo 'V54_RENDERED_START_RESULT=PASS'
+      - name: Restore normal workflow and publish exact version-only tree
+        shell: bash
+        run: |
+          set -euo pipefail
+          cat > .github/workflows/test.yml <<'YAML'
+          name: test
+
+          on:
+            push:
+            pull_request:
+
+          jobs:
+            test:
+              runs-on: ubuntu-latest
+              steps:
+                - uses: actions/checkout@v4
+                - uses: actions/setup-node@v4
+                  with:
+                    node-version: '22'
+                - run: node build.js --check
+                - run: node tests/run.js
+          YAML
+          test -z "$(git diff --name-only HEAD^ -- .github/workflows/test.yml)"
+          test "$(git diff --name-only HEAD^ --)" = $'index.html\nsrc/game.js'
+          git diff --unified=0 HEAD^ -- index.html src/game.js
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add index.html src/game.js .github/workflows/test.yml
+          git commit -m "chore: bump Bellhop visible version to v54"
+          test "$(git diff --name-only HEAD^^ HEAD)" = $'index.html\nsrc/game.js'
+          git diff --unified=0 HEAD^^ HEAD -- index.html src/game.js
+          git push origin HEAD:level5-desert-playtest-enhancement
