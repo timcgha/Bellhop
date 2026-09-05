@@ -104,6 +104,7 @@ function boot(opts){return require('./harness.js')(Object.assign({autostart:fals
     H.P.pos.set(sn[i].g.position.x,0,sn[i].g.position.z);H.P.vel.set(0,0,0);H.P.grounded=true;H.P.lastGround=99;H.tap('KeyK',2);H.frames(2);
     ok(sn[i].state!=='sleep','Snoozle '+(i+1)+' wakes through normal player spin interaction');
     ok(sn.filter(s=>s.state!=='sleep').length===i+1,'Snoozle count advances to '+(i+1)+'/4');
+    H.frames(40);
   }
   const final=H.W.quicksands.find(q=>q.role==='final');H.P.pos.set(final.x,0,final.z);H.P.grounded=true;
   ok(H.window.__DESERT.beginFinalQuicksand(final),'special final quicksand unlocks after all four Snoozles wake');
