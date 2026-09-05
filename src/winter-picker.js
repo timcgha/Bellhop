@@ -1,5 +1,7 @@
 // Level 6 picker card is installed before hud.js binds the shared LEVELS listeners.
 (function installWinterPicker(){
+  // The deterministic harness stubs cards by id and intentionally has no document.querySelector.
+  if(typeof document.querySelector!=='function')return;
   const pick=document.querySelector('#start .level-pick');if(!pick||document.getElementById('lvl5'))return;
   const card=document.createElement('div');card.className='lvl-card';card.id='lvl5';
   const cv=document.createElement('canvas');cv.className='lvl-art';cv.id='art5';cv.width=160;cv.height=100;
