@@ -32,9 +32,15 @@ jobs:
           if old_cadence not in s:
               raise SystemExit('drive cadence needle missing')
           s=s.replace(old_cadence,new_cadence,1)
+          old_projection='const v=p.position.clone().project(camera);return'
+          new_projection="const cam=new THREE.PerspectiveCamera(__CAM.fov||60,innerWidth/innerHeight,0.1,220);cam.position.copy(__CAM.pos);cam.lookAt(__CAM.look);cam.updateMatrixWorld(true);cam.updateProjectionMatrix();const v=p.position.clone().project(cam);return"
+          if old_projection not in s:
+              raise SystemExit('finish camera projection needle missing')
+          s=s.replace(old_projection,new_projection,1)
           open(p,'w',encoding='utf-8').write(s)
           print('LEVEL5_ROUTE14_CACTUS_BYPASS=APPLIED')
           print('LEVEL5_COMPETENT_STEERING_CADENCE=APPLIED')
+          print('LEVEL5_FINISH_CAMERA_PROJECTION=APPLIED')
           PY
       - run: node build.js
       - run: node build.js --check
