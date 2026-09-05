@@ -90,56 +90,74 @@ fan updraft lifts to ~11.
 - **Hearts** restore one of four. Dying returns you to the last checkpoint with
   full hearts, keeping every Snoozle and note already collected.
 
-## Current architecture, and where it should go
+## Source, build, and publishing
 
-Right now `index.html` is a single file: CSS, markup, and about 820 lines of JS
-in one IIFE with everything in closure scope. It got here honestly — it was built
-in a chat window where one file was the only sane option — but it is now the main
-obstacle to adding levels.
-
-**Target:**
+Bellhop source is intentionally small and reviewable:
 
 ```
-src/
-  util.js      clamp, lerp, damp, rand, TAU, angDamp, smooth
-  audio.js     AU, tone(), noise(), the step sequencer, SFX
-  input.js     keyboard, touch, gamepad -> the IN struct
-  render.js    renderer, scene, camera, lights, shared materials and geometries
-  fx.js        particle pool, rings, floating Z sprites
-  entities.js  builders: gloop, crate, snoozle, checkpoint, pinwheel, note, ...
-  player.js    buildPlayer, the P struct, movement, abilities
-  enemies.js   gloop AI, goo, puddles, fireballs
-  hud.js       HUD, toasts, the win banner
-  game.js      the loop, state, wiring
-levels/
-  level1.js    pure data: hedges, path tiles, spawns, enemy and item placement
-build.js       concatenates src/ into index.html
+index.template.html   HTML/CSS/DOM shell with build tokens
+release.json          canonical visible release label
+levels/*.js           level data and level-specific source
+src/*.js              shared gameplay source
+build.js              deterministic assembler
+dist/index.html       generated playable/deploy artifact (ignored by Git)
 ```
 
-The point of the split is `levels/`. A level should be data that a person can
-author, not code inside a `buildLevel()` function. Once level1 is data, adding
-level2 is authoring rather than programming, and a six-year-old can describe a
-level and watch it appear.
+`index.html` at the repository root is a temporary legacy copy retained only so
+the existing branch-based GitHub Pages configuration can stay live during the
+one-time cutover to Actions. It is not a source of truth and must not be edited
+for future releases. After Actions-based Pages deployment is proven in production,
+remove that legacy file in a cleanup PR.
 
-**Sequencing.** Do the split in small commits, running the tests after each one.
-Move one module at a time. Do not refactor and add features in the same commit.
+### Change game code
 
-**Why the build step.** `index.html` must stay a single self-contained file:
-GitHub Pages serves it at the project URL, and double-clicking it locally must
-still work. Browsers refuse ES module imports over `file://`, so the modules get
-concatenated rather than imported. `node build.js` regenerates `index.html` from
-`src/`. Commit the generated file — Pages serves it directly with no CI needed.
+Edit `src/` and/or `levels/`. Do not edit generated HTML.
 
-## Testing
+### Change the visible release
+
+Edit only `release.json`. The `<title>Bellhop v6</title>` value is a separate
+historical document title and is not the release label.
+
+### Build locally
+
+```
+node build.js
+```
+
+The output is `dist/index.html`. It remains one self-contained Bellhop document
+apart from the existing Three.js CDN dependency, so it can be opened directly
+for local playtesting.
+
+Validate the generated output without rebuilding it:
+
+```
+node build.js --check
+```
+
+### Test locally
 
 ```
 node tests/run.js
 ```
 
-76 assertions across six suites, each in its own process against a fresh game.
-There is no browser: `tests/harness.js` stubs THREE and the DOM, boots the game,
-and drives it one frame at a time with scripted input, so tests assert on real
-positions, velocities, hit points, and HUD text.
+The test runner builds `dist/index.html` first. The deterministic harness loads
+that generated artifact, so the suites exercise the same assembled product that
+will be deployed.
+
+### Pull requests and production
+
+`.github/workflows/test.yml` builds the artifact, validates it, and runs the full
+deterministic suite on `main` pushes and pull requests.
+
+`.github/workflows/pages.yml` is the permanent production path. On `main` it
+builds, validates, tests, uploads `dist/` as the official Pages artifact, and
+deploys it with GitHub's Pages actions. The repository Pages source must be set
+to **GitHub Actions** for that deployment path.
+
+Do not create temporary/self-cleaning build workflows. Do not manually replace
+the large generated HTML through the GitHub Contents API. Do not commit `dist/`.
+
+## Testing
 
 **Run the tests before every commit.** They exist because this game cannot be
 verified by reading it — the bugs are in emergent behaviour, and the only
@@ -147,14 +165,8 @@ previous release-blocking bug (a stray unit cube covering the character's face)
 was a one-line scale error that read perfectly fine.
 
 When you add a mechanic, add assertions for it. When a test fails, first work out
-whether the game broke or the test's assumption did — several existing tests had
-to be rewritten because they were sampling mid-flight or placing an enemy inside
-the player. A test that fails for a stale reason is worth fixing properly, not
-deleting.
-
-`tests/harness.js` injects three hooks by string replacement, listed in `HOOKS`.
-Those are the only lines coupled to the source text. When you split into modules,
-replace them with real exports.
+whether the game broke or the test's assumption did. A test that fails for a
+stale reason is worth fixing properly, not deleting.
 
 ## Conventions
 
@@ -165,11 +177,10 @@ replace them with real exports.
   must never block play. Good candidates are the mute setting and notes
   collected. Mid-level checkpoint persistence is low value for a
   ten-minute level.
-- Update the version stamp on the start card (`<div class="sub">`) with every
-  release. It is how we tell which build is actually loaded when a browser serves
-  a cached one.
+- Update the visible version in `release.json` with every release. It is how we
+  tell which build is actually loaded when a browser serves a cached one.
 - Prefer procedural geometry from primitives over asset files. The whole game is
-  one file with no downloads, and that is worth protecting.
+  one generated page with no game-asset downloads, and that is worth protecting.
 - Audio is generated with WebAudio, no samples. Every new mechanic gets a sound.
 
 ## Writing style for anything with prose in it
