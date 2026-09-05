@@ -2,7 +2,11 @@ name: test
 
 on:
   push:
+    branches: [main]
   pull_request:
+
+permissions:
+  contents: read
 
 jobs:
   test:
@@ -12,5 +16,9 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: '22'
-      - run: node build.js --check
-      - run: node tests/run.js
+      - name: Build generated game
+        run: node build.js
+      - name: Validate generated game
+        run: node build.js --check
+      - name: Run deterministic suites
+        run: node tests/run.js
