@@ -22,7 +22,7 @@ const path = require('path');
 const vm = require('vm');
 const { loadGameScript } = require('../tools/load-game.js');
 
-const GAME_HTML = path.join(__dirname, '..', 'index.html');
+const GAME_HTML = path.join(__dirname, '..', 'dist', 'index.html');
 
 // --- permissive proxy: stands in for any THREE class or DOM object we don't model
 const handler = {
@@ -241,6 +241,7 @@ module.exports = function boot(opts = {}) {
     getShadow: () => window.__SHADOW,
     shadowReceiveAt: (x,z,belowY,r) => window.__shadowReceiveAt(x,z,belowY,r),
     getCamDiag: () => window.__CAMDIAG,
+    versionUsesCanonicalRelease: () => /const VERSION_BASE=BELLHOP_RELEASE;/.test(src),
     setViewport(w, h) { viewW = w; viewH = h; },
     isStarted: () => window.__started && window.__started(),
     pickerIdx: () => window.__pickerIdx && window.__pickerIdx(),

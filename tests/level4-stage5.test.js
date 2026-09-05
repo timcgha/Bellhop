@@ -22,7 +22,7 @@ function wake(H,sn){H.P.pos.set(sn.g.position.x,sn.g.position.y,sn.g.position.z+
 // ---- version ----
 {
   const H=boot();
-  ok(H.getCamDiag().VERSION_BASE==='v53 · Desert Level 5','version stamp v53');
+  ok(H.versionUsesCanonicalRelease(),'version stamp derives from canonical BELLHOP_RELEASE');
 }
 
 // ---- Snoozles: exactly four (Launch Dock, Candy, Crystal, Observatory) ----

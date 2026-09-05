@@ -39,7 +39,7 @@ function saucerClearance(e,cp){
 // ---- version ----
 {
   const H=boot();
-  ok(H.getCamDiag().VERSION_BASE==='v53 · Desert Level 5','version stamp v53');
+  ok(H.versionUsesCanonicalRelease(),'version stamp derives from canonical BELLHOP_RELEASE');
 }
 
 // ---- Issue 1: Candy surface enemies clear of landable pad ----
