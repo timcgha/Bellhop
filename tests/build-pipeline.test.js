@@ -15,6 +15,7 @@ const rendered=build.render();
 ok(release.display==='v54 · Desert Level 5','canonical release metadata remains v54 · Desert Level 5');
 ok(!template.includes('v54 · Desert Level 5')&&template.includes('{{RELEASE_DISPLAY}}'),'template does not duplicate the visible release string');
 ok(rendered.includes('<div class="sub" id="ver">v54 · Desert Level 5</div>'),'generated artifact injects canonical release metadata');
+ok(rendered.includes('const BELLHOP_RELEASE="v54 · Desert Level 5";')&&rendered.includes('const VERSION_BASE=BELLHOP_RELEASE;')&&!rendered.includes("const VERSION_BASE='v53 · Desert Level 5';"),'runtime version base derives from canonical release metadata');
 ok(!rendered.includes('{{RELEASE_DISPLAY}}')&&!rendered.includes('{{BUILD_CONTENT}}'),'generated artifact resolves all template tokens');
 ok(rendered.includes('// ---- BUILD:START ----')&&rendered.includes('// ---- BUILD:END ----'),'generated artifact contains deterministic BUILD markers');
 ok(build.ORDER.every(f=>rendered.includes(`// ===== src/${f} =====`)),'generated artifact contains every ordered src module');
@@ -26,7 +27,7 @@ const releaseOriginal=fs.readFileSync(releasePath,'utf8');
 try{
   fs.writeFileSync(releasePath,JSON.stringify({display:'v55 · Build proof'},null,2)+'\n');
   const v55=build.render();
-  ok(v55.includes('<div class="sub" id="ver">v55 · Build proof</div>'),'version-bump proof: release.json alone changes generated visible version');
+  ok(v55.includes('<div class="sub" id="ver">v55 · Build proof</div>')&&v55.includes('const BELLHOP_RELEASE="v55 · Build proof";'),'version-bump proof: release.json alone changes visible and runtime release values');
 }finally{fs.writeFileSync(releasePath,releaseOriginal);}
 
 const sourceOriginal=fs.readFileSync(sourceProbe,'utf8');
