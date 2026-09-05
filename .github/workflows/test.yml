@@ -15,42 +15,16 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: '22'
-
-      - name: Materialize Level 5 remediation
-        if: github.event_name == 'push' && github.ref_name == 'level5-desert-playtest-enhancement'
-        run: |
-          node tools/tmp-level5-remediation2.js
-          node build.js
-          if ! git diff --quiet -- levels/level5.js src/desert.js tests/level5-desert-enhancement.test.js tools/browser-level5-enhancement-verify.js index.html; then
-            git config user.name "github-actions[bot]"
-            git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-            git add levels/level5.js src/desert.js tests/level5-desert-enhancement.test.js tools/browser-level5-enhancement-verify.js index.html
-            git commit -m "fix: add Level 5 Snoozles and airborne camel landing"
-            git push origin HEAD:level5-desert-playtest-enhancement
-            echo "MATERIALIZED=1" >> "$GITHUB_ENV"
-          fi
-
-      - name: Confirm committed remediation tree
-        if: github.event_name == 'push' && github.ref_name == 'level5-desert-playtest-enhancement' && env.MATERIALIZED != '1'
-        run: |
-          node tools/tmp-level5-remediation2.js
-          node build.js
-          git diff --exit-code -- levels/level5.js src/desert.js tests/level5-desert-enhancement.test.js tools/browser-level5-enhancement-verify.js index.html
-
-      - name: Build check
-        if: github.event_name == 'push' && github.ref_name == 'level5-desert-playtest-enhancement' && env.MATERIALIZED != '1'
-        run: node build.js --check
-
-      - name: Deterministic tests
-        if: github.event_name == 'push' && github.ref_name == 'level5-desert-playtest-enhancement' && env.MATERIALIZED != '1'
-        run: node tests/run.js
+      - run: node build.js
+      - run: node build.js --check
+      - run: node tests/run.js
 
       - name: Level 5 browser acceptance
-        if: github.event_name == 'push' && github.ref_name == 'level5-desert-playtest-enhancement' && env.MATERIALIZED != '1'
+        if: github.event_name == 'push' && github.ref_name == 'level5-desert-playtest-enhancement'
         run: node tools/browser-level5-enhancement-verify.js
 
       - name: Upload Level 5 browser evidence
-        if: always() && github.event_name == 'push' && github.ref_name == 'level5-desert-playtest-enhancement' && env.MATERIALIZED != '1'
+        if: always() && github.event_name == 'push' && github.ref_name == 'level5-desert-playtest-enhancement'
         uses: actions/upload-artifact@v4
         with:
           name: level5-browser-evidence
@@ -58,7 +32,7 @@ jobs:
           if-no-files-found: warn
 
       - name: Finalize Level 5 remediation
-        if: success() && github.event_name == 'push' && github.ref_name == 'level5-desert-playtest-enhancement' && env.MATERIALIZED != '1'
+        if: success() && github.event_name == 'push' && github.ref_name == 'level5-desert-playtest-enhancement'
         run: |
           rm tools/tmp-level5-remediation2.js
           cat > .github/workflows/test.yml <<'YAML'
