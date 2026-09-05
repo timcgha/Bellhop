@@ -67,7 +67,7 @@ function validate(html){
   for(const f of ORDER){
     if(!html.includes(`// ===== src/${f} =====`))fail(`generated artifact is missing src/${f}`);
   }
-  if(!html.includes('document.addEventListener(\'DOMContentLoaded\',init);'))fail('generated artifact is missing Bellhop startup hook');
+  if(!html.includes('requestAnimationFrame(frame);'))fail('generated artifact is missing Bellhop frame-loop startup');
   return html;
 }
 function build(){
