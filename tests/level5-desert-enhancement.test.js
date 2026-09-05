@@ -85,4 +85,52 @@ function boot(opts){return require('./harness.js')(Object.assign({autostart:fals
   }
 }
 
+// Level 5 now carries the normal four-Snoozle progression across safe route lanes.
+{
+  const H=boot();H.startLevel(4);H.frames(4);
+  const L=H.getLevel(),sn=H.W.snoozles;
+  ok(L.snoozleGoal===4&&H.window.__snoozleGoal()===4,'Level 5 requires exactly four Snoozles');
+  ok(sn.length===4&&L.snoozleHomes.length===4,'Level 5 instantiates four Snoozles with four homes');
+  const zs=sn.map(s=>s.g.position.z);
+  ok(zs[0]>-20&&zs[1]<-100&&zs[1]>-170&&zs[2]<-330&&zs[2]>-410&&zs[3]<-700,'Snoozles are distributed from early route through pre-finale');
+  for(let i=0;i<sn.length;i++){
+    const x=sn[i].g.position.x,z=sn[i].g.position.z;
+    const inSand=H.W.quicksands.some(q=>Math.abs(x-q.x)<q.w*0.5+0.4&&Math.abs(z-q.z)<q.d*0.5+0.4);
+    const nearCactus=H.W.cacti.some(c=>Math.hypot(x-c.x,z-c.z)<1.7);
+    const inRock=H.W.solids.some(s=>['desertSpur','desertPassWall','cliff','cactus'].includes(s.role)&&x>s.min.x-0.4&&x<s.max.x+0.4&&z>s.min.z-0.4&&z<s.max.z+0.4);
+    ok(!inSand&&!nearCactus&&!inRock,'Snoozle '+(i+1)+' sits in a safe readable lane');
+  }
+  for(let i=0;i<sn.length;i++){
+    H.P.pos.set(sn[i].g.position.x,0,sn[i].g.position.z);H.P.vel.set(0,0,0);H.P.grounded=true;H.P.lastGround=99;H.tap('KeyK',2);H.frames(2);
+    ok(sn[i].state!=='sleep','Snoozle '+(i+1)+' wakes through normal player spin interaction');
+    ok(sn.filter(s=>s.state!=='sleep').length===i+1,'Snoozle count advances to '+(i+1)+'/4');
+  }
+  const final=H.W.quicksands.find(q=>q.role==='final');H.P.pos.set(final.x,0,final.z);H.P.grounded=true;
+  ok(H.window.__DESERT.beginFinalQuicksand(final),'special final quicksand unlocks after all four Snoozles wake');
+}
+
+// The special final sand is visibly gated before the four-Snoozle objective is complete.
+{
+  const H=boot();H.startLevel(4);H.frames(4);const final=H.W.quicksands.find(q=>q.role==='final'),hp=H.P.hp;
+  H.P.safeAnchor.set(0,7.22,-780);H.P.pos.set(final.x,0,final.z);H.P.vel.set(0,0,0);H.P.grounded=true;H.frames(2);
+  ok(!H.window.__DESERT.state.finish&&!H.W.won,'final sand cannot start the portal before Snoozles are awake');
+  ok(H.P.quicksandRecT>0&&H.P.hp===hp-1,'locked final sand uses normal checkpoint recovery instead of a second win path');
+}
+
+// Airborne dismount inherits the camel's vertical motion, lands naturally, and stays reusable.
+for(const tc of [{name:'takeoff',frames:4,sign:1},{name:'apex',frames:22,sign:0},{name:'descent',frames:34,sign:-1}]){
+  const H=boot();H.startLevel(4);H.frames(4);const D=H.window.__DESERT,c=H.W.camels[0],count=H.W.camels.length;
+  H.P.pos.set(c.x,0,c.z);H.P.vel.set(0,0,0);H.P.grounded=true;H.P.lastGround=99;ok(D.mountCamel(c),tc.name+' case mounts camel');
+  H.kd('Space');H.frames(tc.frames);ok(!H.P.grounded&&H.P.pos.y>0.05,tc.name+' case reaches airborne state');H.tap('KeyJ',1);H.ku('Space');H.frames(1);
+  ok(!H.P.camel&&!c.mounted&&c.airborne,tc.name+' dismount separates rider while camel stays physically airborne');
+  if(tc.sign>0)ok(c.vy>0,tc.name+' camel retains upward velocity after early dismount');
+  else if(tc.sign<0)ok(c.vy<0,tc.name+' camel retains descending velocity after late dismount');
+  else ok(Math.abs(c.vy)<5,tc.name+' camel is near apex rather than frozen');
+  const y0=c.y;H.frames(110);
+  ok(!c.airborne&&c.grounded&&Math.abs(c.y)<0.06,tc.name+' camel falls back to valid ground and settles');
+  ok(c.y<y0||tc.sign>0,tc.name+' camel vertical lifecycle progresses instead of freezing');
+  ok(H.W.camels.length===count,'camel does not duplicate during '+tc.name+' dismount');
+  H.P.pos.set(c.x,0,c.z);H.P.vel.set(0,0,0);H.P.grounded=true;ok(D.mountCamel(c),'landed camel remains mountable after '+tc.name+' dismount');
+}
+
 report();

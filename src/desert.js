@@ -87,20 +87,20 @@ function buildCamel(){
   g.userData={seat,neck};return g;
 }
 function addCamel(x,y,z,rideable){
-  const g=buildCamel();g.position.set(x,y,z);desertGroup.add(g);const c={g,x,y,z,home:{x,y,z},rideable:rideable!==false,mounted:false,postMountT:0,ph:rand(0,TAU)};camels.push(c);return c;
+  const g=buildCamel();g.position.set(x,y,z);desertGroup.add(g);const c={g,x,y,z,home:{x,y,z},rideable:rideable!==false,mounted:false,postMountT:0,ph:rand(0,TAU),vy:0,airborne:false,grounded:true};camels.push(c);return c;
 }
 function nearbyCamel(){
   if(!isDesertLevel()||!P||P.dead||won)return null;
-  let best=null,bd=2.35;for(const c of camels){if(!c.rideable||c.mounted)continue;const d=Math.hypot(P.pos.x-c.x,P.pos.z-c.z);if(d<bd){best=c;bd=d;}}
+  let best=null,bd=2.35;for(const c of camels){if(!c.rideable||c.mounted||c.airborne)continue;const d=Math.hypot(P.pos.x-c.x,P.pos.z-c.z);if(d<bd){best=c;bd=d;}}
   return best;
 }
 function mountCamel(c){
   if(!c||P.camel||P.dead)return false;
-  c.mounted=true;c.postMountT=0;P.camel=c;P.vel.set(0,0,0);P.puffAir=0;endHover();clearLeapBoost();clearGlide();
+  c.mounted=true;c.postMountT=0;c.airborne=false;c.grounded=false;c.vy=0;P.camel=c;P.vel.set(0,0,0);P.puffAir=0;endHover();clearLeapBoost();clearGlide();
   SFX.camelMount();showToast('Ride the camel! A jumps. B hops off.');spawnRing(P.pos.x,P.pos.y+0.1,P.pos.z,0x58c6c7,0.35,5,0.45);return true;
 }
 function dismountCamel(silent){
-  if(!P||!P.camel)return false;const c=P.camel;c.mounted=false;c.postMountT=0;c.x=P.pos.x+0.85;c.y=P.pos.y;c.z=P.pos.z;c.g.position.set(c.x,c.y,c.z);P.camel=null;
+  if(!P||!P.camel)return false;const c=P.camel;c.mounted=false;c.postMountT=0;c.x=P.pos.x+0.85;c.y=P.pos.y;c.z=P.pos.z;const ground=surfaceHeightAt(c.x,c.z,c.y+0.65,0.3);c.airborne=!P.grounded&&c.y>ground+0.08;c.grounded=!c.airborne;c.vy=c.airborne?P.vel.y:0;if(!c.airborne)c.y=ground;c.g.position.set(c.x,c.y,c.z);P.camel=null;
   if(!silent){SFX.camelMount();showToast('Nice riding!');}return true;
 }
 function desertHandleJumpAction(){
@@ -116,8 +116,14 @@ function desertHandleDismountAction(){
 }
 function updateCamels(dt){
   for(const c of camels){c.postMountT=Math.max(0,c.postMountT-dt);const bob=Math.sin(time*5+c.ph)*0.055;
-    if(c.mounted){c.x=P.pos.x;c.y=P.pos.y;c.z=P.pos.z;c.g.position.set(c.x,c.y+bob,c.z);c.g.rotation.y=P.yaw;}
-    else{c.g.position.set(c.x,c.y+bob,c.z);c.g.rotation.y=Math.sin(time*0.5+c.ph)*0.12;}
+    if(c.mounted){c.x=P.pos.x;c.y=P.pos.y;c.z=P.pos.z;c.vy=P.vel.y;c.airborne=!P.grounded;c.grounded=P.grounded;c.g.position.set(c.x,c.y+bob,c.z);c.g.rotation.y=P.yaw;}
+    else{
+      if(c.airborne){
+        const ground=surfaceHeightAt(c.x,c.z,c.y+0.65,0.3);c.vy=Math.max(MAXFALL,c.vy+GRAV*dt);const ny=c.y+c.vy*dt;
+        if(c.vy<=0&&ny<=ground){c.y=ground;c.vy=0;c.airborne=false;c.grounded=true;}else{c.y=ny;c.grounded=false;}
+      }
+      c.g.position.set(c.x,c.y+(c.airborne?0:bob),c.z);c.g.rotation.y=Math.sin(time*0.5+c.ph)*0.12;
+    }
     if(c.g.userData&&c.g.userData.neck)c.g.userData.neck.rotation.z=Math.sin(time*2.1+c.ph)*0.055;
   }
 }
@@ -156,11 +162,11 @@ function addQuicksand(x,y,z,w,d,role){
 function addFinalQuicksand(x,y,z,w,d){const q=addQuicksand(x,y,z,w,d,'final');if(DESERT)DESERT.final=q;return q;}
 function inQuicksand(q,x,z){return Math.abs(x-q.x)<q.w*0.5&&Math.abs(z-q.z)<q.d*0.5;}
 function playerInOrdinaryQuicksand(){if(!isDesertLevel()||!P)return false;return quicksands.some(q=>q.role==='ordinary'&&q.active&&inQuicksand(q,P.pos.x,P.pos.z)&&P.pos.y<q.y+0.55);}
-function beginQuicksandRecovery(){
+function beginQuicksandRecovery(message){
   if(P.quicksandRecT>0||P.dead||won)return false;dismountCamel(true);P.hp--;P.inv=1.4;P.quicksandRecMax=0.62;P.quicksandRecT=P.quicksandRecMax;P.quicksandRecFrom.copy(P.pos);P.vel.set(0,0,0);P.grounded=false;P.puffAir=0;endHover();clearLeapBoost();clearGlide();P.anchorSettleT=0;
   SFX.quicksand();CAM.shake=Math.max(CAM.shake,0.28);spawnRing(P.pos.x,P.pos.y+0.1,P.pos.z,0xd58a48,0.3,4.2,0.4);updateHUD();
   if(P.hp<=0){P.dead=true;P.deadT=1.8;P.quicksandRecT=0;SFX.deflate();showToast('Out of puff! Back to the last checkpoint…');}
-  else showToast('Squelch! Back to the checkpoint.');return true;
+  else showToast(message||'Squelch! Back to the checkpoint.');return true;
 }
 function updateDesertQuicksandRecovery(dt){
   if(!P.quicksandRecT)return false;P.quicksandRecT-=dt;const dur=P.quicksandRecMax||0.62,k=smooth(clamp(1-Math.max(P.quicksandRecT,0)/dur,0,1));
@@ -168,7 +174,9 @@ function updateDesertQuicksandRecovery(dt){
   if(P.quicksandRecT<=0){P.quicksandRecT=0;P.pos.copy(P.safeAnchor);P.grounded=true;P.lastGround=time;P.surf='sand';P.puff=true;P.sqT=1;}
   return true;
 }
-function finalQuicksandReady(q){return q&&q.role==='final'&&!P.dead&&!won&&!DESERT.finish&&inQuicksand(q,P.pos.x,P.pos.z)&&P.pos.y<q.y+0.55;}
+function desertSnoozlesReady(){const goal=snoozleGoalCount();return goal<=0||rescued>=goal;}
+function finalQuicksandInside(q){return q&&q.role==='final'&&!P.dead&&!won&&!DESERT.finish&&inQuicksand(q,P.pos.x,P.pos.z)&&P.pos.y<q.y+0.55;}
+function finalQuicksandReady(q){return finalQuicksandInside(q)&&desertSnoozlesReady();}
 function beginFinalQuicksand(q){
   if(!finalQuicksandReady(q))return false;dismountCamel(true);DESERT.finish={phase:'sink',t:0,from:{x:P.pos.x,y:P.pos.y,z:P.pos.z,yaw:P.yaw},q};DESERT.finishCam=true;P.inv=99;P.vel.set(0,0,0);P.grounded=false;P.puffAir=0;endHover();clearLeapBoost();clearGlide();
   if(DESERT.portal)DESERT.portal.visible=true;SFX.quicksand();showToast('The special sand is pulling you in!');CAM.shake=Math.max(CAM.shake,0.38);return true;
@@ -231,6 +239,6 @@ function desertFinishCamera(dt){
 function updateDesertWorld(dt){
   if(!isDesertLevel())return;updateCamels(dt);updateLizards(dt);updateQuicksandVisuals(dt);
   if(!DESERT||DESERT.finish||P.quicksandRecT>0||P.dead||won)return;
-  for(const q of quicksands){if(q.role==='final'){if(finalQuicksandReady(q))beginFinalQuicksand(q);}else if(q.active&&inQuicksand(q,P.pos.x,P.pos.z)&&P.pos.y<q.y+0.55){beginQuicksandRecovery();break;}}
+  for(const q of quicksands){if(q.role==='final'){if(finalQuicksandReady(q))beginFinalQuicksand(q);else if(finalQuicksandInside(q)){beginQuicksandRecovery('Wake all '+snoozleGoalCount()+' Snoozles first!');break;}}else if(q.active&&inQuicksand(q,P.pos.x,P.pos.z)&&P.pos.y<q.y+0.55){beginQuicksandRecovery();break;}}
 }
-window.__DESERT={isDesertLevel,get camels(){return camels;},get cacti(){return cacti;},get lizards(){return lizards;},get quicksands(){return quicksands;},get state(){return DESERT;},nearbyCamel,mountCamel,dismountCamel,beginFinalQuicksand,playerInOrdinaryQuicksand};
+window.__DESERT={isDesertLevel,get camels(){return camels;},get cacti(){return cacti;},get lizards(){return lizards;},get quicksands(){return quicksands;},get state(){return DESERT;},nearbyCamel,mountCamel,dismountCamel,beginFinalQuicksand,playerInOrdinaryQuicksand,desertSnoozlesReady};

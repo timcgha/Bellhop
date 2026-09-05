@@ -44,6 +44,23 @@ async function hold(ev,codes,ms){for(const c of codes)await key(ev,c,true);await
 async function tap(ev,code,ms=65){await key(ev,code,true);await sleep(ms);await key(ev,code,false);await sleep(70);}
 async function cameraForward(ev){await ev(`(()=>{window.__CAM.yaw=0;window.__CAM.lastManual=1e9;return true;})()`);}
 async function state(ev){return ev(`(()=>({x:__P.pos.x,y:__P.pos.y,z:__P.pos.z,vx:__P.vel.x,vy:__P.vel.y,vz:__P.vel.z,grounded:!!__P.grounded,camel:!!__P.camel,dead:!!__P.dead,rec:__P.quicksandRecT||0,won:!!__W.won,finish:!!(__DESERT.state&&__DESERT.state.finish)}))()`);}
+async function awakeCount(ev){return ev(`__W.snoozles.filter(s=>s.state!=='sleep').length`);}
+async function wakeRouteSnoozle(ev,idx,x,z,label){
+  await driveTo(ev,x,z,label+' approach');if((await state(ev)).camel){await tap(ev,'KeyJ',35);await waitEval(ev,`!__P.camel`,2500);}
+  const before=await awakeCount(ev);assert(await ev(`__W.snoozles.length===4&&__snoozleGoal()===4`),'Level 5 Snoozle population/goal mismatch');
+  await tap(ev,'KeyK',55);await waitEval(ev,`__W.snoozles[${idx}].state!=='sleep'`,3000);const after=await awakeCount(ev);assert(after===before+1,label+' count did not advance');
+  await tap(ev,'Space',55);await waitEval(ev,`!!__P.camel`,3000);return {index:idx,before,after,x,z};
+}
+async function camelAirDismountCase(ev,label,delayMs){
+  await waitEval(ev,`__P.grounded===true&&!!__P.camel`,5000);const idx=await ev(`__W.camels.indexOf(__P.camel)`),count=await ev(`__W.camels.length`);
+  await nativeSpace(true);await sleep(delayMs);const pre=await state(ev);assert(pre.camel&&!pre.grounded&&pre.y>0.05,label+' did not reach airborne mounted state');await tap(ev,'KeyJ',25);await nativeSpace(false);
+  const start=await ev(`(()=>{const c=__W.camels[${idx}];return {x:c.x,y:c.y,z:c.z,vy:c.vy,airborne:!!c.airborne,mounted:!!c.mounted,px:__P.pos.x,pz:__P.pos.z};})()`);assert(!start.mounted&&start.airborne,label+' camel did not inherit airborne lifecycle');
+  if(label==='takeoff')assert(start.vy>0,label+' expected upward camel velocity '+start.vy);if(label==='descent')assert(start.vy<0,label+' expected descending camel velocity '+start.vy);if(label==='apex')assert(Math.abs(start.vy)<5,label+' expected near-apex camel velocity '+start.vy);
+  if(label==='takeoff'){await hold(ev,['KeyD'],260);const independent=await ev(`(()=>{const c=__W.camels[${idx}];return {cx:c.x,cz:c.z,px:__P.pos.x,pz:__P.pos.z};})()`);assert(Math.hypot(independent.cx-start.x,independent.cz-start.z)<0.08,'camel was dragged horizontally with Pling');assert(Math.hypot(independent.px-start.px,independent.pz-start.pz)>0.12,'Pling did not separate from camel');}
+  const samples=[start];const t=Date.now();let landed=null;while(Date.now()-t<3500){await sleep(55);const c=await ev(`(()=>{const c=__W.camels[${idx}];return {x:c.x,y:c.y,z:c.z,vy:c.vy,airborne:!!c.airborne,mounted:!!c.mounted};})()`);samples.push(c);if(!c.airborne){landed=c;break;}}
+  assert(landed&&landed.y>=-0.02&&landed.y<0.08,label+' camel did not settle on desert ground');assert(landed.vy===0,label+' camel retained vertical velocity after landing');assert(await ev(`__W.camels.length===${count}`),label+' duplicated camel');
+  await driveTo(ev,landed.x,landed.z,label+' remount');await tap(ev,'Space',55);await waitEval(ev,`__P.camel===__W.camels[${idx}]`,3000);return {idx,pre,start,landed,minY:Math.min(...samples.map(s=>s.y)),maxY:Math.max(...samples.map(s=>s.y))};
+}
 
 // Closed-loop input, deliberately stop/start rather than a speedrun. The pauses make the
 // timing representative of a competent young player reading the route.
@@ -103,28 +120,37 @@ async function main(){
     await tap(cdp.evaluate,'KeyJ');assert(!(await state(cdp.evaluate)).camel,'dismount failed');await tap(cdp.evaluate,'Space');await waitEval(cdp.evaluate,`!!__P.camel`);
 
     // Natural route timing begins after the orientation diagnostic; every progression step below is real input.
-    const naturalStart=Date.now();let adversarialMs=0;
+    const naturalStart=Date.now();let adversarialMs=0;results.snoozles=[];
+    results.snoozles.push(await wakeRouteSnoozle(cdp.evaluate,0,5,-2,'Snoozle 1'));
     await driveTo(cdp.evaluate,-5,-8,'heart lizard');await tap(cdp.evaluate,'KeyJ');await tap(cdp.evaluate,'KeyK');await sleep(700);assert(await cdp.evaluate(`!__W.lizards.find(l=>l.reward==='heart').alive`),'heart lizard not hit');await tap(cdp.evaluate,'Space');await waitEval(cdp.evaluate,`!!__P.camel`);
     await driveTo(cdp.evaluate,0,-24,'ordinary quicksand lip');const qHp0=await cdp.evaluate('__P.hp');await cameraForward(cdp.evaluate);await key(cdp.evaluate,'KeyW',true);await waitEval(cdp.evaluate,`__P.quicksandRecT>0`,3000);await key(cdp.evaluate,'KeyW',false);const qStart=await state(cdp.evaluate);assert(!qStart.won&&!qStart.finish&&qStart.rec>0,'ordinary quicksand did not enter recovery without winning');await waitEval(cdp.evaluate,`__P.quicksandRecT===0&&__P.grounded===true`,4000);const qEnd=await state(cdp.evaluate),qHp1=await cdp.evaluate('__P.hp');const qAnchor=await cdp.evaluate('({x:__P.safeAnchor.x,y:__P.safeAnchor.y,z:__P.safeAnchor.z})');assert(qHp1===qHp0-1,'ordinary quicksand did not cost exactly one heart');assert(!qEnd.won&&!qEnd.finish&&!qEnd.camel,'ordinary quicksand recovery state regressed');assert(Math.hypot(qEnd.x-qAnchor.x,qEnd.z-qAnchor.z)<0.2,'ordinary quicksand did not return to checkpoint');results.ordinaryQuicksand={hpBefore:qHp0,hpAfter:qHp1,start:qStart,end:qEnd,anchor:qAnchor};await driveTo(cdp.evaluate,4.8,-23,'recovery side route 1');await driveTo(cdp.evaluate,4.8,-32,'recovery side route 2');await driveTo(cdp.evaluate,3,-38,'second camel after recovery');await tap(cdp.evaluate,'Space');await waitEval(cdp.evaluate,`!!__P.camel`);let s=await state(cdp.evaluate);
     await driveTo(cdp.evaluate,4.2,-58,'note lizard');await tap(cdp.evaluate,'KeyJ');await tap(cdp.evaluate,'KeyK');await sleep(700);assert(await cdp.evaluate(`!__W.lizards.find(l=>l.reward==='note').alive`),'note lizard not hit');await tap(cdp.evaluate,'Space');await waitEval(cdp.evaluate,`!!__P.camel`);
 
-    // Beat 2: alternating sandstone switchbacks.
-    const waypoints=[
-      [13,-94],[13,-116],[-13,-129],[-13,-151],[13,-164],[13,-186],[-13,-199],[-13,-221],[13,-234],[13,-256],[0,-278],
-      // Beat 3: central terrace + offset quicksand + second switchback run.
-      [0,-288],[0,-313],[1,-326],[1,-347],[-13,-364],[-13,-386],[13,-399],[13,-421],[-13,-434],[-13,-456],[13,-469],[13,-491],[-13,-504],[-13,-526],[13,-539],[13,-561],[-7,-568],[-7,-585],
-      // Beat 4: readable cactus/dune gauntlet.
-      [5,-596],[-7,-608],[-5,-621],[7,-640],[-5,-656],[5,-674],[-7,-692],[-5,-711],[5,-743],[0,-751]
-    ];
-    for(let i=0;i<waypoints.length;i++){await driveTo(cdp.evaluate,waypoints[i][0],waypoints[i][1],'route '+i);if(i===10||i===28)await sleep(900);}
+    // Beat 2: alternating sandstone switchbacks with the second Snoozle in a readable turn pocket.
+    const beat2=[[13,-94],[13,-116]];for(let i=0;i<beat2.length;i++)await driveTo(cdp.evaluate,beat2[i][0],beat2[i][1],'beat2 '+i);
+    results.snoozles.push(await wakeRouteSnoozle(cdp.evaluate,1,13,-123,'Snoozle 2'));
+    for(const p of[[-13,-129],[-13,-151],[13,-164],[13,-186],[-13,-199],[-13,-221],[13,-234],[13,-256],[0,-278]])await driveTo(cdp.evaluate,p[0],p[1],'beat2 continuation');await sleep(900);
+
+    // Real airborne lifecycle coverage in the broad clear lane before the terraced pass.
+    results.camelAirborne={};results.camelAirborne.takeoff=await camelAirDismountCase(cdp.evaluate,'takeoff',45);results.camelAirborne.apex=await camelAirDismountCase(cdp.evaluate,'apex',280);results.camelAirborne.descent=await camelAirDismountCase(cdp.evaluate,'descent',480);
+
+    // Beat 3: central terrace + offset quicksand + second switchback run, with Snoozle 3 immediately after the transition.
+    for(const p of[[0,-288],[0,-313],[1,-326],[1,-347],[-13,-364]])await driveTo(cdp.evaluate,p[0],p[1],'beat3 terrace');
+    results.snoozles.push(await wakeRouteSnoozle(cdp.evaluate,2,-13,-364,'Snoozle 3'));
+    for(const p of[[-13,-386],[13,-399],[13,-421],[-13,-434],[-13,-456],[13,-469],[13,-491],[-13,-504],[-13,-526],[13,-539],[13,-561],[-7,-568],[-7,-585]])await driveTo(cdp.evaluate,p[0],p[1],'beat3 switchback');await sleep(900);
+
+    // Beat 4: readable cactus/dune gauntlet and final Snoozle before the cliff build-up.
+    for(const p of[[5,-596],[-7,-608],[-5,-621],[7,-640],[-5,-656],[5,-674],[-7,-692],[-5,-711]])await driveTo(cdp.evaluate,p[0],p[1],'beat4 gauntlet');
+    results.snoozles.push(await wakeRouteSnoozle(cdp.evaluate,3,2,-724,'Snoozle 4'));assert((await awakeCount(cdp.evaluate))===4,'all four Snoozles were not awake before finale');
+    for(const p of[[5,-743],[0,-751]])await driveTo(cdp.evaluate,p[0],p[1],'beat4 finale approach');
 
     // Deliberately attack the finale from both sides, wide/diagonal and with repeated mounted jumps.
     const advStart=Date.now();results.bypass={};
     async function sideTry(name,x,codes,jumps){await driveTo(cdp.evaluate,x,-751,name+' setup');const before=await state(cdp.evaluate);if(jumps){await key(cdp.evaluate,'KeyW',true);for(let i=0;i<5;i++){await nativeTapSpace(50);await sleep(280);}await key(cdp.evaluate,'KeyW',false);}else await hold(cdp.evaluate,codes,2100);await sleep(180);const after=await state(cdp.evaluate);assert(!after.finish&&!after.won,name+' entered finish');assert(after.z>-760.2,name+' bypassed sandstone ridge z='+after.z);assert(after.camel,name+' lost mounted state');await driveTo(cdp.evaluate,x,-748,name+' retreat');return {before,after};}
     results.bypass.left=await sideTry('left',-18,['KeyW'],false);results.bypass.right=await sideTry('right',18,['KeyW'],false);results.bypass.wideLeft=await sideTry('wide-left',-18.5,['KeyW','KeyA'],false);results.bypass.wideRight=await sideTry('wide-right',18.5,['KeyW','KeyD'],false);results.bypass.diagonalLeft=await sideTry('diagonal-left',-11,['KeyW','KeyA'],false);results.bypass.diagonalRight=await sideTry('diagonal-right',11,['KeyW','KeyD'],false);results.bypass.climbLeft=await sideTry('climb-left',-14,['KeyW'],true);results.bypass.climbRight=await sideTry('climb-right',14,['KeyW'],true);adversarialMs=Date.now()-advStart;
 
-    // Intended finale: center terrace -> cliff top -> deliberate drop -> real final quicksand -> portal -> oasis.
-    await driveTo(cdp.evaluate,0,-751,'final center');await driveTo(cdp.evaluate,0,-779,'terraced cliff climb',70000);await driveTo(cdp.evaluate,0,-790,'cliff top',40000);await cameraForward(cdp.evaluate);await hold(cdp.evaluate,['KeyW'],1900);await waitEval(cdp.evaluate,`!!(__DESERT.state&&__DESERT.state.finish)`,10000);assert(!(await state(cdp.evaluate)).won,'win fired before portal sequence');await waitEval(cdp.evaluate,`__W.won===true`,10000);
+    // Intended finale: all four Snoozles awake -> center terrace -> cliff top -> deliberate drop -> real final quicksand -> portal -> oasis.
+    assert((await awakeCount(cdp.evaluate))===4&&await cdp.evaluate(`__snoozleGoal()===4`),'finale reached without completed Snoozle objective');await driveTo(cdp.evaluate,0,-751,'final center');await driveTo(cdp.evaluate,0,-779,'terraced cliff climb',70000);await driveTo(cdp.evaluate,0,-790,'cliff top',40000);await cameraForward(cdp.evaluate);await hold(cdp.evaluate,['KeyW'],1900);await waitEval(cdp.evaluate,`!!(__DESERT.state&&__DESERT.state.finish)`,10000);assert(!(await state(cdp.evaluate)).won,'win fired before portal sequence');await waitEval(cdp.evaluate,`__W.won===true`,10000);
     const naturalEnd=Date.now();results.naturalSeconds=(naturalEnd-naturalStart-adversarialMs)/1000;assert(results.naturalSeconds>=150&&results.naturalSeconds<=360,'natural traversal outside few-minute target: '+results.naturalSeconds.toFixed(1)+'s');
     results.challengeBeats=4;
 
@@ -134,7 +160,7 @@ async function main(){
     await viewport(cdp,1280,720);results.desktop=await finishLayout(cdp.evaluate);validateLayout(results.desktop,'1280x720');results.performance=await perf(cdp.evaluate);assert(results.performance.fps>10,'finish render stalled fps='+results.performance.fps);await cdp.screenshot(join(outDir,'04-oasis-1280x720.png'));
 
     // Normal post-victory return and restart still function.
-    await sleep(3800);await tap(cdp.evaluate,'Space');await waitEval(cdp.evaluate,`!(__started&&__started())`,5000);results.returnToPicker=true;await cdp.evaluate(`__setPickerIdx(4)`);await tap(cdp.evaluate,'Space');await waitEval(cdp.evaluate,`!!(__started&&__started())&&__LEVEL().id==='level5'`,5000);results.restart=true;
+    await sleep(3800);await tap(cdp.evaluate,'Space');await waitEval(cdp.evaluate,`!(__started&&__started())`,5000);results.returnToPicker=true;await cdp.evaluate(`__setPickerIdx(4)`);await tap(cdp.evaluate,'Space');await waitEval(cdp.evaluate,`!!(__started&&__started())&&__LEVEL().id==='level5'`,5000);assert(await cdp.evaluate(`__W.snoozles.length===4&&__W.snoozles.every(s=>s.state==='sleep')&&__snoozleGoal()===4`),'Level 5 restart did not reset Snoozles');results.restart=true;results.restartSnoozles=await cdp.evaluate(`({count:__W.snoozles.length,awake:__W.snoozles.filter(s=>s.state!=='sleep').length,goal:__snoozleGoal()})`);
 
     writeFileSync(join(outDir,'result.json'),JSON.stringify(results,null,2));console.log('LEVEL5_BROWSER_RESULT=PASS');console.log(JSON.stringify(results));
   }finally{activeCDP=null;if(cdp)cdp.close();try{cp.kill('SIGKILL');}catch(e){}try{server.kill('SIGKILL');}catch(e){}try{rmSync(userData,{recursive:true,force:true});}catch(e){}}

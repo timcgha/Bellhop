@@ -18,7 +18,20 @@ fenceSolids:[
 ],
 pathTiles:[],hedges:[],trees:[],
 checks:[[0,26],[0,-16],[0,-80],[0,-275],[0,-345],[0,-560],[0,-710],[0,-780,7.22]],
-tower:{tx:0,tz:0},snoozleHomes:[],snoozles:[],snoozleGoal:0,
+tower:{tx:0,tz:0},
+snoozleGoal:4,
+snoozleHomes:[
+  {x:6,y:0,z:-2},
+  {x:14,y:0,z:-123},
+  {x:-14,y:0,z:-364},
+  {x:2,y:0,z:-724}
+],
+snoozles:[
+  [5,0,-2,0,false],
+  [13,0,-123,1,false],
+  [-13,0,-364,2,false],
+  [2,0,-724,3,false]
+],
 steps:[
   // Beat 1 — preserve the existing arrival, camel introduction, heart lizard and first sand hazard.
   ['camel',-4,0,20,true],
