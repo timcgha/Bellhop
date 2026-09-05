@@ -65,7 +65,7 @@ function dist(a,b){return Math.hypot(a.x-b.x,a.z-b.z);}
 {
   const H=boot();H.startLevel(4);H.frames(3);
   const cliff=H.W.solids.find(s=>s.role==='cliff');
-  const ramp=H.W.solids.filter(s=>s.role==='desertRamp').sort((a,b)=>b.min.z-a.min.z);
+  const ramp=H.W.solids.filter(s=>s.role==='desertRamp'&&s.min.z<-700).sort((a,b)=>b.min.z-a.min.z);
   ok(!!cliff,'sandstone cliff is collision-authored before the finale');
   ok(ramp.length>=18,'cliff approach uses enough shallow terraces for ordinary step-up movement');
   let maxRise=0;
@@ -79,6 +79,11 @@ function dist(a,b){return Math.hypot(a.x-b.x,a.z-b.z);}
 // ---- final sand trap, portal, oasis and clean return ----
 {
   const H=boot();H.startLevel(4);H.frames(3);
+  for(const s of H.W.snoozles){
+    H.P.pos.set(s.g.position.x,0,s.g.position.z);H.P.vel.set(0,0,0);H.P.grounded=true;H.P.lastGround=99;
+    H.tap('KeyK',2);H.frames(40);
+  }
+  ok(H.W.snoozles.every(s=>s.state!=='sleep')&&H.window.__snoozleGoal()===4,'normal Snoozle progression unlocks the Desert finale');
   const final=H.W.quicksands.find(q=>q.role==='final');
   H.P.pos.set(final.x,0,final.z);H.P.vel.set(0,0,0);H.P.grounded=true;H.P.hp=4;
   H.frames(3);
