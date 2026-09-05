@@ -26,8 +26,15 @@ jobs:
           new='[0,-288],[0,-313],[1,-326],[1,-347],[-13,-364]'
           if old not in s:
               raise SystemExit('route-14 waypoint needle missing')
-          open(p,'w',encoding='utf-8').write(s.replace(old,new,1))
+          s=s.replace(old,new,1)
+          old_cadence='await hold(ev,codes,120);await sleep(110);'
+          new_cadence='await hold(ev,codes,180);await sleep(25);'
+          if old_cadence not in s:
+              raise SystemExit('drive cadence needle missing')
+          s=s.replace(old_cadence,new_cadence,1)
+          open(p,'w',encoding='utf-8').write(s)
           print('LEVEL5_ROUTE14_CACTUS_BYPASS=APPLIED')
+          print('LEVEL5_COMPETENT_STEERING_CADENCE=APPLIED')
           PY
       - run: node build.js
       - run: node build.js --check
