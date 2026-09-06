@@ -464,7 +464,7 @@ function buildWreckShaftVisuals(g){
   }
 }
 function dressPlatform(x,y,z,w,h,d){
-  const g=new THREE.Group();g.position.set(x,y,z);scene.add(g);
+  const g=new THREE.Group();g.position.set(x,y,z);addDecor(g);
   const rock=lam(0x9aa4ad),sand=lam(0xd9c08a),coral=lam(CORALC[Math.floor(rand(0,CORALC.length))]);
   g.add(mesh(BOXG,rock,0,h*0.5,0,w*0.92,h*0.88,d*0.92));
   g.add(mesh(BOXG,sand,0,h*0.02,0,w*0.78,0.08,d*0.78));

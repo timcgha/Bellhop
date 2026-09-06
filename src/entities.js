@@ -157,6 +157,7 @@ const levelDecor=[];
 function addDecor(m){scene.add(m);levelDecor.push(m);return m;}
 function clearLevelWorld(){
   clearShadowStick();
+  clearTransientFx();
   const rem=m=>{
     if(!m)return;
     if(m.parent&&typeof m.parent.remove==='function')m.parent.remove(m);
