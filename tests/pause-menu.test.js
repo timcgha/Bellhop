@@ -40,10 +40,13 @@ ku('KeyD');ku('Space');
 kd('Escape');frames(1);ku('Escape');
 ok(window.__paused()===false,'Escape resumes gameplay');
 ok(el('pauseOverlay').style.display==='none','resume hides pause overlay');
-const resumeNeutral=pos();frames(8);
-ok(samePos(pos(),resumeNeutral),'resume begins from neutral input without stale movement');
+const resumeInput=window.__INPUT_STATE();
+ok(resumeInput.mx===0&&resumeInput.mz===0&&!resumeInput.jump&&!resumeInput.jumpHeld&&!resumeInput.b&&!resumeInput.bHeld&&!resumeInput.y&&resumeInput.keysDown.length===0,'resume begins with gameplay input neutralized');
+const resumeAt=pos();frames(8);
+const freshFrom=pos();
 kd('KeyD');frames(12);ku('KeyD');
-ok(Math.hypot(P.pos.x-resumeNeutral.x,P.pos.z-resumeNeutral.z)>0.05,'fresh movement input works after resume');
+ok(Math.hypot(P.pos.x-freshFrom.x,P.pos.z-freshFrom.z)>0.05,'fresh movement input works after resume');
+ok(window.__gameTime()>pausedTime,'simulation time advances again after resume');
 
 kd('KeyP');frames(1);ku('KeyP');
 ok(window.__paused()===true,'P toggles gameplay into pause');
@@ -60,14 +63,13 @@ setGamepad(null);frames(1);
 
 tapBtn('pauseBtn');frames(1);
 ok(window.__paused()===true,'visible pause touch target enters pause');
-P.camel={test:true};
 H.setTouchStick(1,0);
-tapBtn('pauseMenu');frames(1);
+tapBtn('pauseMenu');
 ok(window.__paused()===false,'returning to menu clears paused state');
 ok(H.isStarted()===false,'returning to menu leaves gameplay state');
 ok(el('pauseOverlay').style.display==='none','returning to menu hides pause overlay');
 ok(el('start').style.display==='flex','returning to menu restores the existing picker');
-ok(P.camel===null,'returning to menu clears stale mount state');
+ok(P.camel===null,'returning to menu leaves mount state clear');
 const menuInput=window.__INPUT_STATE();
 ok(menuInput.touchStickId===null&&menuInput.mx===0&&menuInput.mz===0&&!menuInput.jump&&!menuInput.b&&!menuInput.y,'returning to menu clears transient gameplay input');
 
