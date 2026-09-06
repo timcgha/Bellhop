@@ -118,7 +118,7 @@ async function driveTo(cdp,ev,tx,tz,label,timeout=50000){
 async function verifySpaceTransient(cdp,result){
   const label='Level 4 space transient';
   await fresh(cdp,1280,720,false);await pickerToKeyboard(cdp,3);await waitEval(cdp.evaluate,`__started()&&__LEVEL().id==='level4'`,7000);
-  await cameraForward(cdp.evaluate);await holdKey(cdp,'KeyW',1500);await waitEval(cdp.evaluate,`__P.moveZone==='openSpace'`,6000);
+  await cameraForward(cdp.evaluate);await holdKey(cdp,'KeyA',1500);await waitEval(cdp.evaluate,`__P.moveZone==='openSpace'`,6000);
   await key(cdp,'Space',true);await waitEval(cdp.evaluate,`__P.spaceThrust===true`,3000);await sleep(260);
   await tapKey(cdp,'Escape',55);await key(cdp,'Space',false);await waitEval(cdp.evaluate,`__paused()===true`,3000);
   const a=await sim(cdp.evaluate);assert(a.moveZone==='openSpace'&&a.spaceThrust,label+': unusual-movement state not established');
