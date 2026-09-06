@@ -80,10 +80,8 @@ async function verifyLevelLifecycle(cdp,index,result){
   await fresh(cdp,1280,720,false);
   await pickerToKeyboard(cdp,index);
   await waitEval(cdp.evaluate,`__started()===true&&__LEVEL().id===${JSON.stringify(levelId)}&&__paused()===false&&!__W.won`,7000);
-  const active0=await sim(cdp.evaluate);await sleep(260);const active1=await sim(cdp.evaluate);
-  assert(active1.time>active0.time,`${label}: gameplay clock did not advance after legitimate start`);
   const d0=await sim(cdp.evaluate);await holdKey(cdp,'KeyD',420);const d1=await sim(cdp.evaluate);
-  assert(moved(d0,d1)>0.08,`${label}: meaningful movement did not work before pause`);
+  assert(moved(d0,d1)>0.08&&d1.time>d0.time,`${label}: active gameplay movement/time did not advance after legitimate start`);
 
   await tapKey(cdp,'Escape');await waitEval(cdp.evaluate,`__paused()===true&&getComputedStyle(document.getElementById('pauseOverlay')).display==='flex'`,3000);
   const f0=await sim(cdp.evaluate);await sleep(450);await holdKey(cdp,'KeyD',320);await tapKey(cdp,'Space',55);const f1=await sim(cdp.evaluate);
