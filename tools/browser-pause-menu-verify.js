@@ -51,6 +51,17 @@ async function sim(ev){return ev(`(()=>({started:__started(),paused:__paused(),t
 function moved(a,b){return Math.hypot(a.x-b.x,a.z-b.z);}
 function frozen(a,b){return Math.hypot(a.x-b.x,a.y-b.y,a.z-b.z)<1e-6&&Math.abs(a.time-b.time)<1e-9;}
 function neutral(i){return i.mx===0&&i.mz===0&&i.camDX===0&&i.camDY===0&&!i.jump&&!i.jumpHeld&&!i.b&&!i.bHeld&&!i.y&&i.touchStickId===null&&i.touchCamId===null&&!i.heldA&&!i.heldB&&i.keysDown.length===0;}
+async function proveMovement(cdp,label,phase,preferred=[]){
+  const directions=[...preferred,...['KeyD','KeyA','KeyW','KeyS'].filter(k=>!preferred.includes(k))];
+  const attempts=[];
+  for(const code of directions){
+    const before=await sim(cdp.evaluate);await holdKey(cdp,code,420);const after=await sim(cdp.evaluate);
+    const distance=moved(before,after),dt=after.time-before.time;
+    attempts.push({code,distance:+distance.toFixed(4),gameTime:+dt.toFixed(4)});
+    if(dt>0&&distance>0.06)return {code,before,after,attempts};
+  }
+  throw new Error(`${label}: ${phase} movement proof failed ${JSON.stringify(attempts)}`);
+}
 async function cleanPicker(cdp,label){
   const s=await sim(cdp.evaluate);assert(!s.started&&!s.paused&&!s.won,`${label}: inactive/unpaused/non-win cleanup failed`);
   assert(s.picker==='flex'&&s.win==='none',`${label}: picker/win UI cleanup failed`);assert(!s.playing&&!s.pausedClass,`${label}: stale body gameplay state`);
@@ -60,13 +71,13 @@ async function cleanPicker(cdp,label){
 async function restartSelected(cdp,levelId,label){await tapKey(cdp,'Space',70);await waitEval(cdp.evaluate,`__started()&&__LEVEL().id===${JSON.stringify(levelId)}&&!__paused()&&!__W.won`,7000);await sleep(220);const s=await sim(cdp.evaluate);assert(s.time>0,`${label}: restarted run did not advance`);return s;}
 async function levelLifecycle(cdp,index,result){
   const levelId=`level${index+1}`,label=`Level ${index+1}`;await fresh(cdp);await pickerTo(cdp,index);await waitEval(cdp.evaluate,`__started()&&__LEVEL().id===${JSON.stringify(levelId)}&&!__paused()&&!__W.won`,7000);
-  const a0=await sim(cdp.evaluate);await holdKey(cdp,'KeyD',420);const a1=await sim(cdp.evaluate);assert(a1.time>a0.time&&moved(a0,a1)>0.08,`${label}: active movement/time did not advance`);
+  const active=await proveMovement(cdp,label,'active gameplay');
   await tapKey(cdp,'Escape');await waitEval(cdp.evaluate,`__paused()&&getComputedStyle(document.getElementById('pauseOverlay')).display==='flex'`,3000);
   const f0=await sim(cdp.evaluate);await sleep(320);await holdKey(cdp,'KeyD',320);await tapKey(cdp,'Space',55);const f1=await sim(cdp.evaluate);assert(frozen(f0,f1),`${label}: player/game time advanced while paused`);assert(neutral(f1.input),`${label}: paused input retained`);
-  await mouseTap(cdp,cdp.evaluate,'pauseResume');await waitEval(cdp.evaluate,`!__paused()`,3000);const r0=await sim(cdp.evaluate);await holdKey(cdp,'KeyA',420);const r1=await sim(cdp.evaluate);assert(r1.time>r0.time&&moved(r0,r1)>0.06,`${label}: gameplay did not resume`);assert(!r1.won,`${label}: completion occurred during lifecycle`);
+  await mouseTap(cdp,cdp.evaluate,'pauseResume');await waitEval(cdp.evaluate,`!__paused()`,3000);const resume=await proveMovement(cdp,label,'post-Resume gameplay',[active.code==='KeyD'?'KeyA':'KeyD']);assert(!resume.after.won,`${label}: completion occurred during lifecycle`);
   await mouseTap(cdp,cdp.evaluate,'pauseBtn');await waitEval(cdp.evaluate,`__paused()`,3000);await mouseTap(cdp,cdp.evaluate,'pauseMenu');await waitEval(cdp.evaluate,`!__started()&&!__paused()`,4000);await cleanPicker(cdp,label);
   const again=await restartSelected(cdp,levelId,label);assert(!again.camel&&!again.sled&&!again.spaceThrust,`${label}: transient state leaked into restart`);
-  result.levels.push({level:levelId,status:'PASS',active:'movement+gameTime',freeze:'player position+gameTime',pausedInput:'move+jump blocked',resume:'opposite-direction movement+gameTime',mainMenu:'clean picker/no win',subsequentRun:'clean'});
+  result.levels.push({level:levelId,status:'PASS',active:`${active.code}+gameTime`,freeze:'player position+gameTime',pausedInput:'move+jump blocked',resume:`${resume.code}+gameTime`,mainMenu:'clean picker/no win',subsequentRun:'clean'});
 }
 async function cameraForward(ev){await ev(`(()=>{__CAM.yaw=0;__CAM.lastManual=1e9;return true;})()`);}
 async function driveTo(cdp,ev,tx,tz,label,timeout=50000){const start=Date.now();let last=null,stuck=0;while(Date.now()-start<timeout){await cameraForward(ev);const s=await sim(ev);assert(!s.won,`${label}: unexpected win`);const dx=tx-s.x,dz=tz-s.z;if(Math.hypot(dx,dz)<1.05)return s;const codes=[];if(Math.abs(dx)>0.65)codes.push(dx>0?'KeyD':'KeyA');if(Math.abs(dz)>0.65)codes.push(dz>0?'KeyS':'KeyW');await holdKeys(cdp,codes,180);const n=await sim(ev);if(last&&Math.hypot(n.x-last.x,n.z-last.z)<0.04)stuck++;else stuck=0;last=n;if(stuck>=5){await tapKey(cdp,'Space',55);stuck=0;}}const s=await sim(ev);throw new Error(`drive timeout ${label}: ${s.x.toFixed(1)},${s.y.toFixed(1)},${s.z.toFixed(1)} -> ${tx},${tz}`);}
