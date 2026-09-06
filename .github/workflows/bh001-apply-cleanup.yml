@@ -1,0 +1,41 @@
+name: BH-001 Apply Cleanup
+
+on:
+  push:
+    branches: [fix/bh-001-cross-level-cleanup]
+    paths: [.github/workflows/bh001-apply-cleanup.yml]
+
+permissions:
+  contents: write
+
+jobs:
+  apply:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          ref: fix/bh-001-cross-level-cleanup
+          fetch-depth: 0
+      - name: Apply bounded ownership fix
+        shell: bash
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+          p=Path('src/entities.js')
+          s=p.read_text()
+          old="scene.add(mesh(SPH,lam(0x4f9f3f),x,0.35,z,rand(0.9,1.6),rand(0.6,1.0),rand(0.9,1.6)));"
+          new="addDecor(mesh(SPH,lam(0x4f9f3f),x,0.35,z,rand(0.9,1.6),rand(0.6,1.0),rand(0.9,1.6)));"
+          if s.count(old)!=1:
+              raise SystemExit(f'expected exactly one unowned bushScatter add, found {s.count(old)}')
+          p.write_text(s.replace(old,new))
+          PY
+          git diff --check
+          git diff -- src/entities.js
+      - name: Publish production correction
+        shell: bash
+        run: |
+          git config user.name github-actions[bot]
+          git config user.email 41898282+github-actions[bot]@users.noreply.github.com
+          git add src/entities.js
+          git commit -m "Track Level 1 bushes for level teardown"
+          git push origin HEAD:fix/bh-001-cross-level-cleanup
