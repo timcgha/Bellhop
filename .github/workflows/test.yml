@@ -22,6 +22,17 @@ jobs:
         run: node build.js --check
       - name: Run deterministic suites
         run: node tests/run.js
+      - name: Run pause/menu real-browser verification
+        env:
+          CHROME_BIN: /usr/bin/google-chrome
+        run: node tools/browser-pause-menu-verify.js
+      - name: Upload pause/menu browser evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: pause-menu-browser
+          path: artifacts/browser-pause-menu/
+          if-no-files-found: error
       - name: Run Pling visual real-browser verification
         env:
           CHROME_BIN: /usr/bin/google-chrome
