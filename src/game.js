@@ -1,5 +1,33 @@
 let time=0,rescued=0,gotNotes=0;
-let started=false;
+let started=false,paused=false;
+function syncPauseUI(){
+  const overlay=$('pauseOverlay');if(overlay)overlay.style.display=paused?'flex':'none';
+  document.body.classList.toggle('paused',paused);
+  const btn=$('pauseBtn');if(btn&&btn.setAttribute)btn.setAttribute('aria-pressed',paused?'true':'false');
+}
+function setPaused(next){
+  next=!!next;
+  if(next&&(!started||won))return paused;
+  paused=next;
+  clearGameplayInput();
+  syncPauseUI();
+  return paused;
+}
+function togglePause(){if(!started||won)return paused;return setPaused(!paused);}
+function returnToMainMenu(){
+  if(!started||!paused||won)return false;
+  setPaused(false);
+  softReturnToPicker();
+  if(typeof clearGlide==='function')clearGlide();if(typeof endSpaceThrust==='function')endSpaceThrust();if(typeof endHover==='function')endHover();
+  P.puff=true;P.puffAir=0;P.slam=0;P.lavaRecT=0;P.quicksandRecT=0;P.camel=null;P.anchorSettleT=0;P.moveZone='grounded';P.spaceThrust=false;
+  CAM.mode='outdoor';CAM.collisionPulled=false;
+  clearGameplayInput();
+  return true;
+}
+window.__paused=()=>paused;
+window.__gameTime=()=>time;
+window.__setPaused=setPaused;
+window.__returnToMainMenu=returnToMainMenu;
 window.__W={solids,gloops,goos,hearts,crates,powers,fires,checks,snoozles,notes,dust,puddles,sharks,fish,spikefish,clams,bubbleShots,kelps,steamVents,lavas,cinders,embers,wisps,salamanders,geysers,scorches,protoEndpoints,steamCurtains,crystalSparks,celebrationParticles:PART,get camels(){return typeof camels!=='undefined'?camels:[];},get cacti(){return typeof cacti!=='undefined'?cacti:[];},get lizards(){return typeof lizards!=='undefined'?lizards:[];},get quicksands(){return typeof quicksands!=='undefined'?quicksands:[];},get asteroids(){return typeof asteroids!=='undefined'?asteroids:[];},get saucers(){return typeof saucers!=='undefined'?saucers:[];},get underwaterGroup(){return underwaterGroup;},get won(){return won;},get WM(){return WM;},get RAINBOW(){return RAINBOW;},get FINISH(){return FINISH;},get sfx(){return SFX;},get wreck(){return WRECK;},get conch(){return CONCH;},get organ(){return ORGAN;},get organFireworks(){return organFireworks;},get geodeShell(){return GEODE_SHELL;},get crackedGeode(){return crackedGeodeChamber;}};
 window.__started=()=>started;
 
@@ -190,6 +218,7 @@ camera.position.copy(CAM.pos);camera.lookAt(CAM.look);
 let last=performance.now();
 function frame(now){requestAnimationFrame(frame);let dt=(now-last)/1000;last=now;if(dt>0.05)dt=0.05;
   pollGamepad(dt);
+  if(paused){renderer.render(scene,camera);return;}
   if(!started){updateClouds(dt);updateSnoozles(dt);updateZ(dt);updatePlayerVisual(dt);renderer.render(scene,camera);return;}
   time+=dt;
   readKeys(dt);if(T.stickId!==null){IN.mx=T.jx;IN.mz=T.jy;}if(HELD.a)IN.jumpHeld=true;if(HELD.b)IN.bHeld=true;
@@ -205,4 +234,5 @@ function frame(now){requestAnimationFrame(frame);let dt=(now-last)/1000;last=now
   renderer.render(scene,camera);}
 requestAnimationFrame(frame);
 updateHUD();
+syncPauseUI();
 if(camDistParam!=null)updateCamDiagUI();

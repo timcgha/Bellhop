@@ -1,0 +1,128 @@
+#!/usr/bin/env node
+// v58 Pause / Main Menu real-browser acceptance.
+// Uses the real picker plus real keyboard, mouse, and touch input. Runtime hooks
+// are observed for evidence; this verifier never teleports Pling or mutates
+// pause/progression/completion/win state.
+const {spawn}=require('child_process');
+const {mkdirSync,writeFileSync,existsSync,rmSync}=require('fs');
+const {join}=require('path');
+const http=require('http');
+
+const outDir=join(__dirname,'..','artifacts','browser-pause-menu');
+mkdirSync(outDir,{recursive:true});
+const chrome=[process.env.CHROME_BIN,'/usr/bin/google-chrome','/usr/local/bin/google-chrome','/usr/bin/chromium','/usr/bin/chromium-browser'].find(p=>p&&existsSync(p));
+if(!chrome)throw new Error('Chrome/Chromium executable not found');
+const port=8798,cdpPort=9238,userData=`/tmp/bellhop-pause-${process.pid}`,base=`http://127.0.0.1:${port}/index.html`;
+const sleep=ms=>new Promise(r=>setTimeout(r,ms));
+function assert(c,m){if(!c)throw new Error(m);}
+function getJSON(url){return new Promise((resolve,reject)=>{http.get(url,res=>{let d='';res.on('data',c=>d+=c);res.on('end',()=>{try{resolve(JSON.parse(d));}catch(e){reject(e);}});}).on('error',reject);});}
+async function openCDP(){
+  const pages=await getJSON(`http://127.0.0.1:${cdpPort}/json/list`),page=pages.find(x=>x.type==='page')||pages[0];
+  if(!page||!page.webSocketDebuggerUrl)throw new Error('no CDP page');
+  const ws=new WebSocket(page.webSocketDebuggerUrl);
+  await new Promise((res,rej)=>{ws.addEventListener('open',res,{once:true});ws.addEventListener('error',e=>rej(e.error||e),{once:true});});
+  let id=0;const pending=new Map();
+  ws.addEventListener('message',ev=>{const m=JSON.parse(typeof ev.data==='string'?ev.data:ev.data.toString());if(m.id&&pending.has(m.id)){const p=pending.get(m.id);pending.delete(m.id);m.error?p.reject(new Error(JSON.stringify(m.error))):p.resolve(m.result);}});
+  const send=(method,params={})=>new Promise((resolve,reject)=>{const mid=++id;pending.set(mid,{resolve,reject});ws.send(JSON.stringify({id:mid,method,params}));});
+  const evaluate=async expression=>{const r=await send('Runtime.evaluate',{expression,awaitPromise:true,returnByValue:true});if(r.exceptionDetails)throw new Error((r.exceptionDetails.exception&&r.exceptionDetails.exception.description)||JSON.stringify(r.exceptionDetails));return r.result&&r.result.value;};
+  const screenshot=async name=>{const r=await send('Page.captureScreenshot',{format:'png'});writeFileSync(join(outDir,name),Buffer.from(r.data,'base64'));};
+  await send('Page.enable');await send('Runtime.enable');return {send,evaluate,screenshot,close:()=>{try{ws.close();}catch(e){}}};
+}
+async function waitEval(ev,expr,ms=12000){const t=Date.now();while(Date.now()-t<ms){try{if(await ev(expr))return true;}catch(e){}await sleep(100);}throw new Error('timeout: '+expr);}
+async function setViewport(cdp,w,h,touch=false){
+  await cdp.send('Emulation.setDeviceMetricsOverride',{width:w,height:h,deviceScaleFactor:1,mobile:!!touch,screenWidth:w,screenHeight:h});
+  await cdp.send('Emulation.setTouchEmulationEnabled',{enabled:!!touch,maxTouchPoints:touch?5:1});await sleep(160);
+}
+async function fresh(cdp,w=1280,h=720,touch=false){
+  await setViewport(cdp,w,h,touch);await cdp.send('Page.navigate',{url:base});
+  await waitEval(cdp.evaluate,`document.readyState==='complete'`,15000);
+  await waitEval(cdp.evaluate,`typeof __started==='function'&&typeof __paused==='function'&&typeof __gameTime==='function'&&typeof __INPUT_STATE==='function'&&document.getElementById('pauseBtn')`,15000);
+}
+const keys={Space:[' ',32],KeyW:['w',87],KeyA:['a',65],KeyS:['s',83],KeyD:['d',68],KeyK:['k',75],ArrowRight:['ArrowRight',39],Escape:['Escape',27]};
+async function key(cdp,code,down){const [k,vk]=keys[code];await cdp.send('Input.dispatchKeyEvent',{type:down?'keyDown':'keyUp',key:k,code,windowsVirtualKeyCode:vk,nativeVirtualKeyCode:vk,text:down&&k.length===1?k:undefined,unmodifiedText:down&&k.length===1?k:undefined});}
+async function tapKey(cdp,code,ms=70){await key(cdp,code,true);await sleep(ms);await key(cdp,code,false);await sleep(90);}
+async function holdKey(cdp,code,ms){await key(cdp,code,true);await sleep(ms);await key(cdp,code,false);await sleep(90);}
+async function holdKeys(cdp,codes,ms){for(const c of codes)await key(cdp,c,true);await sleep(ms);for(const c of [...codes].reverse())await key(cdp,c,false);await sleep(80);}
+async function rect(ev,id){return ev(`(()=>{const e=document.getElementById(${JSON.stringify(id)}),r=e.getBoundingClientRect(),s=getComputedStyle(e);return {left:r.left,right:r.right,top:r.top,bottom:r.bottom,w:r.width,h:r.height,display:s.display};})()`);}
+async function mouseTap(cdp,ev,id){const r=await rect(ev,id);assert(r.display!=='none'&&r.w>0&&r.h>0,`#${id} not tappable`);const x=r.left+r.w/2,y=r.top+r.h/2;await cdp.send('Input.dispatchMouseEvent',{type:'mousePressed',x,y,button:'left',clickCount:1});await cdp.send('Input.dispatchMouseEvent',{type:'mouseReleased',x,y,button:'left',clickCount:1});await sleep(100);}
+async function touchTap(cdp,ev,id){const r=await rect(ev,id);assert(r.display!=='none'&&r.w>0&&r.h>0,`#${id} not touchable`);const x=r.left+r.w/2,y=r.top+r.h/2;await cdp.send('Input.dispatchTouchEvent',{type:'touchStart',touchPoints:[{x,y,radiusX:4,radiusY:4,force:1,id:1}]});await sleep(45);await cdp.send('Input.dispatchTouchEvent',{type:'touchEnd',touchPoints:[]});await sleep(110);}
+async function pickerTo(cdp,index){assert(await cdp.evaluate(`__started()===false`),'picker expected');for(let i=0;i<index;i++)await tapKey(cdp,'ArrowRight',45);await tapKey(cdp,'Space',70);}
+async function startPickerCard(cdp,index,levelId,label){
+  const id=`lvl${index}`;assert(await cdp.evaluate(`__started()===false`),`${label}: picker expected`);
+  await mouseTap(cdp,cdp.evaluate,id);if(!(await cdp.evaluate(`__started()===true`)))await mouseTap(cdp,cdp.evaluate,id);
+  await waitEval(cdp.evaluate,`__started()&&__LEVEL().id===${JSON.stringify(levelId)}&&!__paused()&&!__W.won`,7000);
+}
+async function sim(ev){return ev(`(()=>({started:__started(),paused:__paused(),time:__gameTime(),x:__P.pos.x,y:__P.pos.y,z:__P.pos.z,dead:!!__P.dead,level:__LEVEL()&&__LEVEL().id,won:!!__W.won,picker:getComputedStyle(document.getElementById('start')).display,win:getComputedStyle(document.getElementById('win')).display,playing:document.body.classList.contains('playing'),pausedClass:document.body.classList.contains('paused'),pauseBtn:getComputedStyle(document.getElementById('pauseBtn')).display,input:__INPUT_STATE(),camel:!!__P.camel,sled:!!__P.sled,moveZone:__P.moveZone,spaceThrust:!!__P.spaceThrust}))()`);}
+function moved(a,b){return Math.hypot(a.x-b.x,a.z-b.z);}
+function frozen(a,b){return Math.hypot(a.x-b.x,a.y-b.y,a.z-b.z)<1e-6&&Math.abs(a.time-b.time)<1e-9;}
+function neutral(i){return i.mx===0&&i.mz===0&&i.camDX===0&&i.camDY===0&&!i.jump&&!i.jumpHeld&&!i.b&&!i.bHeld&&!i.y&&i.touchStickId===null&&i.touchCamId===null&&!i.heldA&&!i.heldB&&i.keysDown.length===0;}
+async function proveMovement(cdp,label,phase,preferred=[]){
+  const directions=[...preferred,...['KeyD','KeyA','KeyW','KeyS'].filter(k=>!preferred.includes(k))];
+  const attempts=[];
+  for(const code of directions){
+    const before=await sim(cdp.evaluate);await holdKey(cdp,code,420);const after=await sim(cdp.evaluate);
+    const distance=moved(before,after),dt=after.time-before.time;
+    attempts.push({code,distance:+distance.toFixed(4),gameTime:+dt.toFixed(4)});
+    if(dt>0&&distance>0.06)return {code,before,after,attempts};
+  }
+  throw new Error(`${label}: ${phase} movement proof failed ${JSON.stringify(attempts)}`);
+}
+async function cleanPicker(cdp,label){
+  const s=await sim(cdp.evaluate);assert(!s.started&&!s.paused&&!s.won,`${label}: inactive/unpaused/non-win cleanup failed`);
+  assert(s.picker==='flex'&&s.win==='none',`${label}: picker/win UI cleanup failed`);assert(!s.playing&&!s.pausedClass,`${label}: stale body gameplay state`);
+  assert(s.pauseBtn==='none',`${label}: pause button remains on picker`);assert(neutral(s.input),`${label}: stale input ${JSON.stringify(s.input)}`);
+  assert(await cdp.evaluate(`['bA','bB','bY'].every(id=>getComputedStyle(document.getElementById(id)).display==='none')`),`${label}: gameplay touch controls remain on picker`);return s;
+}
+async function restartSelected(cdp,levelId,label){await tapKey(cdp,'Space',70);await waitEval(cdp.evaluate,`__started()&&__LEVEL().id===${JSON.stringify(levelId)}&&!__paused()&&!__W.won`,7000);const proof=await proveMovement(cdp,label,'subsequent run');return proof.after;}
+async function levelLifecycle(cdp,index,result){
+  const levelId=`level${index+1}`,label=`Level ${index+1}`;await fresh(cdp);await pickerTo(cdp,index);await waitEval(cdp.evaluate,`__started()&&__LEVEL().id===${JSON.stringify(levelId)}&&!__paused()&&!__W.won`,7000);
+  const active=await proveMovement(cdp,label,'active gameplay');
+  await tapKey(cdp,'Escape');await waitEval(cdp.evaluate,`__paused()&&getComputedStyle(document.getElementById('pauseOverlay')).display==='flex'`,3000);
+  const f0=await sim(cdp.evaluate);await sleep(320);await holdKey(cdp,'KeyD',320);await tapKey(cdp,'Space',55);const f1=await sim(cdp.evaluate);assert(frozen(f0,f1),`${label}: player/game time advanced while paused`);assert(neutral(f1.input),`${label}: paused input retained`);
+  await mouseTap(cdp,cdp.evaluate,'pauseResume');await waitEval(cdp.evaluate,`!__paused()`,3000);const resume=await proveMovement(cdp,label,'post-Resume gameplay',[active.code==='KeyD'?'KeyA':'KeyD']);assert(!resume.after.won,`${label}: completion occurred during lifecycle`);
+  await mouseTap(cdp,cdp.evaluate,'pauseBtn');await waitEval(cdp.evaluate,`__paused()`,3000);await mouseTap(cdp,cdp.evaluate,'pauseMenu');await waitEval(cdp.evaluate,`!__started()&&!__paused()`,4000);await cleanPicker(cdp,label);
+  const again=await restartSelected(cdp,levelId,label);assert(!again.camel&&!again.sled&&!again.spaceThrust,`${label}: transient state leaked into restart`);
+  result.levels.push({level:levelId,status:'PASS',active:`${active.code}+gameTime`,freeze:'player position+gameTime',pausedInput:'move+jump blocked',resume:`${resume.code}+gameTime`,mainMenu:'clean picker/no win',subsequentRun:'movement+gameTime clean'});
+}
+async function cameraForward(ev){await ev(`(()=>{__CAM.yaw=0;__CAM.lastManual=1e9;return true;})()`);}
+async function driveTo(cdp,ev,tx,tz,label,timeout=50000){const start=Date.now();let last=null,stuck=0;while(Date.now()-start<timeout){await cameraForward(ev);const s=await sim(ev);assert(!s.won,`${label}: unexpected win`);if(s.dead){await sleep(450);continue;}const dx=tx-s.x,dz=tz-s.z;if(Math.hypot(dx,dz)<1.05)return s;const codes=[];if(Math.abs(dx)>0.65)codes.push(dx>0?'KeyD':'KeyA');if(Math.abs(dz)>0.65)codes.push(dz>0?'KeyS':'KeyW');await holdKeys(cdp,codes,180);const n=await sim(ev);if(last&&Math.hypot(n.x-last.x,n.z-last.z)<0.04)stuck++;else stuck=0;last=n;if(stuck>=5){await tapKey(cdp,'Space',55);stuck=0;}}const s=await sim(ev);throw new Error(`drive timeout ${label}: ${s.x.toFixed(1)},${s.y.toFixed(1)},${s.z.toFixed(1)} -> ${tx},${tz}`);}
+async function wakeSnoozle(cdp,ev,idx,label){
+  const q=await ev(`(()=>{const s=__W.snoozles[${idx}];return {x:s.g.position.x,z:s.g.position.z};})()`);await driveTo(cdp,ev,q.x,q.z,label);
+  const before=await ev(`__W.snoozles.filter(s=>s.state!=='sleep').length`);await tapKey(cdp,'KeyK',70);await waitEval(ev,`__W.snoozles[${idx}].state!=='sleep'`,3500);
+  const after=await ev(`__W.snoozles.filter(s=>s.state!=='sleep').length`);assert(after===before+1,label+': wake count');return {idx,before,after};
+}
+async function spaceTransient(cdp,result){
+  const label='Level 4 open-space thrust';await fresh(cdp);await startPickerCard(cdp,3,'level4',label);
+  await key(cdp,'Space',true);await waitEval(cdp.evaluate,`__P.moveZone==='openSpace'&&__P.spaceThrust===true`,3500);await sleep(180);await tapKey(cdp,'Escape',55);await key(cdp,'Space',false);await waitEval(cdp.evaluate,`__paused()`,3000);
+  const a=await sim(cdp.evaluate);assert(a.moveZone==='openSpace'&&a.spaceThrust,label+': transient not established');await holdKey(cdp,'KeyD',320);await tapKey(cdp,'Space',55);await sleep(250);const b=await sim(cdp.evaluate);assert(frozen(a,b)&&b.moveZone===a.moveZone&&b.spaceThrust===a.spaceThrust,label+': state advanced/changed while paused');
+  await mouseTap(cdp,cdp.evaluate,'pauseResume');await waitEval(cdp.evaluate,`!__paused()`,3000);const t=a.time;await waitEval(cdp.evaluate,`__gameTime()>${t+0.08}`,3000);await mouseTap(cdp,cdp.evaluate,'pauseBtn');await waitEval(cdp.evaluate,`__paused()`,3000);await mouseTap(cdp,cdp.evaluate,'pauseMenu');await waitEval(cdp.evaluate,`!__started()&&!__paused()`,4000);const clean=await cleanPicker(cdp,label);assert(clean.moveZone==='grounded'&&!clean.spaceThrust,label+': space state leaked to picker');const again=await restartSelected(cdp,'level4',label);assert(again.moveZone==='grounded'&&!again.spaceThrust,label+': space state leaked into restart');result.transients.push({level:'level4',state:'openSpace + active thrust',freeze:'player+gameTime+movement mode',cleanup:'PASS',status:'PASS'});
+}
+async function camelTransient(cdp,result){
+  const label='Level 5 mounted camel';await fresh(cdp);await startPickerCard(cdp,4,'level5',label);await waitEval(cdp.evaluate,`__W.camels.length>0`,7000);const camel=await cdp.evaluate(`(()=>{const c=__W.camels[0];return {x:c.x,z:c.z};})()`);await driveTo(cdp,cdp.evaluate,camel.x,camel.z,label,24000);await tapKey(cdp,'Space',60);await waitEval(cdp.evaluate,`!!__P.camel`,3500);await holdKey(cdp,'KeyW',350);await tapKey(cdp,'Escape');await waitEval(cdp.evaluate,`__paused()`,3000);
+  const a=await cdp.evaluate(`(()=>{const c=__P.camel;return {time:__gameTime(),px:__P.pos.x,py:__P.pos.y,pz:__P.pos.z,cx:c.x,cy:c.y,cz:c.z,mounted:!!c.mounted};})()`);assert(a.mounted,label+': mount missing');await holdKey(cdp,'KeyD',320);await tapKey(cdp,'Space',55);await sleep(260);const b=await cdp.evaluate(`(()=>{const c=__P.camel;return {time:__gameTime(),px:__P.pos.x,py:__P.pos.y,pz:__P.pos.z,cx:c.x,cy:c.y,cz:c.z,mounted:!!c.mounted};})()`);assert(Math.hypot(a.px-b.px,a.py-b.py,a.pz-b.pz)<1e-6&&Math.abs(a.time-b.time)<1e-9,label+': player/time advanced paused');assert(b.mounted&&Math.hypot(a.cx-b.cx,a.cy-b.cy,a.cz-b.cz)<1e-6,label+': camel advanced paused');
+  await mouseTap(cdp,cdp.evaluate,'pauseResume');await waitEval(cdp.evaluate,`!__paused()`,3000);const r0=await sim(cdp.evaluate);await holdKey(cdp,'KeyW',350);const r1=await sim(cdp.evaluate);assert(r1.time>r0.time&&moved(r0,r1)>0.05&&r1.camel,label+': mounted movement did not resume');await mouseTap(cdp,cdp.evaluate,'pauseBtn');await waitEval(cdp.evaluate,`__paused()`,3000);await mouseTap(cdp,cdp.evaluate,'pauseMenu');await waitEval(cdp.evaluate,`!__started()&&!__paused()`,4000);const clean=await cleanPicker(cdp,label);assert(!clean.camel,label+': camel leaked to picker');const again=await restartSelected(cdp,'level5',label);assert(!again.camel,label+': camel leaked into restart');result.transients.push({level:'level5',state:'mounted camel movement',freeze:'player+gameTime+camel position',cleanup:'PASS',status:'PASS'});
+}
+async function sledTransient(cdp,result){
+  const label='Level 6 sliding sled';await fresh(cdp);await startPickerCard(cdp,5,'level6',label);await waitEval(cdp.evaluate,`!!(window.__WINTER&&window.__WINTER.sled)`,7000);
+  await wakeSnoozle(cdp,cdp.evaluate,0,label+' snoozle 1');await wakeSnoozle(cdp,cdp.evaluate,1,label+' snoozle 2');await wakeSnoozle(cdp,cdp.evaluate,2,label+' hilltop snoozle');
+  const sled=await cdp.evaluate(`({x:window.__WINTER.sled.x,z:window.__WINTER.sled.z})`);await driveTo(cdp,cdp.evaluate,sled.x,sled.z+0.65,label+' sled top',12000);await waitEval(cdp.evaluate,`__P.pos.y>5.2&&Math.hypot(__P.pos.x-__WINTER.sled.x,__P.pos.z-__WINTER.sled.z)<2.25`,6000);await tapKey(cdp,'Space',70);await waitEval(cdp.evaluate,`!!__P.sled&&__WINTER.sled.phase==='sliding'`,3500);await waitEval(cdp.evaluate,`__WINTER.sled.progress>0.04`,4000);await tapKey(cdp,'Escape');await waitEval(cdp.evaluate,`__paused()`,3000);
+  const a=await cdp.evaluate(`(()=>({time:__gameTime(),px:__P.pos.x,py:__P.pos.y,pz:__P.pos.z,phase:__WINTER.sled.phase,progress:__WINTER.sled.progress,sx:__WINTER.sled.x,sz:__WINTER.sled.z,has:!!__P.sled}))()`);assert(a.has&&a.phase==='sliding',label+': sliding state missing');await holdKey(cdp,'KeyA',360);await tapKey(cdp,'Space',55);await sleep(260);const b=await cdp.evaluate(`(()=>({time:__gameTime(),px:__P.pos.x,py:__P.pos.y,pz:__P.pos.z,phase:__WINTER.sled.phase,progress:__WINTER.sled.progress,sx:__WINTER.sled.x,sz:__WINTER.sled.z,has:!!__P.sled}))()`);assert(Math.hypot(a.px-b.px,a.py-b.py,a.pz-b.pz)<1e-6&&Math.abs(a.time-b.time)<1e-9,label+': player/time advanced paused');assert(b.has&&b.phase===a.phase&&Math.abs(b.progress-a.progress)<1e-9&&Math.hypot(b.sx-a.sx,b.sz-a.sz)<1e-6,label+': sled advanced paused');
+  await mouseTap(cdp,cdp.evaluate,'pauseResume');await waitEval(cdp.evaluate,`!__paused()`,3000);await waitEval(cdp.evaluate,`__WINTER.sled.progress>${a.progress+0.03}`,3000);await mouseTap(cdp,cdp.evaluate,'pauseBtn');await waitEval(cdp.evaluate,`__paused()`,3000);await mouseTap(cdp,cdp.evaluate,'pauseMenu');await waitEval(cdp.evaluate,`!__started()&&!__paused()`,4000);const clean=await cleanPicker(cdp,label);assert(!clean.sled,label+': sled leaked to picker');const again=await restartSelected(cdp,'level6',label);assert(!again.sled,label+': sled leaked into restart');result.transients.push({level:'level6',state:'active sliding sled',freeze:'player+gameTime+sled phase/progress/position',cleanup:'PASS',status:'PASS'});
+}
+async function phone(cdp,w,h,label,result){
+  await fresh(cdp,w,h,true);await touchTap(cdp,cdp.evaluate,'lvl0');await touchTap(cdp,cdp.evaluate,'lvl0');await waitEval(cdp.evaluate,`__started()&&__LEVEL().id==='level1'`,7000);const p=await rect(cdp.evaluate,'pauseBtn'),m=await rect(cdp.evaluate,'mute'),hud=await rect(cdp.evaluate,'hud');const overlaps=(a,b)=>a.left<b.right&&a.right>b.left&&a.top<b.bottom&&a.bottom>b.top;assert(p.display!=='none'&&p.w>=44&&p.h>=44,`${label}: pause target <44px`);assert(p.left>=0&&p.top>=0&&p.right<=w&&p.bottom<=h,`${label}: pause target outside viewport`);assert(!overlaps(p,m)&&!overlaps(p,hud),`${label}: pause overlaps HUD/mute`);
+  await touchTap(cdp,cdp.evaluate,'pauseBtn');await waitEval(cdp.evaluate,`__paused()&&getComputedStyle(document.getElementById('pauseOverlay')).display==='flex'`,4000);const resume=await rect(cdp.evaluate,'pauseResume'),menu=await rect(cdp.evaluate,'pauseMenu'),card=await cdp.evaluate(`(()=>{const r=document.querySelector('#pauseOverlay .pause-card').getBoundingClientRect();return {left:r.left,right:r.right,top:r.top,bottom:r.bottom};})()`);assert(card.left>=0&&card.top>=0&&card.right<=w&&card.bottom<=h,`${label}: pause card outside viewport`);assert(resume.h>=48&&menu.h>=48,`${label}: action target <48px`);const f0=await sim(cdp.evaluate);await sleep(350);const f1=await sim(cdp.evaluate);assert(frozen(f0,f1),`${label}: simulation advanced paused`);await cdp.screenshot(`pause-${label}.png`);await touchTap(cdp,cdp.evaluate,'pauseResume');await waitEval(cdp.evaluate,`!__paused()`,3000);await touchTap(cdp,cdp.evaluate,'pauseBtn');await waitEval(cdp.evaluate,`__paused()`,3000);await touchTap(cdp,cdp.evaluate,'pauseMenu');await waitEval(cdp.evaluate,`!__started()&&!__paused()`,5000);await cleanPicker(cdp,label);result.mobile.push({viewport:label,status:'PASS',touch:'pause/resume/menu',geometry:'PASS',freeze:'player+gameTime'});
+}
+async function main(){
+  try{rmSync(userData,{recursive:true,force:true});}catch(e){}
+  const server=spawn('python3',['-m','http.server',String(port),'--bind','127.0.0.1'],{cwd:join(__dirname,'..','dist'),stdio:'ignore'});
+  let chromeErr='';const cp=spawn(chrome,['--headless=new','--remote-debugging-address=127.0.0.1',`--remote-debugging-port=${cdpPort}`,`--user-data-dir=${userData}`,'--no-sandbox','--disable-dev-shm-usage','--no-first-run','--no-default-browser-check','--disable-background-networking','--enable-webgl','--ignore-gpu-blocklist','--use-angle=swiftshader','--window-size=1280,720','about:blank'],{stdio:['ignore','ignore','pipe']});if(cp.stderr)cp.stderr.on('data',d=>chromeErr=(chromeErr+d.toString()).slice(-12000));
+  let cdp;const result={desktop:'1280x720',levels:[],transients:[],mobile:[]};
+  try{let ready=false;for(let i=0;i<75;i++){if(cp.exitCode!==null)throw new Error(`Chrome exited ${cp.exitCode}: ${chromeErr}`);try{await getJSON(`http://127.0.0.1:${cdpPort}/json/version`);ready=true;break;}catch(e){await sleep(200);}}if(!ready)throw new Error('Chrome CDP did not become ready: '+chromeErr.slice(-1200));cdp=await openCDP();
+    for(let i=0;i<6;i++)await levelLifecycle(cdp,i,result);
+    await spaceTransient(cdp,result);await camelTransient(cdp,result);await sledTransient(cdp,result);
+    await phone(cdp,844,390,'844x390',result);await phone(cdp,390,844,'390x844',result);
+    result.status='PASS';writeFileSync(join(outDir,'result.json'),JSON.stringify(result,null,2));console.log('PAUSE_MENU_BROWSER_VERIFY=PASS');console.log(JSON.stringify(result));
+  }finally{if(cdp)cdp.close();try{cp.kill('SIGKILL');}catch(e){}try{server.kill('SIGKILL');}catch(e){}await sleep(200);try{rmSync(userData,{recursive:true,force:true,maxRetries:3,retryDelay:100});}catch(e){console.warn('browser cleanup warning: '+e.message);}}
+}
+main().catch(e=>{console.error('PAUSE_MENU_BROWSER_VERIFY=FAIL');console.error(e&&e.stack||e);process.exit(1);});
