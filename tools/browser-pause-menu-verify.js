@@ -73,7 +73,7 @@ async function cleanPicker(cdp,label){
   assert(s.pauseBtn==='none',`${label}: pause button remains on picker`);assert(neutral(s.input),`${label}: stale input ${JSON.stringify(s.input)}`);
   assert(await cdp.evaluate(`['bA','bB','bY'].every(id=>getComputedStyle(document.getElementById(id)).display==='none')`),`${label}: gameplay touch controls remain on picker`);return s;
 }
-async function restartSelected(cdp,levelId,label){await tapKey(cdp,'Space',70);await waitEval(cdp.evaluate,`__started()&&__LEVEL().id===${JSON.stringify(levelId)}&&!__paused()&&!__W.won`,7000);await sleep(220);const s=await sim(cdp.evaluate);assert(s.time>0,`${label}: restarted run did not advance`);return s;}
+async function restartSelected(cdp,levelId,label){await tapKey(cdp,'Space',70);await waitEval(cdp.evaluate,`__started()&&__LEVEL().id===${JSON.stringify(levelId)}&&!__paused()&&!__W.won`,7000);const proof=await proveMovement(cdp,label,'subsequent run');return proof.after;}
 async function levelLifecycle(cdp,index,result){
   const levelId=`level${index+1}`,label=`Level ${index+1}`;await fresh(cdp);await pickerTo(cdp,index);await waitEval(cdp.evaluate,`__started()&&__LEVEL().id===${JSON.stringify(levelId)}&&!__paused()&&!__W.won`,7000);
   const active=await proveMovement(cdp,label,'active gameplay');
@@ -82,7 +82,7 @@ async function levelLifecycle(cdp,index,result){
   await mouseTap(cdp,cdp.evaluate,'pauseResume');await waitEval(cdp.evaluate,`!__paused()`,3000);const resume=await proveMovement(cdp,label,'post-Resume gameplay',[active.code==='KeyD'?'KeyA':'KeyD']);assert(!resume.after.won,`${label}: completion occurred during lifecycle`);
   await mouseTap(cdp,cdp.evaluate,'pauseBtn');await waitEval(cdp.evaluate,`__paused()`,3000);await mouseTap(cdp,cdp.evaluate,'pauseMenu');await waitEval(cdp.evaluate,`!__started()&&!__paused()`,4000);await cleanPicker(cdp,label);
   const again=await restartSelected(cdp,levelId,label);assert(!again.camel&&!again.sled&&!again.spaceThrust,`${label}: transient state leaked into restart`);
-  result.levels.push({level:levelId,status:'PASS',active:`${active.code}+gameTime`,freeze:'player position+gameTime',pausedInput:'move+jump blocked',resume:`${resume.code}+gameTime`,mainMenu:'clean picker/no win',subsequentRun:'clean'});
+  result.levels.push({level:levelId,status:'PASS',active:`${active.code}+gameTime`,freeze:'player position+gameTime',pausedInput:'move+jump blocked',resume:`${resume.code}+gameTime`,mainMenu:'clean picker/no win',subsequentRun:'movement+gameTime clean'});
 }
 async function cameraForward(ev){await ev(`(()=>{__CAM.yaw=0;__CAM.lastManual=1e9;return true;})()`);}
 async function driveTo(cdp,ev,tx,tz,label,timeout=50000){const start=Date.now();let last=null,stuck=0;while(Date.now()-start<timeout){await cameraForward(ev);const s=await sim(ev);assert(!s.won,`${label}: unexpected win`);if(s.dead){await sleep(450);continue;}const dx=tx-s.x,dz=tz-s.z;if(Math.hypot(dx,dz)<1.05)return s;const codes=[];if(Math.abs(dx)>0.65)codes.push(dx>0?'KeyD':'KeyA');if(Math.abs(dz)>0.65)codes.push(dz>0?'KeyS':'KeyW');await holdKeys(cdp,codes,180);const n=await sim(ev);if(last&&Math.hypot(n.x-last.x,n.z-last.z)<0.04)stuck++;else stuck=0;last=n;if(stuck>=5){await tapKey(cdp,'Space',55);stuck=0;}}const s=await sim(ev);throw new Error(`drive timeout ${label}: ${s.x.toFixed(1)},${s.y.toFixed(1)},${s.z.toFixed(1)} -> ${tx},${tz}`);}
