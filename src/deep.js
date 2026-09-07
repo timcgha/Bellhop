@@ -464,7 +464,7 @@ function buildWreckShaftVisuals(g){
   }
 }
 function dressPlatform(x,y,z,w,h,d){
-  const g=new THREE.Group();g.position.set(x,y,z);scene.add(g);
+  const g=new THREE.Group();g.position.set(x,y,z);addDecor(g);
   const rock=lam(0x9aa4ad),sand=lam(0xd9c08a),coral=lam(CORALC[Math.floor(rand(0,CORALC.length))]);
   g.add(mesh(BOXG,rock,0,h*0.5,0,w*0.92,h*0.88,d*0.92));
   g.add(mesh(BOXG,sand,0,h*0.02,0,w*0.78,0.08,d*0.78));
@@ -935,6 +935,7 @@ function buildConch(cx,cz){
   CONCH.trigger={x:cx,y:1.6,z:cz+1.0,hx:1.35,hy:1.8,hz:1.5};
   CONCH.interior={x0:cx-(CH_HALF_W-0.15),x1:cx+(CH_HALF_W-0.15),z0:cz+CH_BACK+0.2,z1:cz+CH_FRONT,yMax:CH_H-0.2};
   const rainbow=buildRainbow(cx,cz);
+  addDecor(rainbow);
   rainbow.position.set(cx,16,cz+1);rainbow.scale.setScalar(0.18);rainbow.visible=false;CONCH.rainbow=rainbow;
   CONCH.g=g;CONCH.winBurstT=0;
   registerFinish({

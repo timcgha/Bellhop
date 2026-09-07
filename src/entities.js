@@ -155,8 +155,19 @@ function registerFinish(f){
 }
 const levelDecor=[];
 function addDecor(m){scene.add(m);levelDecor.push(m);return m;}
+// Read-only lifecycle ownership evidence for the browser verifier. These are
+// existing containers, not a second cleanup registry or gameplay interface.
+window.__sceneOwnership=()=>({
+  owned:levelDecor,
+  persistentWorlds:[
+    {name:'underwaterGroup',root:underwaterGroup},
+    {name:'spaceGroup',root:spaceGroup},
+    {name:'desertGroup',root:desertGroup}
+  ].filter(c=>!!c.root)
+});
 function clearLevelWorld(){
   clearShadowStick();
+  clearTransientFx();
   const rem=m=>{
     if(!m)return;
     if(m.parent&&typeof m.parent.remove==='function')m.parent.remove(m);
@@ -460,7 +471,7 @@ function loadLevel(L){
     else if(k==='pondReeds'){for(let i=0;i<step[1];i++){const t=i/step[1];const x=POND.x0-0.6+t*(POND.x1-POND.x0+1.2);addWobbler(x,i%2?POND.z0-0.8:POND.z1+0.8,'reed');}}
     else if(k==='towerCore'){addSolid(TX,0,TZ,3.6,12,3.6,0x9aa4ad,{surf:'stone'});addSolid(TX,12,TZ,6,0.5,6,0xc98a4b,{surf:'wood'});}
     else if(k==='towerSteps'){for(let i=0;i<step[1];i++){const a=-Math.PI/2+i*0.56;const y=1.1*(i+1);const sl=addSolid(TX+Math.cos(a)*4.3,y-0.4,TZ+Math.sin(a)*4.3,2.4,0.4,2.4,i%2?0xc98a4b:0xd9a262,{surf:'wood'});if(step[2].indexOf(i)>=0)addNote(sl.mesh.position.x,y+0.7,sl.mesh.position.z,false);}}
-    else if(k==='bushScatter'){for(let i=0;i<step[1];i++){const x=rand(-46,34),z=rand(-82,24);if(x>-38&&x<24&&z>-74&&z<16)continue;scene.add(mesh(SPH,lam(0x4f9f3f),x,0.35,z,rand(0.9,1.6),rand(0.6,1.0),rand(0.9,1.6)));}}
+    else if(k==='bushScatter'){for(let i=0;i<step[1];i++){const x=rand(-46,34),z=rand(-82,24);if(x>-38&&x<24&&z>-74&&z<16)continue;addDecor(mesh(SPH,lam(0x4f9f3f),x,0.35,z,rand(0.9,1.6),rand(0.6,1.0),rand(0.9,1.6)));}}
     else if(k==='cloudScatter'){for(let i=0;i<step[1];i++)addCloud(rand(-44,32),rand(22,30),rand(-80,20),rand(1.5,3));}
     else if(k==='clam')addClam(step[1],step[2],step[3],step[4]);
     else if(k==='shark')addShark(step[1],step[2],step[3],step[4],step[5]);

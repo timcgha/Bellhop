@@ -48,3 +48,21 @@ jobs:
         env:
           CHROME_BIN: /usr/bin/google-chrome
         run: node tools/browser-level6-winter-verify.js
+      - name: Upload Level 6 browser evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: level6-winter-browser
+          path: artifacts/browser-level6-winter/
+          if-no-files-found: error
+      - name: Run cross-level isolation real-browser verification
+        env:
+          CHROME_BIN: /usr/bin/google-chrome
+        run: node tools/browser-cross-level-isolation-verify.js
+      - name: Upload cross-level isolation browser evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: cross-level-isolation-browser
+          path: artifacts/browser-cross-level-isolation/
+          if-no-files-found: error

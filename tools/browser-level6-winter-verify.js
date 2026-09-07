@@ -92,7 +92,23 @@ async function main(){
 
     await wakeSnoozle(cdp,cdp.evaluate,3,'snoozle 4');await wakeSnoozle(cdp,cdp.evaluate,4,'snoozle 5');result.route.push('all-snoozles');assert(await cdp.evaluate(`__W.snoozles.every(s=>s.state!=='sleep')&&__WINTER.winterReady()`),'all-Snoozles finish predicate not ready');
     await driveTo(cdp,cdp.evaluate,0,-456,'decorated Christmas tree approach');const decor=await cdp.evaluate(`(()=>{const t=__WINTER.tree;return {lights:t.lights.length,bright:!!t.brightLights,ornaments:t.ornaments.length,garlands:t.garlands.length,presents:t.presents.length,star:!!t.star};})()`);assert(decor.star&&decor.bright&&decor.lights>=42&&decor.ornaments>=20&&decor.garlands>=3&&decor.presents>=6,'polished Christmas-tree decorations/presents incomplete');await cdp.screenshot('04-decorated-finale-844x390.png');result.route.push('decorated-tree');
-    await driveTo(cdp,cdp.evaluate,0,-462.5,'Christmas tree finale');await waitEval(cdp.evaluate,'__W.won===true',5000);assert(await cdp.evaluate('__WINTER.tree.party'),'Christmas-tree victory celebration did not activate');result.route.push('victory');
+    // Approach the actual authored tree center: the old waypoint's 1m stopping
+    // tolerance extended outside the game's strict 4.2m victory trigger.
+    const finaleState=()=>cdp.evaluate(`(()=>{const t=__WINTER.tree,p=__P.pos,d=Math.hypot(p.x-t.x,p.z-t.z);return {player:{x:p.x,y:p.y,z:p.z},tree:{x:t.x,z:t.z},distance:d,insideTrigger:d<4.2,grounded:!!__P.grounded,dead:!!__P.dead,started:__started(),paused:__paused(),won:!!__W.won,gameTime:__gameTime(),ready:__WINTER.winterReady(),sledCompleted:!!(__WINTER.sled&&__WINTER.sled.completed),rescued:__W.snoozles.filter(s=>s.state!=='sleep').length,goal:__snoozleGoal(),snoozles:__W.snoozles.map(s=>s.state),party:!!t.party};})()`);
+    const finaleTarget=await cdp.evaluate(`(()=>{const t=__WINTER.tree;return {x:t.x,z:t.z};})()`);
+    try{
+      await driveTo(cdp,cdp.evaluate,finaleTarget.x,finaleTarget.z,'Christmas tree finale');
+      result.finale={target:finaleTarget,afterApproach:await finaleState()};
+      assert(result.finale.afterApproach.won||result.finale.afterApproach.insideTrigger,'real finale approach did not enter the authored victory trigger');
+      await waitEval(cdp.evaluate,'__W.won===true',5000);
+      assert(await cdp.evaluate('__WINTER.tree.party'),'Christmas-tree victory celebration did not activate');
+      result.finale.afterVictory=await finaleState();result.route.push('victory');
+    }catch(e){
+      result.finale={...(result.finale||{}),target:finaleTarget,failure:await finaleState().catch(snapshotError=>({snapshotError:String(snapshotError)})),error:e.message};
+      result.status='FAIL';writeFileSync(join(outDir,'result.json'),JSON.stringify(result,null,2));
+      try{await cdp.screenshot('04b-finale-failure.png');}catch(snapshotError){result.finale.screenshotError=String(snapshotError);writeFileSync(join(outDir,'result.json'),JSON.stringify(result,null,2));}
+      throw new Error('Christmas tree finale: '+e.message+'; state='+JSON.stringify(result.finale.failure));
+    }
 
     await viewport(cdp,390,844);result.viewports.push('390x844');await cdp.screenshot('05-victory-phone-390x844.png');
     let returned=false;for(let i=0;i<18&&!returned;i++){await tap(cdp,'Space',70);await sleep(350);returned=await cdp.evaluate(`!__started()&&document.getElementById('start').style.display!=='none'`);}assert(returned,'normal victory Space return did not reach picker');await cdp.screenshot('06-return-picker-phone.png');result.route.push('picker-return');

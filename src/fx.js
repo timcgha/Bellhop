@@ -11,4 +11,10 @@ const ZTEX=textTex('z','#5b4bd6');const ZS=[];let zIdx=0;
 for(let i=0;i<16;i++){const s=new THREE.Sprite(new THREE.SpriteMaterial({map:ZTEX,transparent:true,opacity:1,depthWrite:false}));s.visible=false;scene.add(s);ZS.push({s,life:0,vx:0});}
 function spawnZ(x,y,z){const o=ZS[zIdx];zIdx=(zIdx+1)%ZS.length;o.s.visible=true;o.s.position.set(x,y,z);o.life=1.6;o.vx=rand(-0.2,0.2);o.s.scale.setScalar(0.4);}
 function updateZ(dt){for(const o of ZS){if(o.life<=0)continue;o.life-=dt;if(o.life<=0){o.s.visible=false;continue;}o.s.position.y+=0.7*dt;o.s.position.x+=o.vx*dt;const k=1-o.life/1.6;o.s.scale.setScalar(0.4+k*0.5);o.s.material.opacity=1-k;}}
+function clearTransientFx(){
+  pIdx=0;rIdx=0;zIdx=0;
+  for(const p of PART){p.life=0;p.m.visible=false;}
+  for(const r of RINGS){r.life=0;r.m.visible=false;}
+  for(const o of ZS){o.life=0;o.s.visible=false;}
+}
 
