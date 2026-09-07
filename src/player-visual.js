@@ -2,7 +2,7 @@
 // This module replaces Pling's rendered subparts after player.js boots while
 // deliberately preserving the gameplay-owned root, physics, collision,
 // attacks, camera behavior, mount offsets, and animation binding names.
-(function rebuildPlayerVisual(){
+function buildRobotVisual(player){
   const old=player.userData||{};
   const jet=old.jet,flame=old.flame;
 
@@ -98,18 +98,17 @@
   player.userData={
     legL,legR,bel,head,eyes,mouth,armL,armR,seams,wings,
     jet,flame,visor,antenna,antennaTip,chest,
-    visualStyle:'rounded-white-cyan-v57'
+    visualStyle:'rounded-white-cyan-v57',
+    skinMaterials:{panel:white,soft:whiteSoft,accent:blue,joint}
   };
 
-  // Read-only verification hook; no gameplay state is exposed for mutation.
-  window.__PLAYER_VISUAL=()=>({
-    style:player.userData.visualStyle,
-    rootScale:player.scale.x,
-    eyeCount:eyes.length,
-    hasVisor:!!visor,
-    hasAntenna:!!antennaTip,
-    hasChestAccent:!!chest,
-    keepsJet:!!jet,
-    keepsFlame:!!flame
-  });
-})();
+  return player;
+}
+buildRobotVisual(player);
+// This hook always observes the gameplay robot, never the menu preview.
+window.__PLAYER_VISUAL=()=>{
+  const u=player.userData;
+  return {style:u.visualStyle,rootScale:player.scale.x,eyeCount:u.eyes.length,
+    hasVisor:!!u.visor,hasAntenna:!!u.antennaTip,hasChestAccent:!!u.chest,
+    keepsJet:!!u.jet,keepsFlame:!!u.flame};
+};
