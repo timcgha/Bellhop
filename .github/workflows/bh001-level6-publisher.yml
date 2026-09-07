@@ -19,49 +19,11 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          test "$(git rev-parse HEAD^)" = "94a9a5b42a82e68a8f8de66a91e7f3b66250352a"
+          git merge-base --is-ancestor 94a9a5b42a82e68a8f8de66a91e7f3b66250352a HEAD
+          test "$(git diff --name-only 94a9a5b42a82e68a8f8de66a91e7f3b66250352a HEAD)" = ".github/workflows/bh001-level6-publisher.yml"
           test "$(git hash-object tools/browser-level6-winter-verify.js)" = "93756e990b6bbcc9612dfdbb2583918635972ea2"
           test "$(git ls-remote origin refs/heads/fix/bh-001-cross-level-cleanup | cut -f1)" = "$(git rev-parse HEAD)"
-          python3 - <<'PY'
-          from pathlib import Path
-          p=Path('tools/browser-level6-winter-verify.js')
-          s=p.read_text()
-          old="await driveTo(cdp,cdp.evaluate,0,-462.5,'Christmas tree finale');await waitEval(cdp.evaluate,'__W.won===true',5000);assert(await cdp.evaluate('__WINTER.tree.party'),'Christmas-tree victory celebration did not activate');result.route.push('victory');"
-          new="""// Approach the actual authored tree center: the old waypoint's 1m stopping
-    // tolerance extended outside the game's strict 4.2m victory trigger.
-    const finaleState=()=>cdp.evaluate(`(()=>{const t=__WINTER.tree,p=__P.pos,d=Math.hypot(p.x-t.x,p.z-t.z);return {player:{x:p.x,y:p.y,z:p.z},tree:{x:t.x,z:t.z},distance:d,insideTrigger:d<4.2,grounded:!!__P.grounded,dead:!!__P.dead,started:__started(),paused:__paused(),won:!!__W.won,gameTime:__gameTime(),ready:__WINTER.winterReady(),sledCompleted:!!(__WINTER.sled&&__WINTER.sled.completed),rescued,goal:snoozleGoalCount(),snoozles:__W.snoozles.map(s=>s.state),party:!!t.party};})()`);
-    const finaleTarget=await cdp.evaluate(`(()=>{const t=__WINTER.tree;return {x:t.x,z:t.z};})()`);
-    try{
-      await driveTo(cdp,cdp.evaluate,finaleTarget.x,finaleTarget.z,'Christmas tree finale');
-      result.finale={target:finaleTarget,afterApproach:await finaleState()};
-      assert(result.finale.afterApproach.won||result.finale.afterApproach.insideTrigger,'real finale approach did not enter the authored victory trigger');
-      await waitEval(cdp.evaluate,'__W.won===true',5000);
-      assert(await cdp.evaluate('__WINTER.tree.party'),'Christmas-tree victory celebration did not activate');
-      result.finale.afterVictory=await finaleState();result.route.push('victory');
-    }catch(e){
-      result.finale={...(result.finale||{}),target:finaleTarget,failure:await finaleState(),error:e.message};
-      result.status='FAIL';writeFileSync(join(outDir,'result.json'),JSON.stringify(result,null,2));
-      await cdp.screenshot('04b-finale-failure.png');
-      throw new Error('Christmas tree finale: '+e.message+'; state='+JSON.stringify(result.finale.failure));
-    }
-"""
-          assert s.count(old)==1, 'Expected exact original finale block once'
-          p.write_text(s.replace(old,new))
-          w=Path('.github/workflows/test.yml')
-          y=w.read_text()
-          old_step="      - name: Run cross-level isolation real-browser verification\n"
-          new_step="""      - name: Upload Level 6 browser evidence
-        if: always()
-        uses: actions/upload-artifact@v4
-        with:
-          name: level6-winter-browser
-          path: artifacts/browser-level6-winter/
-          if-no-files-found: error
-"""+old_step
-          assert y.count(old_step)==1, 'Expected isolation gate once'
-          assert 'Upload Level 6 browser evidence' not in y
-          w.write_text(y.replace(old_step,new_step))
-          PY
+          printf '%s' 'ZnJvbSBwYXRobGliIGltcG9ydCBQYXRoCnA9UGF0aCgndG9vbHMvYnJvd3Nlci1sZXZlbDYtd2ludGVyLXZlcmlmeS5qcycpCnM9cC5yZWFkX3RleHQoKQpvbGQ9ImF3YWl0IGRyaXZlVG8oY2RwLGNkcC5ldmFsdWF0ZSwwLC00NjIuNSwnQ2hyaXN0bWFzIHRyZWUgZmluYWxlJyk7YXdhaXQgd2FpdEV2YWwoY2RwLmV2YWx1YXRlLCdfX1cud29uPT09dHJ1ZScsNTAwMCk7YXNzZXJ0KGF3YWl0IGNkcC5ldmFsdWF0ZSgnX19XSU5URVIudHJlZS5wYXJ0eScpLCdDaHJpc3RtYXMtdHJlZSB2aWN0b3J5IGNlbGVicmF0aW9uIGRpZCBub3QgYWN0aXZhdGUnKTtyZXN1bHQucm91dGUucHVzaCgndmljdG9yeScpOyIKbmV3PSIiIi8vIEFwcHJvYWNoIHRoZSBhY3R1YWwgYXV0aG9yZWQgdHJlZSBjZW50ZXI6IHRoZSBvbGQgd2F5cG9pbnQncyAxbSBzdG9wcGluZwogICAgLy8gdG9sZXJhbmNlIGV4dGVuZGVkIG91dHNpZGUgdGhlIGdhbWUncyBzdHJpY3QgNC4ybSB2aWN0b3J5IHRyaWdnZXIuCiAgICBjb25zdCBmaW5hbGVTdGF0ZT0oKT0+Y2RwLmV2YWx1YXRlKGAoKCk9Pntjb25zdCB0PV9fV0lOVEVSLnRyZWUscD1fX1AucG9zLGQ9TWF0aC5oeXBvdChwLngtdC54LHAuei10LnopO3JldHVybiB7cGxheWVyOnt4OnAueCx5OnAueSx6OnAuen0sdHJlZTp7eDp0Lngsejp0Lnp9LGRpc3RhbmNlOmQsaW5zaWRlVHJpZ2dlcjpkPDQuMixncm91bmRlZDohIV9fUC5ncm91bmRlZCxkZWFkOiEhX19QLmRlYWQsc3RhcnRlZDpfX3N0YXJ0ZWQoKSxwYXVzZWQ6X19wYXVzZWQoKSx3b246ISFfX1cud29uLGdhbWVUaW1lOl9fZ2FtZVRpbWUoKSxyZWFkeTpfX1dJTlRFUi53aW50ZXJSZWFkeSgpLHNsZWRDb21wbGV0ZWQ6ISEoX19XSU5URVIuc2xlZCYmX19XSU5URVIuc2xlZC5jb21wbGV0ZWQpLHJlc2N1ZWQsZ29hbDpzbm9vemxlR29hbENvdW50KCksc25vb3psZXM6X19XLnNub296bGVzLm1hcChzPT5zLnN0YXRlKSxwYXJ0eTohIXQucGFydHl9O30pKClgKTsKICAgIGNvbnN0IGZpbmFsZVRhcmdldD1hd2FpdCBjZHAuZXZhbHVhdGUoYCgoKT0+e2NvbnN0IHQ9X19XSU5URVIudHJlZTtyZXR1cm4ge3g6dC54LHo6dC56fTt9KSgpYCk7CiAgICB0cnl7CiAgICAgIGF3YWl0IGRyaXZlVG8oY2RwLGNkcC5ldmFsdWF0ZSxmaW5hbGVUYXJnZXQueCxmaW5hbGVUYXJnZXQueiwnQ2hyaXN0bWFzIHRyZWUgZmluYWxlJyk7CiAgICAgIHJlc3VsdC5maW5hbGU9e3RhcmdldDpmaW5hbGVUYXJnZXQsYWZ0ZXJBcHByb2FjaDphd2FpdCBmaW5hbGVTdGF0ZSgpfTsKICAgICAgYXNzZXJ0KHJlc3VsdC5maW5hbGUuYWZ0ZXJBcHByb2FjaC53b258fHJlc3VsdC5maW5hbGUuYWZ0ZXJBcHByb2FjaC5pbnNpZGVUcmlnZ2VyLCdyZWFsIGZpbmFsZSBhcHByb2FjaCBkaWQgbm90IGVudGVyIHRoZSBhdXRob3JlZCB2aWN0b3J5IHRyaWdnZXInKTsKICAgICAgYXdhaXQgd2FpdEV2YWwoY2RwLmV2YWx1YXRlLCdfX1cud29uPT09dHJ1ZScsNTAwMCk7CiAgICAgIGFzc2VydChhd2FpdCBjZHAuZXZhbHVhdGUoJ19fV0lOVEVSLnRyZWUucGFydHknKSwnQ2hyaXN0bWFzLXRyZWUgdmljdG9yeSBjZWxlYnJhdGlvbiBkaWQgbm90IGFjdGl2YXRlJyk7CiAgICAgIHJlc3VsdC5maW5hbGUuYWZ0ZXJWaWN0b3J5PWF3YWl0IGZpbmFsZVN0YXRlKCk7cmVzdWx0LnJvdXRlLnB1c2goJ3ZpY3RvcnknKTsKICAgIH1jYXRjaChlKXsKICAgICAgcmVzdWx0LmZpbmFsZT17Li4uKHJlc3VsdC5maW5hbGV8fHt9KSx0YXJnZXQ6ZmluYWxlVGFyZ2V0LGZhaWx1cmU6YXdhaXQgZmluYWxlU3RhdGUoKSxlcnJvcjplLm1lc3NhZ2V9OwogICAgICByZXN1bHQuc3RhdHVzPSdGQUlMJzt3cml0ZUZpbGVTeW5jKGpvaW4ob3V0RGlyLCdyZXN1bHQuanNvbicpLEpTT04uc3RyaW5naWZ5KHJlc3VsdCxudWxsLDIpKTsKICAgICAgYXdhaXQgY2RwLnNjcmVlbnNob3QoJzA0Yi1maW5hbGUtZmFpbHVyZS5wbmcnKTsKICAgICAgdGhyb3cgbmV3IEVycm9yKCdDaHJpc3RtYXMgdHJlZSBmaW5hbGU6ICcrZS5tZXNzYWdlKyc7IHN0YXRlPScrSlNPTi5zdHJpbmdpZnkocmVzdWx0LmZpbmFsZS5mYWlsdXJlKSk7CiAgICB9CiIiIgphc3NlcnQgcy5jb3VudChvbGQpPT0xLCAnRXhwZWN0ZWQgZXhhY3Qgb3JpZ2luYWwgZmluYWxlIGJsb2NrIG9uY2UnCnAud3JpdGVfdGV4dChzLnJlcGxhY2Uob2xkLG5ldykpCnc9UGF0aCgnLmdpdGh1Yi93b3JrZmxvd3MvdGVzdC55bWwnKQp5PXcucmVhZF90ZXh0KCkKb2xkX3N0ZXA9IiAgICAgIC0gbmFtZTogUnVuIGNyb3NzLWxldmVsIGlzb2xhdGlvbiByZWFsLWJyb3dzZXIgdmVyaWZpY2F0aW9uXG4iCm5ld19zdGVwPSIiIiAgICAgIC0gbmFtZTogVXBsb2FkIExldmVsIDYgYnJvd3NlciBldmlkZW5jZQogICAgICAgIGlmOiBhbHdheXMoKQogICAgICAgIHVzZXM6IGFjdGlvbnMvdXBsb2FkLWFydGlmYWN0QHY0CiAgICAgICAgd2l0aDoKICAgICAgICAgIG5hbWU6IGxldmVsNi13aW50ZXItYnJvd3NlcgogICAgICAgICAgcGF0aDogYXJ0aWZhY3RzL2Jyb3dzZXItbGV2ZWw2LXdpbnRlci8KICAgICAgICAgIGlmLW5vLWZpbGVzLWZvdW5kOiBlcnJvcgoiIiIrb2xkX3N0ZXAKYXNzZXJ0IHkuY291bnQob2xkX3N0ZXApPT0xLCAnRXhwZWN0ZWQgaXNvbGF0aW9uIGdhdGUgb25jZScKYXNzZXJ0ICdVcGxvYWQgTGV2ZWwgNiBicm93c2VyIGV2aWRlbmNlJyBub3QgaW4geQp3LndyaXRlX3RleHQoeS5yZXBsYWNlKG9sZF9zdGVwLG5ld19zdGVwKSkK' | base64 -d | python3
           node --check tools/browser-level6-winter-verify.js
           git diff --check
           git config user.name 'github-actions[bot]'
