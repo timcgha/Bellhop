@@ -1,0 +1,72 @@
+name: BH-001 bounded Level 6 verifier publisher
+on:
+  push:
+    branches: [fix/bh-001-cross-level-cleanup]
+    paths: [.github/workflows/bh001-level6-publisher.yml]
+permissions:
+  contents: write
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          fetch-depth: 2
+      - uses: actions/setup-node@v7
+        with:
+          node-version: '22'
+      - name: Verify exact parent and publish bounded verifier correction
+        shell: bash
+        run: |
+          set -euo pipefail
+          test "$(git rev-parse HEAD^)" = "94a9a5b42a82e68a8f8de66a91e7f3b66250352a"
+          test "$(git hash-object tools/browser-level6-winter-verify.js)" = "93756e990b6bbcc9612dfdbb2583918635972ea2"
+          test "$(git ls-remote origin refs/heads/fix/bh-001-cross-level-cleanup | cut -f1)" = "$(git rev-parse HEAD)"
+          python3 - <<'PY'
+          from pathlib import Path
+          p=Path('tools/browser-level6-winter-verify.js')
+          s=p.read_text()
+          old="await driveTo(cdp,cdp.evaluate,0,-462.5,'Christmas tree finale');await waitEval(cdp.evaluate,'__W.won===true',5000);assert(await cdp.evaluate('__WINTER.tree.party'),'Christmas-tree victory celebration did not activate');result.route.push('victory');"
+          new="""// Approach the actual authored tree center: the old waypoint's 1m stopping
+    // tolerance extended outside the game's strict 4.2m victory trigger.
+    const finaleState=()=>cdp.evaluate(`(()=>{const t=__WINTER.tree,p=__P.pos,d=Math.hypot(p.x-t.x,p.z-t.z);return {player:{x:p.x,y:p.y,z:p.z},tree:{x:t.x,z:t.z},distance:d,insideTrigger:d<4.2,grounded:!!__P.grounded,dead:!!__P.dead,started:__started(),paused:__paused(),won:!!__W.won,gameTime:__gameTime(),ready:__WINTER.winterReady(),sledCompleted:!!(__WINTER.sled&&__WINTER.sled.completed),rescued,goal:snoozleGoalCount(),snoozles:__W.snoozles.map(s=>s.state),party:!!t.party};})()`);
+    const finaleTarget=await cdp.evaluate(`(()=>{const t=__WINTER.tree;return {x:t.x,z:t.z};})()`);
+    try{
+      await driveTo(cdp,cdp.evaluate,finaleTarget.x,finaleTarget.z,'Christmas tree finale');
+      result.finale={target:finaleTarget,afterApproach:await finaleState()};
+      assert(result.finale.afterApproach.won||result.finale.afterApproach.insideTrigger,'real finale approach did not enter the authored victory trigger');
+      await waitEval(cdp.evaluate,'__W.won===true',5000);
+      assert(await cdp.evaluate('__WINTER.tree.party'),'Christmas-tree victory celebration did not activate');
+      result.finale.afterVictory=await finaleState();result.route.push('victory');
+    }catch(e){
+      result.finale={...(result.finale||{}),target:finaleTarget,failure:await finaleState(),error:e.message};
+      result.status='FAIL';writeFileSync(join(outDir,'result.json'),JSON.stringify(result,null,2));
+      await cdp.screenshot('04b-finale-failure.png');
+      throw new Error('Christmas tree finale: '+e.message+'; state='+JSON.stringify(result.finale.failure));
+    }
+"""
+          assert s.count(old)==1, 'Expected exact original finale block once'
+          p.write_text(s.replace(old,new))
+          w=Path('.github/workflows/test.yml')
+          y=w.read_text()
+          old_step="      - name: Run cross-level isolation real-browser verification\n"
+          new_step="""      - name: Upload Level 6 browser evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: level6-winter-browser
+          path: artifacts/browser-level6-winter/
+          if-no-files-found: error
+"""+old_step
+          assert y.count(old_step)==1, 'Expected isolation gate once'
+          assert 'Upload Level 6 browser evidence' not in y
+          w.write_text(y.replace(old_step,new_step))
+          PY
+          node --check tools/browser-level6-winter-verify.js
+          git diff --check
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add tools/browser-level6-winter-verify.js .github/workflows/test.yml
+          git commit -m 'BH-001: Prove Level 6 victory at authored trigger'
+          test "$(git ls-remote origin refs/heads/fix/bh-001-cross-level-cleanup | cut -f1)" = "$(git rev-parse HEAD^)"
+          git push origin HEAD:refs/heads/fix/bh-001-cross-level-cleanup
