@@ -42,6 +42,59 @@ function residueStateDirty(s){return Object.values(s).some(v=>v!==0&&v!==false);
 function setOf(rows){return new Set(rows.map(r=>r.uuid));}
 function subtract(rows,ids){return rows.filter(r=>!ids.has(r.uuid));}
 function roots(rows){const m=new Map();for(const r of rows){if(!m.has(r.root))m.set(r.root,{uuid:r.root,type:r.rootType,name:r.rootName,geom:r.rootGeom,x:r.rx,y:r.ry,z:r.rz,effectiveVisible:false,descendants:0});const q=m.get(r.root);q.descendants++;if(r.effectiveVisible)q.effectiveVisible=true;}return [...m.values()];}
+// Only these actual, reusable world containers have an intentional lifetime
+// beyond a level. Their identity is read from runtime ownership references,
+// never inferred from UUID, position, geometry, or a hidden flag.
+async function infrastructureContracts(ev){return ev(`(()=>{
+  const sc=__PLAYER().parent;
+  const refs=__sceneOwnership().persistentWorlds;
+  return refs.map(({name,root:o})=>{
+    const attached=o.parent===sc,empty=o.children.length===0,hidden=o.visible===false;
+    return {name,uuid:o.uuid,type:o.type||'',attached,empty,hidden,descendants:o.children.length+1,inactive:attached&&empty&&hidden&&o.type==='Group',contract:'reusable world container; teardown empties children and hides the group'};
+  });
+})()`);}
+function classifyOwnership(picker,baselineIds,contracts){
+  const extras=subtract(picker,baselineIds);
+  const valid=contracts.filter(c=>c.inactive),validIds=new Set(valid.map(c=>c.uuid));
+  const unowned=extras.filter(r=>!validIds.has(r.uuid));
+  return {extras,unowned,persistentInfrastructure:valid,invalidInfrastructure:contracts.filter(c=>!c.inactive)};
+}
+async function rainbowState(ev,uuid){return ev(`(()=>{
+  const sc=__PLAYER().parent,o=sc.getObjectByProperty('uuid',${JSON.stringify(uuid)});
+  return {uuid:${JSON.stringify(uuid)},attached:!!o,descendants:o?1+o.children.length:0,effectiveVisible:(()=>{let p=o;while(p){if(p.visible===false)return false;p=p.parent;}return !!o;})()};
+})()`);}
+async function conchRainbow(ev){return ev(`(()=>{
+  const c=__W.conch,r=c&&c.rainbow;
+  return r?{uuid:r.uuid,type:r.type,descendants:1+r.children.length,attached:!!r.parent,registered:__sceneOwnership().owned.includes(r)}:null;
+})()`);}
+async function auditPicker(ev,baselineIds){
+  const picker=await sceneSnapshot(ev),contracts=await infrastructureContracts(ev);
+  return {picker,ownership:classifyOwnership(picker,baselineIds,contracts),runtime:await runtimeResidue(ev),ownedCount:await ev(`__sceneOwnership().owned.length`)};
+}
+function ownershipDirty(a){return a.ownership.unowned.length>0||a.ownership.invalidInfrastructure.length>0||residueStateDirty(a.runtime)||a.ownedCount!==0;}
+function ownershipReport(a){return {unownedRoots:roots(a.ownership.unowned),unownedObjects:a.ownership.unowned.length,persistentInfrastructure:a.ownership.persistentInfrastructure,invalidInfrastructure:a.ownership.invalidInfrastructure,ownedCount:a.ownedCount==null?null:a.ownedCount};}
+async function runConchProbe(cdp,result,expectLeak){
+  const label='1280x720';await viewport(cdp,1280,720,false);
+  await cdp.send('Page.navigate',{url:base});
+  await waitEval(cdp.evaluate,`document.readyState==='complete'`,20000);
+  await waitEval(cdp.evaluate,`typeof __started==='function'&&__PLAYER()&&__PLAYER().parent&&document.getElementById('lvl1')`,20000);
+  const baselineIds=setOf(await sceneSnapshot(cdp.evaluate));
+  await startCard(cdp,1,'level2',false);
+  const rainbow=await conchRainbow(cdp.evaluate);
+  assert(rainbow&&rainbow.attached&&rainbow.descendants===8,'real Conch rainbow was not constructed');
+  await holdKey(cdp,'KeyD',320);await sleep(180);
+  await pauseAndMenu(cdp,false);await sleep(180);
+  const audit=await auditPicker(cdp.evaluate,baselineIds);
+  const state=await rainbowState(cdp.evaluate,rainbow.uuid);
+  const detected=audit.ownership.unowned.some(r=>r.uuid===rainbow.uuid);
+  const probe={mode:expectLeak?'before-correction':'after-correction',rainbow,state,detectedAsUnowned:detected,ownership:ownershipReport(audit),runtimeResidue:audit.runtime};
+  result.probe=probe;
+  const correct=expectLeak?(state.attached&&detected&&!rainbow.registered):(rainbow.registered&&!state.attached&&!detected&&!ownershipDirty(audit));
+  result.status=correct?(expectLeak?'EXPECTED_FAILURE':'PASS'):'FAIL';
+  writeFileSync(join(outDir,'conch-ownership-probe.json'),JSON.stringify(result,null,2));
+  console.log(`CONCH_OWNERSHIP_PROBE=${result.status}`);console.log(JSON.stringify(result));
+  if(!correct)throw new Error('Conch ownership regression did not match the expected lifecycle');
+}
 async function runViewport(cdp,w,h,label,touch,result){
   await viewport(cdp,w,h,touch);await cdp.send('Page.navigate',{url:base});await waitEval(cdp.evaluate,`document.readyState==='complete'`,20000);await waitEval(cdp.evaluate,`typeof __started==='function'&&typeof __paused==='function'&&typeof __gameTime==='function'&&typeof __PLAYER==='function'&&__PLAYER()&&__PLAYER().parent&&document.getElementById('lvl5')`,20000);
   const baseline=await sceneSnapshot(cdp.evaluate),baselineIds=setOf(baseline),baselineBy=new Map(baseline.map(r=>[r.uuid,r]));let pickerExtras=[];const view={viewport:label,baselineObjects:baseline.length,transitions:[],status:'PASS'};
@@ -49,21 +102,36 @@ async function runViewport(cdp,w,h,label,touch,result){
     const levelId=`level${i+1}`,beforePickerIds=setOf(pickerExtras);
     await startCard(cdp,i,levelId,touch);const ta=await cdp.evaluate(`__gameTime()`);await holdKey(cdp,'KeyD',320);const tb=await cdp.evaluate(`__gameTime()`);assert(tb>ta,`${label} ${levelId}: active game time did not advance`);await sleep(220);
     const active=await sceneSnapshot(cdp.evaluate);const activeExtras=subtract(active,baselineIds);const introduced=activeExtras.filter(r=>!beforePickerIds.has(r.uuid)),introducedIds=setOf(introduced);
-    await pauseAndMenu(cdp,touch);await sleep(180);const picker=await sceneSnapshot(cdp.evaluate);pickerExtras=subtract(picker,baselineIds);
-    const residue=pickerExtras.filter(r=>introducedIds.has(r.uuid));const residueVisible=residue.filter(r=>r.effectiveVisible);const priorResidue=pickerExtras.filter(r=>!introducedIds.has(r.uuid));const baselineReactivated=picker.filter(r=>{const b=baselineBy.get(r.uuid);return b&&!b.effectiveVisible&&r.effectiveVisible;});const runtime=await runtimeResidue(cdp.evaluate);
-    const tr={from:levelId,to:'picker',introducedRoots:roots(introduced),residueRoots:roots(residue),visibleResidueRoots:roots(residueVisible),reactivatedBaselineRoots:roots(baselineReactivated),residueObjects:residue.length,visibleResidueObjects:residueVisible.length,reactivatedBaselineObjects:baselineReactivated.length,totalPickerExtras:pickerExtras.length,priorResidueObjects:priorResidue.length,runtimeResidue:runtime};view.transitions.push(tr);
-    if(residueVisible.length||baselineReactivated.length||residueStateDirty(runtime)){view.status='FAIL';await cdp.screenshot(`${label}-${levelId}-picker-residue.png`);}
+    const rainbow=levelId==='level2'?await conchRainbow(cdp.evaluate):null;
+    if(levelId==='level2')assert(rainbow&&rainbow.attached&&rainbow.descendants===8&&rainbow.registered,`${label}: Conch rainbow missing or unregistered before teardown`);
+    await pauseAndMenu(cdp,touch);await sleep(180);
+    const audit=await auditPicker(cdp.evaluate,baselineIds),picker=audit.picker;pickerExtras=audit.ownership.extras;
+    const residue=pickerExtras.filter(r=>introducedIds.has(r.uuid)),residueVisible=residue.filter(r=>r.effectiveVisible),priorResidue=pickerExtras.filter(r=>!introducedIds.has(r.uuid));
+    const baselineReactivated=picker.filter(r=>{const b=baselineBy.get(r.uuid);return b&&!b.effectiveVisible&&r.effectiveVisible;});
+    const rainbowAfter=rainbow?await rainbowState(cdp.evaluate,rainbow.uuid):null;
+    const tr={from:levelId,to:'picker',introducedRoots:roots(introduced),residueRoots:roots(residue),visibleResidueRoots:roots(residueVisible),reactivatedBaselineRoots:roots(baselineReactivated),residueObjects:residue.length,visibleResidueObjects:residueVisible.length,reactivatedBaselineObjects:baselineReactivated.length,totalPickerExtras:pickerExtras.length,priorResidueObjects:priorResidue.length,runtimeResidue:audit.runtime,ownership:ownershipReport(audit),conchRainbow:rainbowAfter};view.transitions.push(tr);
+    if(residueVisible.length||baselineReactivated.length||ownershipDirty(audit)||(rainbowAfter&&rainbowAfter.attached)){view.status='FAIL';await cdp.screenshot(`${label}-${levelId}-picker-residue.png`);}
   }
-  // Start one more real run after the six-level sequence and verify previous residue cannot contaminate it.
-  const staleBefore=setOf(pickerExtras);await startCard(cdp,0,'level1',touch);const restarted=await sceneSnapshot(cdp.evaluate);const staleInRestart=restarted.filter(r=>staleBefore.has(r.uuid)),staleVisible=staleInRestart.filter(r=>r.effectiveVisible);view.restart={level:'level1',staleObjects:staleInRestart.length,staleVisibleObjects:staleVisible.length,staleRoots:roots(staleInRestart)};if(staleVisible.length)view.status='FAIL';await pauseAndMenu(cdp,touch);
+  // A subsequent real run must not reactivate or retain prior-level objects.
+  const staleBefore=setOf(pickerExtras);await startCard(cdp,0,'level1',touch);const restarted=await sceneSnapshot(cdp.evaluate);const staleInRestart=restarted.filter(r=>staleBefore.has(r.uuid)),staleVisible=staleInRestart.filter(r=>r.effectiveVisible);
+  const restartContracts=await infrastructureContracts(cdp.evaluate),restartOwnership=classifyOwnership(staleInRestart,new Set(),restartContracts);
+  view.restart={level:'level1',staleObjects:staleInRestart.length,staleVisibleObjects:staleVisible.length,staleRoots:roots(staleInRestart),ownership:ownershipReport({ownership:restartOwnership})};
+  if(staleVisible.length||restartOwnership.unowned.length||restartOwnership.invalidInfrastructure.length)view.status='FAIL';
+  await pauseAndMenu(cdp,touch);
+  const finalAudit=await auditPicker(cdp.evaluate,baselineIds);view.restart.pickerOwnership=ownershipReport(finalAudit);
+  if(ownershipDirty(finalAudit))view.status='FAIL';
   result.viewports.push(view);if(view.status!=='PASS')result.status='FAIL';
 }
 async function main(){
+  const probe=process.argv.includes('--probe-conch'),expectLeak=process.argv.includes('--expect-conch-leak');
+  if(expectLeak&&!probe)throw new Error('--expect-conch-leak requires --probe-conch');
   rmSync(userData,{recursive:true,force:true});
   const server=spawn('python3',['-m','http.server',String(port),'--bind','127.0.0.1'],{cwd:join(__dirname,'..','dist'),stdio:'ignore'});
   let chromeErr='';const cp=spawn(chrome,['--headless=new','--remote-debugging-address=127.0.0.1',`--remote-debugging-port=${cdpPort}`,`--user-data-dir=${userData}`,'--no-sandbox','--disable-dev-shm-usage','--no-first-run','--no-default-browser-check','--disable-background-networking','--enable-webgl','--ignore-gpu-blocklist','--use-angle=swiftshader','--window-size=1280,720','about:blank'],{stdio:['ignore','ignore','pipe']});if(cp.stderr)cp.stderr.on('data',d=>chromeErr=(chromeErr+d.toString()).slice(-12000));
   let cdp;const result={status:'PASS',viewports:[]};
-  try{let ready=false;for(let i=0;i<75;i++){if(cp.exitCode!==null)throw new Error(`Chrome exited ${cp.exitCode}: ${chromeErr}`);try{await getJSON(`http://127.0.0.1:${cdpPort}/json/version`);ready=true;break;}catch(e){await sleep(200);}}if(!ready)throw new Error('Chrome CDP did not become ready: '+chromeErr.slice(-1200));cdp=await openCDP();await runViewport(cdp,1280,720,'1280x720',false,result);await runViewport(cdp,390,844,'390x844',true,result);writeFileSync(join(outDir,'result.json'),JSON.stringify(result,null,2));console.log(`CROSS_LEVEL_ISOLATION_BROWSER_VERIFY=${result.status}`);console.log(JSON.stringify(result));if(result.status!=='PASS')throw new Error('cross-level scene residue detected; see result.json / residue roots above');
+  try{let ready=false;for(let i=0;i<75;i++){if(cp.exitCode!==null)throw new Error(`Chrome exited ${cp.exitCode}: ${chromeErr}`);try{await getJSON(`http://127.0.0.1:${cdpPort}/json/version`);ready=true;break;}catch(e){await sleep(200);}}if(!ready)throw new Error('Chrome CDP did not become ready: '+chromeErr.slice(-1200));cdp=await openCDP();
+    if(probe)await runConchProbe(cdp,result,expectLeak);
+    else{await runViewport(cdp,1280,720,'1280x720',false,result);await runViewport(cdp,390,844,'390x844',true,result);writeFileSync(join(outDir,'result.json'),JSON.stringify(result,null,2));console.log(`CROSS_LEVEL_ISOLATION_BROWSER_VERIFY=${result.status}`);console.log(JSON.stringify(result));if(result.status!=='PASS')throw new Error('cross-level scene residue detected; see result.json / residue roots above');}
   }finally{if(cdp)cdp.close();try{cp.kill('SIGKILL');}catch(e){}try{server.kill('SIGKILL');}catch(e){}await sleep(200);try{rmSync(userData,{recursive:true,force:true,maxRetries:3,retryDelay:100});}catch(e){console.warn('browser cleanup warning: '+e.message);}}
 }
 main().catch(e=>{console.error('CROSS_LEVEL_ISOLATION_BROWSER_VERIFY=FAIL');console.error(e&&e.stack||e);process.exit(1);});

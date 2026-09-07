@@ -155,6 +155,16 @@ function registerFinish(f){
 }
 const levelDecor=[];
 function addDecor(m){scene.add(m);levelDecor.push(m);return m;}
+// Read-only lifecycle ownership evidence for the browser verifier. These are
+// existing containers, not a second cleanup registry or gameplay interface.
+window.__sceneOwnership=()=>({
+  owned:levelDecor,
+  persistentWorlds:[
+    {name:'underwaterGroup',root:underwaterGroup},
+    {name:'spaceGroup',root:spaceGroup},
+    {name:'desertGroup',root:desertGroup}
+  ].filter(c=>!!c.root)
+});
 function clearLevelWorld(){
   clearShadowStick();
   clearTransientFx();

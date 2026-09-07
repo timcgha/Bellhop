@@ -935,6 +935,7 @@ function buildConch(cx,cz){
   CONCH.trigger={x:cx,y:1.6,z:cz+1.0,hx:1.35,hy:1.8,hz:1.5};
   CONCH.interior={x0:cx-(CH_HALF_W-0.15),x1:cx+(CH_HALF_W-0.15),z0:cz+CH_BACK+0.2,z1:cz+CH_FRONT,yMax:CH_H-0.2};
   const rainbow=buildRainbow(cx,cz);
+  addDecor(rainbow);
   rainbow.position.set(cx,16,cz+1);rainbow.scale.setScalar(0.18);rainbow.visible=false;CONCH.rainbow=rainbow;
   CONCH.g=g;CONCH.winBurstT=0;
   registerFinish({
