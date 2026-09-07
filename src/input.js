@@ -2,7 +2,7 @@ const IN={mx:0,mz:0,camDX:0,camDY:0,jump:false,jumpHeld:false,b:false,bHeld:fals
 const keys={};
 addEventListener('keydown',e=>{
   if(typeof isSkinPanelOpen==='function'&&isSkinPanelOpen()){handleSkinKey(e);return;}
-  if(!started&&e.target===$('skinsOpen'))return;
+  if(!started&&e.target===$('skinsOpen')&&(e.code==='Enter'||e.code==='Space'))return;
   if(['Space','ArrowUp','ArrowDown','ArrowLeft','ArrowRight'].indexOf(e.code)>=0)e.preventDefault();
   if(e.repeat)return;
   if(started&&(e.code==='Escape'||e.code==='KeyP')){e.preventDefault();togglePause();return;}
