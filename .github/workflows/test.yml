@@ -77,3 +77,23 @@ jobs:
           name: robot-skins-browser
           path: artifacts/browser-robot-skins/
           if-no-files-found: error
+  movement:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
+      - uses: actions/setup-node@v7
+        with:
+          node-version: '22'
+      - name: Capture movement and jump comparison
+        env:
+          CHROME_BIN: /usr/bin/google-chrome
+        run: node tools/browser-movement-jump-verify.js
+      - name: Upload movement comparison evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: movement-jump-browser
+          path: artifacts/browser-movement-jump/
+          if-no-files-found: error
