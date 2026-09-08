@@ -2,7 +2,7 @@
 // THREE/DOM are the deterministic harness fixture, not browser or device evidence.
 const fs=require('fs'),path=require('path'),os=require('os'),crypto=require('crypto');
 const {execFileSync}=require('child_process');
-const boot=require('./harness');
+const boot=require('../tests/harness');
 const ROOT=path.join(__dirname,'..'),BASE='33f3d4a750cb78bfbd48d464ad38292d2a933133';
 const BASE_TREE='61c46dd64d2922760c309adf85de67dc41fce884';
 const OUT=path.join(ROOT,'artifacts','browser-movement-jump');

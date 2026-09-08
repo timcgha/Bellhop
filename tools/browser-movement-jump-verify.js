@@ -87,10 +87,10 @@ async function capture(c,origin,version,w,h){
   const touch=w!==1280,name=`${version}-${w}x${h}`,dir=path.join(OUT,name);fs.mkdirSync(path.join(dir,'frames'),{recursive:true});
   await c.send('Emulation.setDeviceMetricsOverride',{width:w,height:h,deviceScaleFactor:1,mobile:touch,screenWidth:w,screenHeight:h});
   await c.send('Emulation.setTouchEmulationEnabled',{enabled:touch,maxTouchPoints:touch?5:1});
-  await c.send('Page.navigate',{url:`${origin}/${version}`});
-  await wait(c,`document.readyState==='complete'&&typeof __BH004Read==='function'&&typeof THREE!=='undefined'`);
+  const target=`${origin}/${version}?capture=${w}x${h}`;await c.send('Page.navigate',{url:target});
+  await wait(c,`location.href===${JSON.stringify(target)}&&document.readyState==='complete'&&typeof __BH004Read==='function'&&typeof THREE!=='undefined'`);
   assert(await c.ev('THREE.REVISION')==='128','wrong THREE revision');
-  await click(c,'lvl0',touch);if(!await c.ev('__started()'))await click(c,'lvl0',touch);
+  await click(c,'lvl0',touch);if(!await c.ev('__started()')){await wait(c,'__touchArmed()&&__pickerIdx()===0');await click(c,'lvl0',touch);}
   await wait(c,`__started()&&__LEVEL().id==='level1'&&!__paused()&&__P.grounded`);
   const input=await controls(c,touch,w,h);
   // Real movement clear of the starting checkpoint, at the ordinary camera.
@@ -127,13 +127,13 @@ async function lifecycle(c,origin,w,h){
   const touch=w!==1280,name=`lifecycle-${w}x${h}`,dir=path.join(OUT,name);fs.mkdirSync(dir,{recursive:true});
   await c.send('Emulation.setDeviceMetricsOverride',{width:w,height:h,deviceScaleFactor:1,mobile:touch,screenWidth:w,screenHeight:h});
   await c.send('Emulation.setTouchEmulationEnabled',{enabled:touch,maxTouchPoints:touch?5:1});
-  await c.send('Page.navigate',{url:origin+'/candidate'});await wait(c,`document.readyState==='complete'&&typeof __BH004Read==='function'`);
+  const target=`${origin}/candidate?lifecycle=${w}x${h}`;await c.send('Page.navigate',{url:target});await wait(c,`location.href===${JSON.stringify(target)}&&document.readyState==='complete'&&typeof __BH004Read==='function'`);
   await click(c,'skinsOpen',touch);await wait(c,'__SKINS().open');await click(c,'skin-purple',touch);await click(c,'skinUse',touch);await wait(c,`!__SKINS().open&&__SKINS().equipped==='purple'`);
   const state=()=>c.ev(`({time:__gameTime(),pos:[__P.pos.x,__P.pos.y,__P.pos.z],root:[__PLAYER().position.x,__PLAYER().position.y,__PLAYER().position.z],arms:[__PLAYER().userData.armL.rotation.x,__PLAYER().userData.armR.rotation.x],grounded:__P.grounded,dead:__P.dead,started:__started(),paused:__paused(),won:__W.won,level:__LEVEL().id,thrust:__P.spaceThrust,skin:__SKINS().equipped})`);
   const rows=[];
   for(let index=0;index<6;index++){
     console.log('MOTION lifecycle '+w+'x'+h+' level '+(index+1));
-    await click(c,'lvl'+index,touch);if(!await c.ev('__started()'))await click(c,'lvl'+index,touch);
+    await click(c,'lvl'+index,touch);if(!await c.ev('__started()')){await wait(c,`__touchArmed()&&__pickerIdx()===${index}`);await click(c,'lvl'+index,touch);}
     await wait(c,`__started()&&__LEVEL().id==='level${index+1}'&&!__paused()&&__P.grounded`,45000);
     const input=await controls(c,touch,w,h),start=await state();
     await c.ev('window.__BH004Capture=true');
@@ -156,7 +156,7 @@ async function lifecycle(c,origin,w,h){
     rows.push({level:index+1,status:'PASS',input:touch?'real CDP touch emulation':'real CDP keyboard',start,moved,airborne,pauseFrozen:true,landed,descent,menu:true});
   }
   // Restart after the sixth teardown through the same real picker.
-  await click(c,'lvl0',touch);if(!await c.ev('__started()'))await click(c,'lvl0',touch);await wait(c,`__started()&&__LEVEL().id==='level1'&&__P.grounded`);
+  await click(c,'lvl0',touch);if(!await c.ev('__started()')){await wait(c,'__touchArmed()&&__pickerIdx()===0');await click(c,'lvl0',touch);}await wait(c,`__started()&&__LEVEL().id==='level1'&&__P.grounded`);
   const restart=await state();assert(!restart.dead&&!restart.won&&restart.skin==='purple','restart lost native state');
   write(path.join(dir,'result.json'),{status:'PASS',viewport:[w,h],rows,restart});return {name,status:'PASS',rows,restart};
 }
@@ -179,7 +179,7 @@ async function main(){
     assert(lib.length>100000,'invalid Three.js dependency');fs.writeFileSync(path.join(OUT,'three-r128.min.js'),lib);result.dependency={url:CDN,sha256:hash(lib)};
     const marker='// ---- BUILD:END ----';const serve=s=>{assert(s.split(marker).length===2,'ambiguous probe insertion');return s.replace(CDN,'/three-r128.min.js').replace(marker,`(${probe.toString()})();\n`+marker);};
     const pages={base:serve(base),candidate:serve(candidate)};
-    server=http.createServer((req,res)=>{if(req.url==='/three-r128.min.js'){res.setHeader('Content-Type','application/javascript');res.end(lib);}else if(pages[req.url.slice(1)]){res.setHeader('Content-Type','text/html');res.end(pages[req.url.slice(1)]);}else{res.writeHead(404);res.end();}});await new Promise(r=>server.listen(port,'127.0.0.1',r));
+    server=http.createServer((req,res)=>{const requested=new URL(req.url,'http://localhost').pathname;if(requested==='/three-r128.min.js'){res.setHeader('Content-Type','application/javascript');res.end(lib);}else if(pages[requested.slice(1)]){res.setHeader('Content-Type','text/html');res.end(pages[requested.slice(1)]);}else{res.writeHead(404);res.end();}});await new Promise(r=>server.listen(port,'127.0.0.1',r));
     const chrome=[process.env.CHROME_BIN,'/usr/bin/google-chrome','/usr/bin/chromium','/usr/bin/chromium-browser'].find(p=>p&&fs.existsSync(p));assert(chrome,'Chrome unavailable');result.browser=execFileSync(chrome,['--version'],{encoding:'utf8'}).trim();result.node=process.version;
     browser=spawn(chrome,['--headless=new',`--remote-debugging-port=${debugPort}`,'--remote-debugging-address=127.0.0.1',`--user-data-dir=${path.join(tmp,'chrome')}`,'--no-sandbox','--disable-dev-shm-usage','--no-first-run','--no-default-browser-check','--enable-webgl','--ignore-gpu-blocklist','--use-angle=swiftshader','--window-size=1280,720','about:blank'],{stdio:'ignore'});
     let ready=false;for(let i=0;i<75;i++){try{await json(`http://127.0.0.1:${debugPort}/json/version`);ready=true;break;}catch(e){await sleep(200);}}assert(ready,'Chrome did not initialize');c=await connect(debugPort);

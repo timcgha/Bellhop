@@ -13,8 +13,6 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v7
-        with:
-          fetch-depth: 0
       - uses: actions/setup-node@v7
         with:
           node-version: '22'
@@ -91,7 +89,7 @@ jobs:
       - name: Compare exact gameplay and synthetic frame schedules
         run: |
           node build.js
-          node tests/movement-jump-feel.test.js
+          node tools/movement-jump-compare.js
       - name: Capture movement and jump comparison
         env:
           CHROME_BIN: /usr/bin/google-chrome
