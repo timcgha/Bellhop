@@ -42,14 +42,14 @@ function probe(){
   };
 }
 function json(url){return new Promise((resolve,reject)=>http.get(url,res=>{let s='';res.on('data',c=>s+=c);res.on('end',()=>{try{resolve(JSON.parse(s));}catch(e){reject(e);}});}).on('error',reject));}
-async function connect(port){
-  const pages=await json(`http://127.0.0.1:${port}/json/list`),page=pages.find(p=>p.type==='page');assert(page,'no browser page');
+async function connect(port,targetId=null){
+  const pages=await json(`http://127.0.0.1:${port}/json/list`),page=pages.find(p=>p.type==='page'&&(!targetId||p.id===targetId));assert(page,'no browser page');
   const ws=new WebSocket(page.webSocketDebuggerUrl);await new Promise((r,j)=>{ws.addEventListener('open',r,{once:true});ws.addEventListener('error',j,{once:true});});
   let id=0;const pending=new Map(),errors=[],listeners=new Map();
   const send=(method,params={})=>new Promise((resolve,reject)=>{const n=++id,t=setTimeout(()=>{pending.delete(n);reject(Error('CDP timeout '+method));},20000);pending.set(n,{resolve,reject,t});ws.send(JSON.stringify({id:n,method,params}));});
   ws.addEventListener('message',e=>{const m=JSON.parse(e.data);if(m.method==='Runtime.exceptionThrown')errors.push(m.params.exceptionDetails);if(listeners.has(m.method))listeners.get(m.method)(m.params);if(m.id&&pending.has(m.id)){const p=pending.get(m.id);pending.delete(m.id);clearTimeout(p.t);m.error?p.reject(Error(JSON.stringify(m.error))):p.resolve(m.result);}});
   const ev=async expression=>{const r=await send('Runtime.evaluate',{expression,returnByValue:true,awaitPromise:true});if(r.exceptionDetails)throw Error(r.exceptionDetails.exception?.description||JSON.stringify(r.exceptionDetails));return r.result?.value;};
-  await send('Page.enable');await send('Runtime.enable');return {send,ev,errors,on:(m,f)=>listeners.set(m,f),close:()=>ws.close()};
+  await send('Page.enable');await send('Runtime.enable');return {send,ev,errors,targetId:page.id,on:(m,f)=>listeners.set(m,f),close:()=>ws.close()};
 }
 async function wait(c,expr,ms=15000){const start=Date.now();let last;while(Date.now()-start<ms){try{if(await c.ev(expr))return;}catch(e){last=e.message;}await sleep(80);}throw Error('timeout '+expr+(last?' / '+last:''));}
 async function key(c,code,down){const map={Space:[' ',32],KeyD:['d',68],KeyA:['a',65],KeyS:['s',83]},[key,v]=map[code];await c.send('Input.dispatchKeyEvent',{type:down?'keyDown':'keyUp',key,code,windowsVirtualKeyCode:v,nativeVirtualKeyCode:v});}
@@ -222,9 +222,22 @@ async function main(){
     const chrome=[process.env.CHROME_BIN,'/usr/bin/google-chrome','/usr/bin/chromium','/usr/bin/chromium-browser'].find(p=>p&&fs.existsSync(p));assert(chrome,'Chrome unavailable');result.browser=execFileSync(chrome,['--version'],{encoding:'utf8'}).trim();result.node=process.version;
     browser=spawn(chrome,['--headless=new',`--remote-debugging-port=${debugPort}`,'--remote-debugging-address=127.0.0.1',`--user-data-dir=${path.join(tmp,'chrome')}`,'--no-sandbox','--disable-dev-shm-usage','--no-first-run','--no-default-browser-check','--enable-webgl','--ignore-gpu-blocklist','--use-angle=swiftshader','--window-size=1280,720','about:blank'],{stdio:'ignore'});
     let ready=false;for(let i=0;i<75;i++){try{await json(`http://127.0.0.1:${debugPort}/json/version`);ready=true;break;}catch(e){await sleep(200);}}assert(ready,'Chrome did not initialize');c=await connect(debugPort);
+    // Runs #399/#400 lost DOM touch delivery only after reusing a captured
+    // portrait widget for landscape. A fresh sequential page owns each viewport;
+    // no old touch/scroll/screencast transport is reused, and every tap still
+    // requires a trusted DOM receipt. This is test isolation, not another worker.
+    const inputEvidence={transports:[],taps:[]};
+    async function freshPage(){
+      assert(!c.errors.length,'browser exceptions '+JSON.stringify(c.errors));
+      const old=c,next=await old.send('Target.createTarget',{url:'about:blank'});
+      c=await connect(debugPort,next.targetId);
+      c.transportEvidence=inputEvidence.transports;c.tapEvidence=inputEvidence.taps;
+      await c.send('Page.bringToFront');
+      await c.send('Target.closeTarget',{targetId:old.targetId});old.close();
+    }
     const versions=base===candidate?['base']:['base','candidate'];
-    for(const version of versions)for(const [w,h] of [[1280,720],[390,844],[844,390]]){console.log('MOTION '+version+' '+w+'x'+h);result.captures.push(await capture(c,`http://127.0.0.1:${port}`,version,w,h));}
-    if(versions.length===2){result.lifecycle=[];for(const [w,h] of [[1280,720],[390,844],[844,390]])result.lifecycle.push(await lifecycle(c,`http://127.0.0.1:${port}`,w,h));}
+    for(const version of versions)for(const [w,h] of [[1280,720],[390,844],[844,390]]){await freshPage();console.log('MOTION '+version+' '+w+'x'+h);result.captures.push(await capture(c,`http://127.0.0.1:${port}`,version,w,h));}
+    if(versions.length===2){result.lifecycle=[];for(const [w,h] of [[1280,720],[390,844],[844,390]]){await freshPage();result.lifecycle.push(await lifecycle(c,`http://127.0.0.1:${port}`,w,h));}}
     assert(!c.errors.length,'browser exceptions '+JSON.stringify(c.errors));result.errors=c.errors;
     if(versions.length===2){result.landingComparison=result.captures.filter(x=>x.name.startsWith('base-')).map(b=>{const a=result.captures.find(x=>x.name===b.name.replace('base-','candidate-'));const deltas=x=>x.landings.map(l=>Math.max(Math.abs(l.poseDelta[2]),Math.abs(l.poseDelta[3])));return {viewport:b.viewport,base:deltas(b),candidate:deltas(a),note:'Real browser schedules differ; exact-input/time gameplay parity is in physics-comparison.json.'};});}
     result.status=versions.length===1?'BASELINE_CAPTURED_NO_PRODUCT_CHANGE':'COMPARISON_CAPTURED';
