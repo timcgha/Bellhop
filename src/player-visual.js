@@ -121,3 +121,28 @@ window.__PLAYER_VISUAL=()=>{
     hasVisor:!!u.visor,hasAntenna:!!u.antennaTip,hasChestAccent:!!u.chest,
     keepsJet:!!u.jet,keepsFlame:!!u.flame};
 };
+
+// BH-004: the airborne arm pose already eases in player.js, but landing used
+// to replace both arms in one frame. Ease only the grounded arm presentation.
+// Feet, physical root, bellows/spout height and all gameplay stay authoritative.
+// The shared builder is also used in isolated preview/geometry contexts.
+if(typeof updatePlayerVisual==='function'){
+  const updateExistingPlayerVisual=updatePlayerVisual;
+  let continuous=false,lastParts=null,lastLevel=null,lastTime=-1;
+  updatePlayerVisual=function(dt){
+    const u=player.userData,left=u.armL.rotation.x,right=u.armR.rotation.x;
+    const ordinary=started&&!won&&!P.dead&&!P.camel&&!P.sled&&P.slam===0&&P.bonkT<=0&&
+      !P.lavaRecT&&!P.quicksandRecT&&!isUnderwater()&&CURRENT_LEVEL&&CURRENT_LEVEL.id!=='level4';
+    const reset=!continuous||lastParts!==u||lastLevel!==CURRENT_LEVEL||time<=lastTime||
+      player.position.distanceTo(P.pos)>2;
+    updateExistingPlayerVisual(dt);
+    if(ordinary&&P.grounded&&!reset){
+      const k=1-Math.exp(-24*dt);
+      u.armL.rotation.x=lerp(left,u.armL.rotation.x,k);
+      u.armR.rotation.x=lerp(right,u.armR.rotation.x,k);
+    }
+    // No elapsed-time accumulator: pause never calls this function. A menu,
+    // recovery, mount, special move or position discontinuity drops continuity.
+    continuous=!!ordinary;lastParts=u;lastLevel=CURRENT_LEVEL;lastTime=time;
+  };
+}

@@ -46,19 +46,19 @@ async function connect(port){
   await send('Page.enable');await send('Runtime.enable');return {send,ev,errors,on:(m,f)=>listeners.set(m,f),close:()=>ws.close()};
 }
 async function wait(c,expr,ms=15000){const start=Date.now();let last;while(Date.now()-start<ms){try{if(await c.ev(expr))return;}catch(e){last=e.message;}await sleep(80);}throw Error('timeout '+expr+(last?' / '+last:''));}
-async function key(c,code,down){const map={Space:[' ',32],KeyD:['d',68],KeyA:['a',65]},[key,v]=map[code];await c.send('Input.dispatchKeyEvent',{type:down?'keyDown':'keyUp',key,code,windowsVirtualKeyCode:v,nativeVirtualKeyCode:v});}
+async function key(c,code,down){const map={Space:[' ',32],KeyD:['d',68],KeyA:['a',65],KeyS:['s',83]},[key,v]=map[code];await c.send('Input.dispatchKeyEvent',{type:down?'keyDown':'keyUp',key,code,windowsVirtualKeyCode:v,nativeVirtualKeyCode:v});}
 async function point(c,id){return c.ev(`(()=>{const e=document.getElementById(${JSON.stringify(id)});e.scrollIntoView({block:'nearest'});const r=e.getBoundingClientRect();return {x:r.x+r.width/2,y:r.y+r.height/2,w:r.width,h:r.height};})()`);}
 async function click(c,id,touch){const p=await point(c,id);assert(p.w>0&&p.h>0,'hidden control '+id);if(touch){await c.send('Input.dispatchTouchEvent',{type:'touchStart',touchPoints:[{x:p.x,y:p.y,id:1}]});await sleep(40);await c.send('Input.dispatchTouchEvent',{type:'touchEnd',touchPoints:[]});}else{await c.send('Input.dispatchMouseEvent',{type:'mousePressed',x:p.x,y:p.y,button:'left',clickCount:1});await c.send('Input.dispatchMouseEvent',{type:'mouseReleased',x:p.x,y:p.y,button:'left',clickCount:1});}await sleep(100);}
 async function controls(c,touch,w,h){
   let move=null,jump=false,points=[];
   const log=[];const mark=async(label)=>{log.push({label,wallMs:Date.now(),browserMs:await c.ev('performance.now()')});};
-  async function direction(sign){
+  async function direction(sign,z=0){
     if(touch){
       assert(!jump,'finish touch jump before releasing stick');
       if(points.length)await c.send('Input.dispatchTouchEvent',{type:'touchEnd',touchPoints:[]});points=[];
-      if(sign){const p={x:Math.round(w*.22),y:Math.round(h*.72),id:1};await c.send('Input.dispatchTouchEvent',{type:'touchStart',touchPoints:[p]});p.x+=sign*48;points=[p];await c.send('Input.dispatchTouchEvent',{type:'touchMove',touchPoints:points});}
-    }else{if(move)await key(c,move,false);if(sign)await key(c,sign>0?'KeyD':'KeyA',true);}
-    move=sign?(sign>0?'KeyD':'KeyA'):null;
+      if(sign||z){const p={x:Math.round(w*.22),y:Math.round(h*.72),id:1};await c.send('Input.dispatchTouchEvent',{type:'touchStart',touchPoints:[p]});p.x+=sign*48;p.y+=z*48;points=[p];await c.send('Input.dispatchTouchEvent',{type:'touchMove',touchPoints:points});}
+    }else{if(move)await key(c,move,false);if(sign||z)await key(c,z?'KeyS':sign>0?'KeyD':'KeyA',true);}
+    move=sign||z?(z?'KeyS':sign>0?'KeyD':'KeyA'):null;
   }
   async function jumpDown(){
     if(touch){const p=await point(c,'bA');points=[...points,{x:p.x,y:p.y,id:2}];await c.send('Input.dispatchTouchEvent',{type:'touchStart',touchPoints:points});}
@@ -121,6 +121,45 @@ async function capture(c,origin,version,w,h){
     return {name,viewport:[w,h],input:touch?'CDP touch emulation':'CDP keyboard',status:'CAPTURED',frames:frames.length,samples:samples.length,...summary};
   }finally{recording=false;await c.send('Page.stopScreencast');await c.ev('window.__BH004Capture=false');await input.release();}
 }
+// Reuse the existing picker/pause controls; no level or progression setters.
+async function lifecycle(c,origin,w,h){
+  c.on('Page.screencastFrame',p=>{c.send('Page.screencastFrameAck',{sessionId:p.sessionId}).catch(()=>{});});
+  const touch=w!==1280,name=`lifecycle-${w}x${h}`,dir=path.join(OUT,name);fs.mkdirSync(dir,{recursive:true});
+  await c.send('Emulation.setDeviceMetricsOverride',{width:w,height:h,deviceScaleFactor:1,mobile:touch,screenWidth:w,screenHeight:h});
+  await c.send('Emulation.setTouchEmulationEnabled',{enabled:touch,maxTouchPoints:touch?5:1});
+  await c.send('Page.navigate',{url:origin+'/candidate'});await wait(c,`document.readyState==='complete'&&typeof __BH004Read==='function'`);
+  await click(c,'skinsOpen',touch);await wait(c,'__SKINS().open');await click(c,'skin-purple',touch);await click(c,'skinUse',touch);await wait(c,`!__SKINS().open&&__SKINS().equipped==='purple'`);
+  const state=()=>c.ev(`({time:__gameTime(),pos:[__P.pos.x,__P.pos.y,__P.pos.z],root:[__PLAYER().position.x,__PLAYER().position.y,__PLAYER().position.z],arms:[__PLAYER().userData.armL.rotation.x,__PLAYER().userData.armR.rotation.x],grounded:__P.grounded,dead:__P.dead,started:__started(),paused:__paused(),won:__W.won,level:__LEVEL().id,thrust:__P.spaceThrust,skin:__SKINS().equipped})`);
+  const rows=[];
+  for(let index=0;index<6;index++){
+    console.log('MOTION lifecycle '+w+'x'+h+' level '+(index+1));
+    await click(c,'lvl'+index,touch);if(!await c.ev('__started()'))await click(c,'lvl'+index,touch);
+    await wait(c,`__started()&&__LEVEL().id==='level${index+1}'&&!__paused()&&__P.grounded`,45000);
+    const input=await controls(c,touch,w,h),start=await state();
+    await c.ev('window.__BH004Capture=true');
+    await input.direction(1);await gameWait(c,250);await input.release();await gameWait(c,300);const moved=await state();
+    assert(Math.hypot(...moved.pos.map((v,j)=>v-start.pos[j]))>.08,'movement not observed');
+    await input.jumpDown();await wait(c,'!__P.grounded&&__P.vel.y>0',20000);await gameWait(c,80);await input.release();const airborne=await state();
+    await click(c,'pauseBtn',touch);await wait(c,'__paused()');const frozen=await state();await sleep(350);const held=await state();
+    assert(JSON.stringify(frozen)===JSON.stringify(held),'paused motion/pose changed');
+    await click(c,'pauseResume',touch);await wait(c,'!__paused()');await gameWait(c,100);
+    let descent=null;
+    if(index===3){
+      // Native open-space backward-stick + held A descends back to the same pad.
+      await input.direction(0,1);await input.jumpDown();await wait(c,'__P.grounded',45000);descent=await state();await input.release();
+    }else await wait(c,'__P.grounded',45000);
+    const landed=await state();assert(!landed.dead&&!landed.won&&landed.skin==='purple'&&landed.grounded,'invalid native landing');
+    await gameWait(c,250);const shot=await c.send('Page.captureScreenshot',{format:'png'});fs.writeFileSync(path.join(dir,'level'+(index+1)+'-landed.png'),Buffer.from(shot.data,'base64'));
+    const samples=await c.ev('__BH004Read()');write(path.join(dir,'level'+(index+1)+'-samples.json'),samples);
+    await c.ev('window.__BH004Capture=false');await click(c,'pauseBtn',touch);await wait(c,'__paused()');await click(c,'pauseMenu',touch);await wait(c,`!__started()&&!__paused()&&!__W.won`);
+    assert(await c.ev(`!__P.camel&&!__P.sled&&!__P.spaceThrust&&__INPUT_STATE().keysDown.length===0&&!__INPUT_STATE().jumpHeld`),'menu retained mode/input');
+    rows.push({level:index+1,status:'PASS',input:touch?'real CDP touch emulation':'real CDP keyboard',start,moved,airborne,pauseFrozen:true,landed,descent,menu:true});
+  }
+  // Restart after the sixth teardown through the same real picker.
+  await click(c,'lvl0',touch);if(!await c.ev('__started()'))await click(c,'lvl0',touch);await wait(c,`__started()&&__LEVEL().id==='level1'&&__P.grounded`);
+  const restart=await state();assert(!restart.dead&&!restart.won&&restart.skin==='purple','restart lost native state');
+  write(path.join(dir,'result.json'),{status:'PASS',viewport:[w,h],rows,restart});return {name,status:'PASS',rows,restart};
+}
 function viewer(names){return `<!doctype html><meta charset="utf-8"><title>BH-004 normal-speed motion</title><style>body{font:16px system-ui;background:#16191d;color:white;margin:24px}img{max-width:100%;display:block}button,select{font:inherit;padding:8px;margin:8px}p{max-width:70em}</style><h1>BH-004 motion evidence</h1><p>Normal-speed timestamped browser frames, not interpolated frames. Select a capture and Play. Real frame intervals are in summary.json. Touch means emulation, not a physical phone. Source identities and limitations are in result.json.</p><select id="pick">${names.map(n=>`<option>${n}</option>`).join('')}</select><button id="play">Play at 1×</button><span id="clock"></span><img id="frame"><script>let ticket=0;document.getElementById('play').onclick=async()=>{const id=++ticket,name=document.getElementById('pick').value,frames=await(await fetch(name+'/frames.json')).json(),images=await Promise.all(frames.map(f=>new Promise(r=>{const x=new Image();x.onload=()=>r(x);x.onerror=()=>r(x);x.src=name+'/'+f.file;})));const t0=performance.now(),start=frames[0].timestamp;let i=0;function show(){if(ticket!==id)return;const elapsed=(performance.now()-t0)/1000;while(i+1<frames.length&&frames[i+1].timestamp-start<=elapsed)i++;document.getElementById('frame').src=images[i].src;document.getElementById('clock').textContent=(frames[i].timestamp-start).toFixed(2)+' s | frame '+i;if(i+1<frames.length)requestAnimationFrame(show);}show();};</script>`;}
 async function main(){
   fs.mkdirSync(OUT,{recursive:true});const tmp=fs.mkdtempSync(path.join(os.tmpdir(),'bh004-')),port=8814,debugPort=9254;
@@ -146,7 +185,9 @@ async function main(){
     let ready=false;for(let i=0;i<75;i++){try{await json(`http://127.0.0.1:${debugPort}/json/version`);ready=true;break;}catch(e){await sleep(200);}}assert(ready,'Chrome did not initialize');c=await connect(debugPort);
     const versions=base===candidate?['base']:['base','candidate'];
     for(const version of versions)for(const [w,h] of [[1280,720],[390,844],[844,390]]){console.log('MOTION '+version+' '+w+'x'+h);result.captures.push(await capture(c,`http://127.0.0.1:${port}`,version,w,h));}
+    if(versions.length===2){result.lifecycle=[];for(const [w,h] of [[1280,720],[390,844],[844,390]])result.lifecycle.push(await lifecycle(c,`http://127.0.0.1:${port}`,w,h));}
     assert(!c.errors.length,'browser exceptions '+JSON.stringify(c.errors));result.errors=c.errors;
+    if(versions.length===2){result.landingComparison=result.captures.filter(x=>x.name.startsWith('base-')).map(b=>{const a=result.captures.find(x=>x.name===b.name.replace('base-','candidate-'));const deltas=x=>x.landings.map(l=>Math.max(Math.abs(l.poseDelta[2]),Math.abs(l.poseDelta[3])));return {viewport:b.viewport,base:deltas(b),candidate:deltas(a),note:'Real browser schedules differ; exact-input/time gameplay parity is in physics-comparison.json.'};});}
     result.status=versions.length===1?'BASELINE_CAPTURED_NO_PRODUCT_CHANGE':'COMPARISON_CAPTURED';
     fs.writeFileSync(path.join(OUT,'index.html'),viewer(result.captures.map(x=>x.name)));
   }catch(e){result.status='FAIL';result.error=e.stack||String(e);if(c){result.errors=c.errors;try{const s=await c.send('Page.captureScreenshot',{format:'png'});fs.writeFileSync(path.join(OUT,'failure.png'),Buffer.from(s.data,'base64'));write(path.join(OUT,'failure-samples.json'),await c.ev('__BH004Read()'));}catch(_){}}process.exitCode=1;}
