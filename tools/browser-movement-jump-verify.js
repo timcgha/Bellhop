@@ -55,7 +55,7 @@ async function controls(c,touch,w,h){
   async function direction(sign){
     if(touch){
       assert(!jump,'finish touch jump before releasing stick');
-      await c.send('Input.dispatchTouchEvent',{type:'touchEnd',touchPoints:[]});points=[];
+      if(points.length)await c.send('Input.dispatchTouchEvent',{type:'touchEnd',touchPoints:[]});points=[];
       if(sign){const p={x:Math.round(w*.22),y:Math.round(h*.72),id:1};await c.send('Input.dispatchTouchEvent',{type:'touchStart',touchPoints:[p]});p.x+=sign*48;points=[p];await c.send('Input.dispatchTouchEvent',{type:'touchMove',touchPoints:points});}
     }else{if(move)await key(c,move,false);if(sign)await key(c,sign>0?'KeyD':'KeyA',true);}
     move=sign?(sign>0?'KeyD':'KeyA'):null;
@@ -65,7 +65,7 @@ async function controls(c,touch,w,h){
     else await key(c,'Space',true);jump=true;
   }
   async function release(){
-    if(touch){await c.send('Input.dispatchTouchEvent',{type:'touchEnd',touchPoints:[]});points=[];move=null;}
+    if(touch){if(points.length)await c.send('Input.dispatchTouchEvent',{type:'touchEnd',touchPoints:[]});points=[];move=null;}
     else{if(jump)await key(c,'Space',false);if(move)await key(c,move,false);move=null;}
     jump=false;
   }
