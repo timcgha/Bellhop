@@ -32,6 +32,7 @@ function probe(){
       records.push({ms:now,interval:previous===null?null:now-previous,time,started,paused,
         level:CURRENT_LEVEL&&CURRENT_LEVEL.id,pos:[P.pos.x,P.pos.y,P.pos.z],vel:[P.vel.x,P.vel.y,P.vel.z],
         grounded:P.grounded,dead:P.dead,puff:P.puff,hover:P.hover,slam:P.slam,
+        recovering:!!(P.lavaRecT||P.quicksandRecT),
         root:[player.position.x,player.position.y,player.position.z],
         pose:[u.legL.rotation.x,u.legR.rotation.x,u.armL.rotation.x,u.armR.rotation.x,u.head.rotation.x],
         squash:P.sq,headY:u.head.position.y,camera:[camera.position.x,camera.position.y,camera.position.z],
@@ -175,16 +176,22 @@ async function lifecycle(c,origin,w,h){
   const target=`${origin}/candidate?lifecycle=${w}x${h}`;await c.send('Page.navigate',{url:target});await wait(c,`location.href===${JSON.stringify(target)}&&document.readyState==='complete'&&typeof __BH004Read==='function'`);
   await inputTransport(c,touch);
   await click(c,'skinsOpen',touch);await wait(c,'__SKINS().open');await click(c,'skin-purple',touch);await click(c,'skinUse',touch);await wait(c,`!__SKINS().open&&__SKINS().equipped==='purple'`);
-  const state=()=>c.ev(`({time:__gameTime(),pos:[__P.pos.x,__P.pos.y,__P.pos.z],root:[__PLAYER().position.x,__PLAYER().position.y,__PLAYER().position.z],arms:[__PLAYER().userData.armL.rotation.x,__PLAYER().userData.armR.rotation.x],grounded:__P.grounded,dead:__P.dead,started:__started(),paused:__paused(),won:__W.won,level:__LEVEL().id,thrust:__P.spaceThrust,skin:__SKINS().equipped})`);
+  const state=()=>c.ev(`({time:__gameTime(),pos:[__P.pos.x,__P.pos.y,__P.pos.z],root:[__PLAYER().position.x,__PLAYER().position.y,__PLAYER().position.z],arms:[__PLAYER().userData.armL.rotation.x,__PLAYER().userData.armR.rotation.x],grounded:__P.grounded,dead:__P.dead,recovering:!!(__P.lavaRecT||__P.quicksandRecT),puff:__P.puff,started:__started(),paused:__paused(),won:__W.won,level:__LEVEL().id,thrust:__P.spaceThrust,skin:__SKINS().equipped})`);
   const rows=[];
   for(let index=0;index<6;index++){
     console.log('MOTION lifecycle '+w+'x'+h+' level '+(index+1));
     await click(c,'lvl'+index,touch);if(!await c.ev('__started()')){await wait(c,`__touchArmed()&&__pickerIdx()===${index}`);await click(c,'lvl'+index,touch);}
     await wait(c,`__started()&&__LEVEL().id==='level${index+1}'&&!__paused()&&__P.grounded`,45000);
     const input=await controls(c,touch,w,h),start=await state();
+    const firstSample=await c.ev('__BH004Read().length');
     await c.ev('window.__BH004Capture=true');
-    await input.direction(1);await gameWait(c,250);await input.release();await gameWait(c,300);const moved=await state();
+    // Level 3's start ledge ends behind the spawn. In run #402 a long
+    // emulated right-stick move walked off it, so the next A press was a
+    // puff followed by authored recovery, not the intended standing jump.
+    // Walk toward the interior and require real grounded takeoff instead.
+    await input.direction(index===2?-1:1);await gameWait(c,250);await input.release();await gameWait(c,300);const moved=await state();
     assert(Math.hypot(...moved.pos.map((v,j)=>v-start.pos[j]))>.08,'movement not observed');
+    assert(moved.grounded&&!moved.dead&&!moved.recovering,'ordinary jump must start on the ground: '+JSON.stringify(moved));
     await input.jumpDown();await wait(c,'!__P.grounded&&__P.vel.y>0',20000);await gameWait(c,80);await input.release();const airborne=await state();
     await click(c,'pauseBtn',touch);await wait(c,'__paused()');const frozen=await state();await sleep(350);const held=await state();
     assert(JSON.stringify(frozen)===JSON.stringify(held),'paused motion/pose changed');
@@ -196,7 +203,9 @@ async function lifecycle(c,origin,w,h){
     }else await wait(c,'__P.grounded',45000);
     const landed=await state();assert(!landed.dead&&!landed.won&&landed.skin==='purple'&&landed.grounded,'invalid native landing');
     await gameWait(c,250);const shot=await c.send('Page.captureScreenshot',{format:'png'});fs.writeFileSync(path.join(dir,'level'+(index+1)+'-landed.png'),Buffer.from(shot.data,'base64'));
-    const samples=await c.ev('__BH004Read()');write(path.join(dir,'level'+(index+1)+'-samples.json'),samples);
+    const samples=await c.ev(`__BH004Read().slice(${firstSample})`);
+    assert(samples.length>0&&samples.every(s=>!s.dead&&!s.recovering&&s.level==='level'+(index+1)),'recovery cannot substitute for ordinary landing');
+    write(path.join(dir,'level'+(index+1)+'-samples.json'),samples);
     await c.ev('window.__BH004Capture=false');await click(c,'pauseBtn',touch);await wait(c,'__paused()');await click(c,'pauseMenu',touch);await wait(c,`!__started()&&!__paused()&&!__W.won`);
     assert(await c.ev(`!__P.camel&&!__P.sled&&!__P.spaceThrust&&__INPUT_STATE().keysDown.length===0&&!__INPUT_STATE().jumpHeld`),'menu retained mode/input');
     rows.push({level:index+1,status:'PASS',input:touch?'real CDP touch emulation':'real CDP keyboard',start,moved,airborne,pauseFrozen:true,landed,descent,menu:true});
