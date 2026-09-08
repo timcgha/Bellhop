@@ -18,6 +18,7 @@ function probe(){
   const original=renderer.render.bind(renderer);
   const records=[];let previous=null;
   window.__BH004Capture=false;
+  window.__BH004PointerEvents=[];document.addEventListener('pointerdown',e=>{if(window.__BH004PointerEvents.length<200)window.__BH004PointerEvents.push({type:e.pointerType,target:e.target.id,x:e.clientX,y:e.clientY,time:performance.now()});},true);
   window.__BH004Read=()=>records.slice();
   renderer.render=function(...args){
     const result=original(...args),now=performance.now();
@@ -47,8 +48,13 @@ async function connect(port){
 }
 async function wait(c,expr,ms=15000){const start=Date.now();let last;while(Date.now()-start<ms){try{if(await c.ev(expr))return;}catch(e){last=e.message;}await sleep(80);}throw Error('timeout '+expr+(last?' / '+last:''));}
 async function key(c,code,down){const map={Space:[' ',32],KeyD:['d',68],KeyA:['a',65],KeyS:['s',83]},[key,v]=map[code];await c.send('Input.dispatchKeyEvent',{type:down?'keyDown':'keyUp',key,code,windowsVirtualKeyCode:v,nativeVirtualKeyCode:v});}
-async function point(c,id){return c.ev(`(()=>{const e=document.getElementById(${JSON.stringify(id)});e.scrollIntoView({block:'nearest'});const r=e.getBoundingClientRect();return {x:r.x+r.width/2,y:r.y+r.height/2,w:r.width,h:r.height};})()`);}
-async function click(c,id,touch){const p=await point(c,id);assert(p.w>0&&p.h>0,'hidden control '+id);if(touch){await c.send('Input.dispatchTouchEvent',{type:'touchStart',touchPoints:[{x:p.x,y:p.y,id:1}]});await sleep(40);await c.send('Input.dispatchTouchEvent',{type:'touchEnd',touchPoints:[]});}else{await c.send('Input.dispatchMouseEvent',{type:'mousePressed',x:p.x,y:p.y,button:'left',clickCount:1});await c.send('Input.dispatchMouseEvent',{type:'mouseReleased',x:p.x,y:p.y,button:'left',clickCount:1});}await sleep(100);}
+async function point(c,id){
+  // A viewport/scroll change must be painted before CDP routes touch coordinates.
+  await c.ev(`new Promise(resolve=>{document.getElementById(${JSON.stringify(id)}).scrollIntoView({block:'center',inline:'nearest'});requestAnimationFrame(()=>requestAnimationFrame(resolve));})`);
+  const p=await c.ev(`(()=>{const e=document.getElementById(${JSON.stringify(id)}),r=e.getBoundingClientRect(),x=r.x+r.width/2,y=r.y+r.height/2;return {x,y,w:r.width,h:r.height,hit:e.contains(document.elementFromPoint(x,y))};})()`);
+  assert(p.hit,'control is not the actual pointer hit target: '+id+' '+JSON.stringify(p));return p;
+}
+async function click(c,id,touch){const p=await point(c,id);assert(p.w>0&&p.h>0,'hidden control '+id);if(touch){await c.send('Input.dispatchTouchEvent',{type:'touchStart',touchPoints:[{x:p.x,y:p.y,id:1,radiusX:4,radiusY:4,force:1}]});await sleep(40);await c.send('Input.dispatchTouchEvent',{type:'touchEnd',touchPoints:[]});}else{await c.send('Input.dispatchMouseEvent',{type:'mousePressed',x:p.x,y:p.y,button:'left',clickCount:1});await c.send('Input.dispatchMouseEvent',{type:'mouseReleased',x:p.x,y:p.y,button:'left',clickCount:1});}await sleep(100);}
 async function controls(c,touch,w,h){
   let move=null,jump=false,points=[];
   const log=[];const mark=async(label)=>{log.push({label,wallMs:Date.now(),browserMs:await c.ev('performance.now()')});};
@@ -190,7 +196,7 @@ async function main(){
     if(versions.length===2){result.landingComparison=result.captures.filter(x=>x.name.startsWith('base-')).map(b=>{const a=result.captures.find(x=>x.name===b.name.replace('base-','candidate-'));const deltas=x=>x.landings.map(l=>Math.max(Math.abs(l.poseDelta[2]),Math.abs(l.poseDelta[3])));return {viewport:b.viewport,base:deltas(b),candidate:deltas(a),note:'Real browser schedules differ; exact-input/time gameplay parity is in physics-comparison.json.'};});}
     result.status=versions.length===1?'BASELINE_CAPTURED_NO_PRODUCT_CHANGE':'COMPARISON_CAPTURED';
     fs.writeFileSync(path.join(OUT,'index.html'),viewer(result.captures.map(x=>x.name)));
-  }catch(e){result.status='FAIL';result.error=e.stack||String(e);if(c){result.errors=c.errors;try{const s=await c.send('Page.captureScreenshot',{format:'png'});fs.writeFileSync(path.join(OUT,'failure.png'),Buffer.from(s.data,'base64'));write(path.join(OUT,'failure-samples.json'),await c.ev('__BH004Read()'));}catch(_){}}process.exitCode=1;}
+  }catch(e){result.status='FAIL';result.error=e.stack||String(e);if(c){result.errors=c.errors;try{const s=await c.send('Page.captureScreenshot',{format:'png'});fs.writeFileSync(path.join(OUT,'failure.png'),Buffer.from(s.data,'base64'));write(path.join(OUT,'failure-samples.json'),await c.ev('__BH004Read()'));write(path.join(OUT,'failure-input.json'),await c.ev('({events:__BH004PointerEvents,armed:__touchArmed(),picker:__pickerIdx(),viewport:[innerWidth,innerHeight]})'));}catch(_){}}process.exitCode=1;}
   finally{write(path.join(OUT,'result.json'),result);console.log(JSON.stringify(result,null,2));if(c)c.close();if(browser)browser.kill('SIGKILL');if(server)server.close();await sleep(200);fs.rmSync(tmp,{recursive:true,force:true,maxRetries:3,retryDelay:100});}
 }
 if(require.main===module)main().catch(e=>{console.error(e);process.exitCode=1;});
