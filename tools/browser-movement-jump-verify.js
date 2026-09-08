@@ -82,6 +82,7 @@ function summarize(samples){
   return {frameIntervalsMs:stats(samples.map(s=>s.interval)),landings,takeoffs,
     maxRootError:Math.max(0,...samples.filter(s=>!s.camel).map(s=>Math.hypot(...s.root.map((v,i)=>v-s.pos[i]))))};
 }
+async function gameWait(c,ms){const target=await c.ev(`__gameTime()+${ms/1000}`);await wait(c,`__gameTime()>=${target}`,90000);}
 async function capture(c,origin,version,w,h){
   const touch=w!==1280,name=`${version}-${w}x${h}`,dir=path.join(OUT,name);fs.mkdirSync(path.join(dir,'frames'),{recursive:true});
   await c.send('Emulation.setDeviceMetricsOverride',{width:w,height:h,deviceScaleFactor:1,mobile:touch,screenWidth:w,screenHeight:h});
@@ -93,23 +94,24 @@ async function capture(c,origin,version,w,h){
   await wait(c,`__started()&&__LEVEL().id==='level1'&&!__paused()&&__P.grounded`);
   const input=await controls(c,touch,w,h);
   // Real movement clear of the starting checkpoint, at the ordinary camera.
-  await input.direction(1);await sleep(400);await input.release();await sleep(350);
+  await input.direction(1);await gameWait(c,400);await input.release();await gameWait(c,350);
   const frames=[];let n=0,recording=true;
   c.on('Page.screencastFrame',p=>{c.send('Page.screencastFrameAck',{sessionId:p.sessionId}).catch(()=>{});if(recording){const file=`frames/${String(n++).padStart(5,'0')}.jpg`;fs.writeFileSync(path.join(dir,file),Buffer.from(p.data,'base64'));frames.push({file,timestamp:p.metadata.timestamp,receivedMs:Date.now()});}});
   await c.ev('window.__BH004Capture=true');
   await c.send('Page.startScreencast',{format:'jpeg',quality:75,maxWidth:w,maxHeight:h,everyNthFrame:1});
   try{
-    await input.mark('idle');await sleep(500);
-    await input.mark('idle-to-run');await input.direction(1);await sleep(420);
-    await input.mark('run-to-stop');await input.release();await sleep(350);
-    await input.mark('change-direction');await input.direction(-1);await sleep(420);await input.release();await sleep(350);
-    await input.mark('standing-jump');await input.jumpDown();await sleep(380);await input.release();await sleep(1000);
-    await input.mark('early-release-short-hop');await input.jumpDown();await sleep(70);await input.release();await sleep(900);
-    await input.mark('held-jump');await input.jumpDown();await sleep(720);await input.release();await sleep(650);
-    await input.mark('puff-float');await input.jumpDown();await sleep(100);await input.release();await sleep(150);await input.jumpDown();await sleep(1000);await input.release();await sleep(1600);
-    await input.mark('running-jump-and-landing-into-run');await input.direction(-1);await sleep(200);await input.jumpDown();await sleep(1000);await input.release();await sleep(500);
+    await input.mark('idle');await gameWait(c,500);
+    await input.mark('idle-to-run');await input.direction(1);await gameWait(c,420);
+    await input.mark('run-to-stop');await input.release();await gameWait(c,350);
+    await input.mark('change-direction');await input.direction(-1);await gameWait(c,420);await input.release();await gameWait(c,350);
+    await input.mark('standing-jump');await input.jumpDown();await gameWait(c,380);await input.release();await gameWait(c,1000);
+    await input.mark('early-release-short-hop');await input.jumpDown();await gameWait(c,70);await input.release();await gameWait(c,900);
+    await input.mark('held-jump');await input.jumpDown();await gameWait(c,720);await input.release();await gameWait(c,650);
+    await input.mark('puff-float');await input.jumpDown();await gameWait(c,100);await input.release();await gameWait(c,150);await input.jumpDown();await gameWait(c,1000);await input.release();await gameWait(c,1600);
+    await input.mark('running-jump-and-landing-into-run');await input.direction(-1);await gameWait(c,200);await input.jumpDown();await gameWait(c,1000);await input.release();await gameWait(c,500);
     await input.mark('end');
     const samples=await c.ev('__BH004Read()'),summary=summarize(samples);
+    write(path.join(dir,'samples.json'),samples);write(path.join(dir,'frames.json'),frames);write(path.join(dir,'inputs.json'),input.log);write(path.join(dir,'summary.json'),summary);
     assert(samples.length>60&&frames.length>30,'insufficient real motion capture');
     assert(summary.takeoffs.length>=5&&summary.landings.length>=5,'missing jump/landing path '+JSON.stringify(summary));
     assert(samples.some(s=>s.hover),'puff/float was not exercised');
@@ -122,7 +124,7 @@ async function capture(c,origin,version,w,h){
 function viewer(names){return `<!doctype html><meta charset="utf-8"><title>BH-004 normal-speed motion</title><style>body{font:16px system-ui;background:#16191d;color:white;margin:24px}img{max-width:100%;display:block}button,select{font:inherit;padding:8px;margin:8px}p{max-width:70em}</style><h1>BH-004 motion evidence</h1><p>Normal-speed timestamped browser frames, not interpolated frames. Select a capture and Play. Real frame intervals are in summary.json. Touch means emulation, not a physical phone. Source identities and limitations are in result.json.</p><select id="pick">${names.map(n=>`<option>${n}</option>`).join('')}</select><button id="play">Play at 1×</button><span id="clock"></span><img id="frame"><script>let ticket=0;document.getElementById('play').onclick=async()=>{const id=++ticket,name=document.getElementById('pick').value,frames=await(await fetch(name+'/frames.json')).json(),images=await Promise.all(frames.map(f=>new Promise(r=>{const x=new Image();x.onload=()=>r(x);x.onerror=()=>r(x);x.src=name+'/'+f.file;})));const t0=performance.now(),start=frames[0].timestamp;let i=0;function show(){if(ticket!==id)return;const elapsed=(performance.now()-t0)/1000;while(i+1<frames.length&&frames[i+1].timestamp-start<=elapsed)i++;document.getElementById('frame').src=images[i].src;document.getElementById('clock').textContent=(frames[i].timestamp-start).toFixed(2)+' s | frame '+i;if(i+1<frames.length)requestAnimationFrame(show);}show();};</script>`;}
 async function main(){
   fs.mkdirSync(OUT,{recursive:true});const tmp=fs.mkdtempSync(path.join(os.tmpdir(),'bh004-')),port=8814,debugPort=9254;
-  let browser,server,c;const result={status:'RUNNING',base:BASE,baseTree:BASE_TREE,observedAt:new Date().toISOString(),captures:[],limitations:['Original reporter device, browser, input and precise symptom unknown.','Browser is headless Chrome with software WebGL; touch is emulation.','Input durations match across versions, but real variable frame delivery is measured, not forced identical.','Read-only observation and screencast add capture overhead.','No subjective or human acceptance is inferred from capture success.']};
+  let browser,server,c;const result={status:'RUNNING',base:BASE,baseTree:BASE_TREE,observedAt:new Date().toISOString(),captures:[],limitations:['Original reporter device, browser, input and precise symptom unknown.','Browser is headless Chrome with software WebGL; touch is emulation.','Inputs wait for observed gameplay time; wall durations and frame quantization differ on software rendering. Exact version parity is a separate deterministic test.','Read-only observation and screencast add capture overhead.','No subjective or human acceptance is inferred from capture success.']};
   try{
     assert(git('rev-parse',`${BASE}^{tree}`)===BASE_TREE,'authorized base tree mismatch');
     execFileSync('git',['merge-base','--is-ancestor',BASE,'HEAD'],{cwd:ROOT});
