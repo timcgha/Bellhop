@@ -52,11 +52,20 @@ function buildRobotVisual(player){
 
   const visor=mesh(SPH,visorMat,0,0.14,0.39,0.365,0.205,0.075);head.add(visor);
   const visorGlow=mesh(SPH,new THREE.MeshBasicMaterial({color:0x163447,transparent:true,opacity:0.7}),0,0.14,0.454,0.33,0.17,0.012);head.add(visorGlow);
+  // A shallow arch in the existing filled eye keeps the open, glowing lens.
+  // Clone the shared sphere: bending it in place would distort the whole world.
+  const eyeShape=SPH.clone(),eyePoints=eyeShape.attributes.position;
+  for(let i=0;i<eyePoints.count;i++){
+    const x=eyePoints.getX(i);
+    eyePoints.setY(i,eyePoints.getY(i)+0.9*(0.5-x*x));
+  }
+  eyePoints.needsUpdate=true;eyeShape.computeVertexNormals();
+  eyeShape.computeBoundingBox();eyeShape.computeBoundingSphere();
   const eyes=[];
   [-0.14,0.14].forEach(x=>{
     const e=new THREE.Group();e.position.set(x,0.17,0.472);
-    e.add(mesh(SPH,cyan,0,0,0,0.066,0.041,0.024));
-    e.add(mesh(SPH,new THREE.MeshBasicMaterial({color:0xbaf7ff}),0,0,0.018,0.032,0.020,0.010));
+    e.add(mesh(eyeShape,cyan,0,0,0,0.066,0.041,0.024));
+    e.add(mesh(eyeShape,new THREE.MeshBasicMaterial({color:0xbaf7ff}),0,0,0.018,0.032,0.020,0.010));
     head.add(e);eyes.push(e);
   });
   const mouth=mesh(BOXG,joint,0,-0.065,0.455,0.16,0.05,0.03);head.add(mouth);
