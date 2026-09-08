@@ -15,6 +15,62 @@ const assert=(c,m)=>{if(!c)throw Error(m);};
 const same=(a,b)=>JSON.stringify(a)===JSON.stringify(b);
 const expected=id=>{const s=ROBOT_SKINS.find(s=>s.id===id);return {panel:s.panel,soft:s.soft,accent:s.accent,joint:s.joint};};
 function json(url){return new Promise((resolve,reject)=>http.get(url,res=>{let s='';res.on('data',c=>s+=c);res.on('end',()=>{try{resolve(JSON.parse(s));}catch(e){reject(e);}});}).on('error',reject));}
+
+// BH-003 read-only inspection, injected only into the temporary served test page.
+// The arrays come from the actual THREE meshes used by gameplay and the preview.
+function readEyeState(robot){
+  return robot?robot.userData.eyes.map(e=>({position:e.position.toArray(),parts:e.children.map(m=>({
+    mesh:m.isMesh,visible:m.visible,geometry:m.geometry.uuid,scale:m.scale.toArray(),position:m.position.toArray(),
+    color:m.material.color.getHex(),vertices:Array.from(m.geometry.attributes.position.array),
+    normals:Array.from(m.geometry.attributes.normal.array)
+  }))})):null;
+}
+function eyeShapeStats(vertices){
+  assert(vertices.length===390&&vertices.every(Number.isFinite),'invalid eye vertex buffer');
+  const middle=[],ends=[];let sphereError=0;
+  for(let i=0;i<vertices.length;i+=3){
+    const x=vertices[i],y=vertices[i+1],z=vertices[i+2],originalY=y-.9*(.5-x*x);
+    sphereError=Math.max(sphereError,Math.abs(x*x+originalY*originalY+z*z-1));
+    if(Math.abs(x)<1e-5)middle.push(y);if(Math.abs(x)>.98)ends.push(y);
+  }
+  const center=(Math.max(...middle)+Math.min(...middle))/2,edge=(Math.max(...ends)+Math.min(...ends))/2;
+  return {center,edge,rise:center-edge,openThickness:Math.max(...middle)-Math.min(...middle),sphereError};
+}
+function assertEyeState(eyes,label){
+  assert(eyes&&eyes.length===2,label+' missing two actual eyes');let stats;
+  for(let i=0;i<eyes.length;i++){
+    const e=eyes[i];assert(same(e.position,[i===0?-.14:.14,.17,.472])&&e.parts.length===2,label+' changed eye placement/parts');
+    for(let j=0;j<e.parts.length;j++){
+      const m=e.parts[j];stats=eyeShapeStats(m.vertices);
+      assert(m.mesh&&m.visible&&m.normals.length===m.vertices.length&&m.normals.every(Number.isFinite),label+' invalid rendered eye mesh/normals');
+      assert(stats.rise>.8&&stats.rise<.95&&Math.abs(stats.openThickness-2)<1e-5&&stats.sphereError<1e-5,label+' not an open smiling lens '+JSON.stringify(stats));
+      assert(same(m.scale,j?[.032,.020,.010]:[.066,.041,.024])&&same(m.position,j?[0,0,.018]:[0,0,0]),label+' reduced/repositioned lens');
+      assert(m.color===(j?0xbaf7ff:0x28d7ff),label+' changed eye contrast');
+      assert(same(m.vertices,eyes[0].parts[0].vertices),label+' inconsistent eyes/highlight');
+    }
+  }
+  return stats;
+}
+async function eyeProof(c,previewRequired=false){
+  const state=await c.ev('__BH003Eyes()'),stats=assertEyeState(state.gameplay,'gameplay');
+  assert(eyeShapeStats(state.shared).rise<.01,'shared world sphere was bent');
+  const neutral=state.gameplay.map(e=>({...e,parts:e.parts.map(m=>({...m,vertices:state.shared}))}));
+  let neutralRejected=false;
+  try{assertEyeState(neutral,'neutral control');}catch(error){neutralRejected=error.message.includes('not an open smiling lens');}
+  assert(neutralRejected,'neutral eye geometry incorrectly passed the smiling-eye gate');
+  if(previewRequired){
+    assertEyeState(state.preview,'preview');
+    assert(same(state.gameplay[0].parts[0].vertices,state.preview[0].parts[0].vertices),'preview/gameplay shape mismatch');
+    assert(state.gameplay[0].parts[0].geometry!==state.preview[0].parts[0].geometry,'preview shares disposable gameplay geometry');
+  }
+  return {...stats,previewMatches:previewRequired,neutralRejected};
+}
+async function faceForward(c){
+  // Real controls move clear of the checkpoint; no player/camera teleport or zoom.
+  await hold(c,['KeyD'],550);await hold(c,['KeyS'],450);
+  await wait(c,'__PLAYER().visible&&__PLAYER().userData.eyes.every(e=>e.scale.y>.99)');
+}
+
 async function connect(){
   const pages=await json(`http://127.0.0.1:${debugPort}/json/list`),page=pages.find(p=>p.type==='page');assert(page,'no browser page');
   const ws=new WebSocket(page.webSocketDebuggerUrl);await new Promise((r,j)=>{ws.addEventListener('open',r,{once:true});ws.addEventListener('error',j,{once:true});});
@@ -40,11 +96,11 @@ async function tap(c,id,touch=false){
 async function viewport(c,w,h,touch){await c.send('Emulation.setDeviceMetricsOverride',{width:w,height:h,deviceScaleFactor:1,mobile:touch,screenWidth:w,screenHeight:h});await c.send('Emulation.setTouchEmulationEnabled',{enabled:touch,maxTouchPoints:touch?5:1});await sleep(150);}
 async function navigate(c){await c.send('Page.navigate',{url});await wait(c,`document.readyState==='complete'&&typeof __SKINS==='function'&&typeof __sceneOwnership==='function'`,20000);}
 async function skins(c){return c.ev('__SKINS()');}
-async function appearance(c,id){const s=await skins(c);assert(s.equipped===id&&same(s.gameplay,expected(id)),'equipped/rendered palette mismatch '+id+' '+JSON.stringify(s));return s;}
+async function appearance(c,id){const s=await skins(c);assert(s.equipped===id&&same(s.gameplay,expected(id)),'equipped/rendered palette mismatch '+id+' '+JSON.stringify(s));await eyeProof(c);return s;}
 async function sim(c){return c.ev(`({started:__started(),paused:__paused(),won:__W.won,time:__gameTime(),x:__P.pos.x,y:__P.pos.y,z:__P.pos.z,dead:__P.dead,grounded:__P.grounded,camel:!!__P.camel,sled:!!__P.sled,thrust:__P.spaceThrust,zone:__P.moveZone,physics:__PHYS(),level:__LEVEL()&&__LEVEL().id})`);}
 async function sceneRoots(c){return c.ev(`__PLAYER().parent.children.map(o=>o.uuid).sort()`);}
 async function nonRobotMaterials(c){return c.ev(`(()=>{const root=__PLAYER(),items={};root.parent.traverse(o=>{let p=o;while(p){if(p===root)return;p=p.parent;}if(o.material&&o.material.color)items[o.material.uuid]=o.material.color.getHex();});return items;})()`);}
-async function checkPreview(c,id,equipped){const s=await skins(c);assert(s.open&&s.pending===id&&s.equipped===equipped,'pending/equipped separation');assert(s.preview&&same(s.preview.colors,expected(id)),'preview actual material mismatch '+id);assert(same(s.gameplay,expected(equipped)),'preview recolored gameplay');}
+async function checkPreview(c,id,equipped){const s=await skins(c);assert(s.open&&s.pending===id&&s.equipped===equipped,'pending/equipped separation');assert(s.preview&&same(s.preview.colors,expected(id)),'preview actual material mismatch '+id);assert(same(s.gameplay,expected(equipped)),'preview recolored gameplay');await eyeProof(c,true);}
 async function open(c,touch=false){await tap(c,'skinsOpen',touch);await wait(c,'__SKINS().open&&!!__SKINS().preview');}
 async function equip(c,id,touch=false){await open(c,touch);await tap(c,'skin-'+id,touch);await checkPreview(c,id,(await skins(c)).equipped);await tap(c,'skinUse',touch);await wait(c,'!__SKINS().open');await appearance(c,id);assert(!await c.ev('__started()'),'Use Skin launched a level');}
 async function checkClosed(c){const s=await skins(c);assert(!s.open&&s.preview===null&&await c.ev(`document.getElementById('skinPreviewHost').children.length===0&&!document.getElementById('start').inert`),'preview resources or input lock survived close');if(s.lastDisposal)assert(s.lastDisposal.detached&&s.lastDisposal.materials>0&&s.lastDisposal.geometries>0,'preview cleanup evidence missing');}
@@ -95,18 +151,29 @@ async function selector(c,w,h,result){
   await c.ev(`document.getElementById('skinsPanel').scrollTop=0`);await c.shot('selector-'+w+'x'+h);await tap(c,'skinBack',touch);await appearance(c,original);await checkClosed(c);assert(same(roots,await sceneRoots(c))&&same(world,await nonRobotMaterials(c)),'preview altered main scene/materials');
   await open(c,touch);await tap(c,'skin-red',touch);await tapKey(c,'Escape');await checkClosed(c);await appearance(c,original);
   await equip(c,'blue',touch);assert(await c.ev(`localStorage.getItem(${JSON.stringify(ROBOT_SKIN_KEY)})==='blue'`),'confirm did not persist');await navigate(c);await appearance(c,'blue');await open(c,touch);await checkPreview(c,'blue','blue');await tap(c,'skinBack',touch);
-  await start(c,0,touch);await appearance(c,'blue');await movement(c);await c.shot('blue-gameplay-'+w+'x'+h);await menu(c,touch);
+  await start(c,0,touch);await appearance(c,'blue');await movement(c);await faceForward(c);await c.shot('blue-gameplay-'+w+'x'+h);await menu(c,touch);
   result.viewports.push({viewport:w+'x'+h,status:'PASS',confirmCancel:true,reload:true,targets:geometry.controls,previewSceneUnchanged:true});
 }
 async function main(){
-  fs.rmSync(profile,{recursive:true,force:true});const server=spawn('python3',['-m','http.server',String(port),'--bind','127.0.0.1'],{cwd:path.join(__dirname,'..','dist'),stdio:'ignore'});
+  fs.rmSync(profile,{recursive:true,force:true});
+  const served=profile+'-page',html=fs.readFileSync(path.join(__dirname,'..','dist','index.html'),'utf8'),marker='// ---- BUILD:END ----';
+  assert(html.split(marker).length===2,'missing/ambiguous test observation insertion point');
+  const probe=`window.__BH003Eyes=()=>({gameplay:(${readEyeState.toString()})(player),preview:(${readEyeState.toString()})(skinPreview&&skinPreview.robot),shared:Array.from(SPH.attributes.position.array)});\n`;
+  fs.mkdirSync(served,{recursive:true});fs.writeFileSync(path.join(served,'index.html'),html.replace(marker,probe+marker));
+  const server=spawn('python3',['-m','http.server',String(port),'--bind','127.0.0.1'],{cwd:served,stdio:'ignore'});
   let err='';const browser=spawn(chrome,['--headless=new',`--remote-debugging-port=${debugPort}`,'--remote-debugging-address=127.0.0.1',`--user-data-dir=${profile}`,'--no-sandbox','--disable-dev-shm-usage','--no-first-run','--no-default-browser-check','--enable-webgl','--ignore-gpu-blocklist','--use-angle=swiftshader','--window-size=1280,720','about:blank'],{stdio:['ignore','ignore','pipe']});browser.stderr.on('data',d=>err=(err+d).slice(-8000));
   let c;const result={status:'RUNNING',viewports:[],skins:[],transients:[],levels:[],errors:[]};
   try{
     let ready=false;for(let i=0;i<75;i++){if(browser.exitCode!==null)throw Error('Chrome exited '+err);try{await json(`http://127.0.0.1:${debugPort}/json/version`);ready=true;break;}catch(e){await sleep(200);}}assert(ready,'Chrome initialization failed '+err);c=await connect();await viewport(c,1280,720,false);await navigate(c);await appearance(c,'classic');
     for(const [w,h] of [[1280,720],[390,844],[844,390]]){console.log('SKINS selector '+w+'x'+h);await selector(c,w,h,result);}
     await viewport(c,1280,720,false);await navigate(c);const baseline=await sceneRoots(c);
-    for(const skin of ROBOT_SKINS){console.log('SKINS gameplay '+skin.id);await equip(c,skin.id);await start(c,0);await wait(c,'__PLAYER().visible');await appearance(c,skin.id);await c.shot('gameplay-'+skin.id);const proof=await movement(c);await menu(c);result.skins.push({skin:skin.id,status:'PASS',colors:expected(skin.id),movement:proof});}
+    for(const skin of ROBOT_SKINS){
+      console.log('SKINS gameplay '+skin.id);await equip(c,skin.id);
+      await open(c);const previewEyes=await eyeProof(c,true);await c.shot('preview-'+skin.id);await tap(c,'skinBack');await checkClosed(c);
+      await start(c,0);await wait(c,'__PLAYER().visible');await appearance(c,skin.id);const proof=await movement(c);await faceForward(c);
+      const eyes=await eyeProof(c);await c.shot('gameplay-'+skin.id);await menu(c);
+      result.skins.push({skin:skin.id,status:'PASS',colors:expected(skin.id),movement:proof,eyes,previewEyes});
+    }
     const roots=await sceneRoots(c);for(let i=0;i<5;i++){await open(c);await tap(c,'skin-green');await tap(c,'skinBack');await checkClosed(c);assert(same(roots,await sceneRoots(c)),'preview scene roots accumulated');}
     await equip(c,'purple');
     for(const [w,h] of [[1280,720],[390,844]]){
@@ -123,6 +190,6 @@ async function main(){
     }
     assert(!c.errors.length,'page exceptions '+JSON.stringify(c.errors));result.status='PASS';result.previewCycles=5;result.restart='PASS';result.errors=c.errors;console.log('ROBOT_SKINS_BROWSER_VERIFY=PASS');
   }catch(e){result.status='FAIL';result.error=e.stack||String(e);if(c){try{result.lastState=await sim(c);result.skinState=await skins(c);result.errors=c.errors;await c.shot('failure');}catch(snapshotError){result.snapshotError=String(snapshotError);}}console.error('ROBOT_SKINS_BROWSER_VERIFY=FAIL');console.error(e.stack||e);process.exitCode=1;}
-  finally{fs.writeFileSync(path.join(out,'result.json'),JSON.stringify(result,null,2));console.log(JSON.stringify(result));if(c)c.close();browser.kill('SIGKILL');server.kill('SIGKILL');await sleep(200);try{fs.rmSync(profile,{recursive:true,force:true,maxRetries:3,retryDelay:100});}catch(e){}}
+  finally{fs.writeFileSync(path.join(out,'result.json'),JSON.stringify(result,null,2));console.log(JSON.stringify(result));if(c)c.close();browser.kill('SIGKILL');server.kill('SIGKILL');await sleep(200);try{fs.rmSync(profile,{recursive:true,force:true,maxRetries:3,retryDelay:100});fs.rmSync(served,{recursive:true,force:true});}catch(e){}}
 }
 main().catch(e=>{console.error(e);process.exitCode=1;});

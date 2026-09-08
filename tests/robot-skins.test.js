@@ -29,7 +29,8 @@ class V{constructor(x=0,y=0,z=0){Object.assign(this,{x,y,z});}set(x,y,z){Object.
 class O{constructor(geometry,material){this.geometry=geometry;this.material=material;this.children=[];this.userData={};this.position=new V();this.rotation=new V();this.scale=new V(1,1,1);this.visible=true;this.parent=null;}add(o){if(o.parent)o.parent.remove(o);this.children.push(o);o.parent=this;}remove(o){this.children=this.children.filter(c=>c!==o);o.parent=null;}traverse(fn){fn(this);this.children.forEach(c=>c.traverse(fn));}}
 class C{constructor(v){this.v=v;}setHex(v){this.v=v;}getHex(){return this.v;}}
 class M{constructor(o){Object.assign(this,o);this.color=new C(o.color);}}
-class G{constructor(...args){this.args=args;}}
+// This material/transform fixture does not model vertices; smiling-eyes.test.js does.
+class G{constructor(...args){this.args=args;this.attributes={position:{count:0}};}clone(){return new G(...this.args);}computeVertexNormals(){}computeBoundingBox(){}computeBoundingSphere(){}}
 const root=new O();root.scale.setScalar(.72);
 const fxMat=new M({color:0xff7a1f}),jet=new O(new G(),fxMat),flame=new O(new G(),fxMat);root.add(jet);root.userData={jet,flame};
 const context={THREE:{Group:O,Mesh:O,TorusGeometry:G,MeshBasicMaterial:M},player:root,window:{},SPH:new G(),CYL:new G(),BOXG:new G(),pho:(c,s,sp)=>new M({color:c,shininess:s,specular:sp})};

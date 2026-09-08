@@ -23,8 +23,8 @@ for(const name of forbidden){
 
 const pi=build.ORDER.indexOf('player.js'),pvi=build.ORDER.indexOf('player-visual.js');
 ok(pi>=0&&pvi===pi+1,'visual shell loads immediately after gameplay-owned player.js');
-ok(JSON.parse(fs.readFileSync(path.join(ROOT,'release.json'),'utf8')).display==='v59 · Robot Skins',
-  'canonical release metadata advances to v59 · Robot Skins');
+ok(JSON.parse(fs.readFileSync(path.join(ROOT,'release.json'),'utf8')).display==='v60 · Smiling Eyes',
+  'canonical release metadata advances to v60 · Smiling Eyes');
 
 const H=require('./harness.js')({level:0});
 const {P,frames,kd,ku,getPlayer,getPhys,ok:hok}=H;
