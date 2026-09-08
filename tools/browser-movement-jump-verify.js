@@ -88,6 +88,10 @@ async function click(c,id,touch){
 }
 async function controls(c,touch,w,h){
   let move=null,jump=false,points=[];
+  // The fixed A button is measured once before the route. Scrolling it into
+  // view and waiting two paints DURING a short hop consumed the puff window
+  // in run #401. Gameplay input must not wait for test-only presentation work.
+  const jumpPoint=touch?await point(c,'bA'):null;
   const log=[];const mark=async(label)=>{log.push({label,wallMs:Date.now(),browserMs:await c.ev('performance.now()')});};
   async function direction(sign,z=0){
     if(touch){
@@ -98,7 +102,7 @@ async function controls(c,touch,w,h){
     move=sign||z?(z?'KeyS':sign>0?'KeyD':'KeyA'):null;
   }
   async function jumpDown(){
-    if(touch){const p=await point(c,'bA');points=[...points,{x:p.x,y:p.y,id:2}];await c.send('Input.dispatchTouchEvent',{type:'touchStart',touchPoints:points});}
+    if(touch){const p=jumpPoint;points=[...points,{x:p.x,y:p.y,id:2}];await c.send('Input.dispatchTouchEvent',{type:'touchStart',touchPoints:points});}
     else await key(c,'Space',true);jump=true;
   }
   async function release(){
@@ -145,8 +149,11 @@ async function capture(c,origin,version,w,h){
     await input.mark('standing-jump');await input.jumpDown();await gameWait(c,380);await input.release();await gameWait(c,1000);
     await input.mark('early-release-short-hop');await input.jumpDown();await gameWait(c,70);await input.release();await gameWait(c,900);
     await input.mark('held-jump');await input.jumpDown();await gameWait(c,720);await input.release();await gameWait(c,650);
-    await input.mark('puff-float');await input.jumpDown();await gameWait(c,100);await input.release();await gameWait(c,150);await input.jumpDown();await gameWait(c,1000);await input.release();await gameWait(c,1600);
-    await input.mark('running-jump-and-landing-into-run');await input.direction(-1);await gameWait(c,200);await input.jumpDown();await gameWait(c,1000);await input.release();await gameWait(c,500);
+    await input.mark('puff-float');await input.jumpDown();await wait(c,'!__P.grounded&&__P.vel.y>0');await gameWait(c,100);await input.release();
+    await wait(c,'!__INPUT_STATE().jumpHeld');assert(await c.ev('!__P.grounded&&__P.puff'),'puff window lost before second real input');
+    await input.jumpDown();await wait(c,'!__P.puff&&__P.puffAir>0');await gameWait(c,1000);await input.release();await gameWait(c,1600);
+    await input.mark('running-jump-and-landing-into-run');await input.direction(-1);await gameWait(c,200);await input.jumpDown();
+    await wait(c,'!__P.grounded');await wait(c,'__P.grounded');await gameWait(c,150);await input.release();await gameWait(c,350);
     await input.mark('end');
     const samples=await c.ev('__BH004Read()'),summary=summarize(samples);
     write(path.join(dir,'samples.json'),samples);write(path.join(dir,'frames.json'),frames);write(path.join(dir,'inputs.json'),input.log);write(path.join(dir,'summary.json'),summary);
