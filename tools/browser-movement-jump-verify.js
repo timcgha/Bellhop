@@ -18,7 +18,12 @@ function probe(){
   const original=renderer.render.bind(renderer);
   const records=[];let previous=null;
   window.__BH004Capture=false;
-  window.__BH004PointerEvents=[];document.addEventListener('pointerdown',e=>{if(window.__BH004PointerEvents.length<200)window.__BH004PointerEvents.push({type:e.pointerType,target:e.target.id,x:e.clientX,y:e.clientY,time:performance.now()});},true);
+  window.__BH004PointerEvents=[];window.__BH004PointerCount=0;window.__BH004LastPointer=null;
+  document.addEventListener('pointerdown',e=>{
+    const event={count:++window.__BH004PointerCount,type:e.pointerType,target:e.target.id,
+      path:e.composedPath().map(n=>n.id).filter(Boolean),trusted:e.isTrusted,x:e.clientX,y:e.clientY,time:performance.now()};
+    window.__BH004LastPointer=event;if(window.__BH004PointerEvents.length<200)window.__BH004PointerEvents.push(event);
+  },true);
   window.__BH004Read=()=>records.slice();
   renderer.render=function(...args){
     const result=original(...args),now=performance.now();
@@ -54,7 +59,33 @@ async function point(c,id){
   const p=await c.ev(`(()=>{const e=document.getElementById(${JSON.stringify(id)}),r=e.getBoundingClientRect(),x=r.x+r.width/2,y=r.y+r.height/2;return {x,y,w:r.width,h:r.height,hit:e.contains(document.elementFromPoint(x,y))};})()`);
   assert(p.hit,'control is not the actual pointer hit target: '+id+' '+JSON.stringify(p));return p;
 }
-async function click(c,id,touch){const p=await point(c,id);assert(p.w>0&&p.h>0,'hidden control '+id);if(touch){await c.send('Input.dispatchTouchEvent',{type:'touchStart',touchPoints:[{x:p.x,y:p.y,id:1,radiusX:4,radiusY:4,force:1}]});await sleep(40);await c.send('Input.dispatchTouchEvent',{type:'touchEnd',touchPoints:[]});}else{await c.send('Input.dispatchMouseEvent',{type:'mousePressed',x:p.x,y:p.y,button:'left',clickCount:1});await c.send('Input.dispatchMouseEvent',{type:'mouseReleased',x:p.x,y:p.y,button:'left',clickCount:1});}await sleep(100);}
+// Run #399's landscape touch was acknowledged by CDP but delivered no DOM
+// pointerdown. Reinitialize emulation on the NEW document, not only the widget
+// being navigated away from. This resets test transport, never game input/state.
+async function inputTransport(c,touch){
+  const before=await c.ev('({url:location.href,touchPoints:navigator.maxTouchPoints})');
+  await c.send('Emulation.setTouchEmulationEnabled',{enabled:false});
+  await c.send('Emulation.setTouchEmulationEnabled',{enabled:touch,maxTouchPoints:touch?5:1});
+  const after=await c.ev('({url:location.href,touchPoints:navigator.maxTouchPoints,focused:document.hasFocus(),width:innerWidth,height:innerHeight})');
+  assert(after.touchPoints===(touch?5:0),'touch emulation not bound to the current document');
+  (c.transportEvidence??=[]).push({before,after,layout:await c.send('Page.getLayoutMetrics')});
+}
+async function click(c,id,touch){
+  const p=await point(c,id);assert(p.w>0&&p.h>0,'hidden control '+id);
+  const previous=await c.ev('__BH004PointerCount');
+  try{
+    if(touch)await c.send('Input.dispatchTouchEvent',{type:'touchStart',touchPoints:[{x:p.x,y:p.y,id:1,radiusX:4,radiusY:4,force:1}]});
+    else await c.send('Input.dispatchMouseEvent',{type:'mousePressed',x:p.x,y:p.y,button:'left',clickCount:1});
+    // A protocol reply or elapsed wall-clock delay does not prove delivery.
+    // Keep the actual finger down until the current DOM sees this exact target.
+    await wait(c,`__BH004LastPointer&&__BH004LastPointer.count>${previous}&&__BH004LastPointer.trusted&&__BH004LastPointer.type===${JSON.stringify(touch?'touch':'mouse')}&&__BH004LastPointer.path.includes(${JSON.stringify(id)})`);
+    (c.tapEvidence??=[]).push({id,requested:p,event:await c.ev('__BH004LastPointer'),url:await c.ev('location.href')});
+  }finally{
+    if(touch)await c.send('Input.dispatchTouchEvent',{type:'touchEnd',touchPoints:[]});
+    else await c.send('Input.dispatchMouseEvent',{type:'mouseReleased',x:p.x,y:p.y,button:'left',clickCount:1});
+  }
+  await sleep(100);
+}
 async function controls(c,touch,w,h){
   let move=null,jump=false,points=[];
   const log=[];const mark=async(label)=>{log.push({label,wallMs:Date.now(),browserMs:await c.ev('performance.now()')});};
@@ -95,6 +126,7 @@ async function capture(c,origin,version,w,h){
   await c.send('Emulation.setTouchEmulationEnabled',{enabled:touch,maxTouchPoints:touch?5:1});
   const target=`${origin}/${version}?capture=${w}x${h}`;await c.send('Page.navigate',{url:target});
   await wait(c,`location.href===${JSON.stringify(target)}&&document.readyState==='complete'&&typeof __BH004Read==='function'&&typeof THREE!=='undefined'`);
+  await inputTransport(c,touch);
   assert(await c.ev('THREE.REVISION')==='128','wrong THREE revision');
   await click(c,'lvl0',touch);if(!await c.ev('__started()')){await wait(c,'__touchArmed()&&__pickerIdx()===0');await click(c,'lvl0',touch);}
   await wait(c,`__started()&&__LEVEL().id==='level1'&&!__paused()&&__P.grounded`);
@@ -134,6 +166,7 @@ async function lifecycle(c,origin,w,h){
   await c.send('Emulation.setDeviceMetricsOverride',{width:w,height:h,deviceScaleFactor:1,mobile:touch,screenWidth:w,screenHeight:h});
   await c.send('Emulation.setTouchEmulationEnabled',{enabled:touch,maxTouchPoints:touch?5:1});
   const target=`${origin}/candidate?lifecycle=${w}x${h}`;await c.send('Page.navigate',{url:target});await wait(c,`location.href===${JSON.stringify(target)}&&document.readyState==='complete'&&typeof __BH004Read==='function'`);
+  await inputTransport(c,touch);
   await click(c,'skinsOpen',touch);await wait(c,'__SKINS().open');await click(c,'skin-purple',touch);await click(c,'skinUse',touch);await wait(c,`!__SKINS().open&&__SKINS().equipped==='purple'`);
   const state=()=>c.ev(`({time:__gameTime(),pos:[__P.pos.x,__P.pos.y,__P.pos.z],root:[__PLAYER().position.x,__PLAYER().position.y,__PLAYER().position.z],arms:[__PLAYER().userData.armL.rotation.x,__PLAYER().userData.armR.rotation.x],grounded:__P.grounded,dead:__P.dead,started:__started(),paused:__paused(),won:__W.won,level:__LEVEL().id,thrust:__P.spaceThrust,skin:__SKINS().equipped})`);
   const rows=[];
@@ -197,7 +230,7 @@ async function main(){
     result.status=versions.length===1?'BASELINE_CAPTURED_NO_PRODUCT_CHANGE':'COMPARISON_CAPTURED';
     fs.writeFileSync(path.join(OUT,'index.html'),viewer(result.captures.map(x=>x.name)));
   }catch(e){result.status='FAIL';result.error=e.stack||String(e);if(c){result.errors=c.errors;try{const s=await c.send('Page.captureScreenshot',{format:'png'});fs.writeFileSync(path.join(OUT,'failure.png'),Buffer.from(s.data,'base64'));write(path.join(OUT,'failure-samples.json'),await c.ev('__BH004Read()'));write(path.join(OUT,'failure-input.json'),await c.ev('({events:__BH004PointerEvents,armed:__touchArmed(),picker:__pickerIdx(),viewport:[innerWidth,innerHeight]})'));}catch(_){}}process.exitCode=1;}
-  finally{write(path.join(OUT,'result.json'),result);console.log(JSON.stringify(result,null,2));if(c)c.close();if(browser)browser.kill('SIGKILL');if(server)server.close();await sleep(200);fs.rmSync(tmp,{recursive:true,force:true,maxRetries:3,retryDelay:100});}
+  finally{if(c){write(path.join(OUT,'input-delivery.json'),{transports:c.transportEvidence||[],taps:c.tapEvidence||[]});}write(path.join(OUT,'result.json'),result);console.log(JSON.stringify(result,null,2));if(c)c.close();if(browser)browser.kill('SIGKILL');if(server)server.close();await sleep(200);fs.rmSync(tmp,{recursive:true,force:true,maxRetries:3,retryDelay:100});}
 }
 if(require.main===module)main().catch(e=>{console.error(e);process.exitCode=1;});
 module.exports={summarize,stats};
