@@ -24,6 +24,7 @@ function updatePickerUI(pulse){
   }
 }
 function setPickerIdx(i){
+  if(typeof isSkinPanelOpen==='function'&&isSkinPanelOpen())return;
   const next=clamp(i,0,LEVELS.length-1);
   const changed=next!==pickerIdx;
   pickerIdx=next;
@@ -32,7 +33,7 @@ function setPickerIdx(i){
   updatePickerUI(changed);
 }
 function tapLevelCard(i){
-  if(started)return;
+  if(started||(typeof isSkinPanelOpen==='function'&&isSkinPanelOpen()))return;
   // Touch needs two physical taps on the same card. Default Meadow highlight does not count.
   if(i===pickerIdx&&touchArmed){startGame();return;}
   pickerIdx=clamp(i,0,LEVELS.length-1);
@@ -97,7 +98,7 @@ for(let i=0;i<LEVELS.length;i++){
   $('lvl'+i).addEventListener('pointerdown',e=>{e.stopPropagation();e.preventDefault();tapLevelCard(i);});
 }
 
-function startGame(){if(started)return;loadLevel(LEVELS[pickerIdx]);started=true;document.body.classList.add('playing');$('start').style.display='none';initAudio();IN.jump=false;IN.b=false;IN.y=false;updateHUD();
+function startGame(){if(started||(typeof isSkinPanelOpen==='function'&&isSkinPanelOpen()))return;loadLevel(LEVELS[pickerIdx]);started=true;document.body.classList.add('playing');$('start').style.display='none';initAudio();IN.jump=false;IN.b=false;IN.y=false;updateHUD();
   const msg=pickerIdx===0?'Follow the path. Wake all four Snoozles!':(pickerIdx===1?'Dive in. Wake four Snoozles on the ocean floor!':(pickerIdx===2?'Try the long leap. Jump, then puff again!':(pickerIdx===3?'Hold jump to fly. Let go to glide.':'Try A or Space beside a camel. B hops off!')));
   setTimeout(()=>showToast(msg),600);setTimeout(()=>{$('hint').style.opacity=0;},12000);}
 window.__startGame=startGame;

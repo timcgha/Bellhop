@@ -1,6 +1,8 @@
 const IN={mx:0,mz:0,camDX:0,camDY:0,jump:false,jumpHeld:false,b:false,bHeld:false,y:false};
 const keys={};
 addEventListener('keydown',e=>{
+  if(typeof isSkinPanelOpen==='function'&&isSkinPanelOpen()){handleSkinKey(e);return;}
+  if(!started&&e.target===$('skinsOpen')&&(e.code==='Enter'||e.code==='Space'))return;
   if(['Space','ArrowUp','ArrowDown','ArrowLeft','ArrowRight'].indexOf(e.code)>=0)e.preventDefault();
   if(e.repeat)return;
   if(started&&(e.code==='Escape'||e.code==='KeyP')){e.preventDefault();togglePause();return;}
@@ -36,6 +38,8 @@ function pollGamepad(dt){
   const dz=v=>Math.abs(v)<0.18?0:v;const ax=gp.axes;
   const lx=dz(ax[0]||0),ly=dz(ax[1]||0),rx=dz(ax[2]||0),ry=dz(ax[3]||0);
   const b=gp.buttons.map(x=>x.pressed);const edge=i=>b[i]&&!GP.prev[i];
+  if(typeof isSkinPanelOpen==='function'&&isSkinPanelOpen()){handleSkinGamepad(b,ax,edge);GP.prev=b;return;}
+  if(!started&&edge(3)){openSkins();GP.prev=b;return;}
   if(started&&edge(9)){togglePause();GP.prev=b;return;}
   if(started&&paused){GP.prev=b;return;}
   if(!started){
@@ -99,6 +103,7 @@ window.__setTouchStick=(x,z)=>{T.stickId=1;T.jx=x;T.jy=z;};
 window.__clearTouchStick=()=>{T.stickId=null;T.jx=0;T.jy=0;};
 document.addEventListener('touchmove',e=>{
   if(!started){
+    if(typeof isSkinPanelOpen==='function'&&isSkinPanelOpen()&&e.target.closest('#skinsOverlay'))return;
     const menu=$('start');
     if(menu&&menu.style.display!=='none'&&e.target.closest('#start'))return;
   }
