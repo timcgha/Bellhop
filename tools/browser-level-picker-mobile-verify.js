@@ -127,8 +127,9 @@ async function key(cdp,code){
   await sleep(55);await cdp.send('Input.dispatchKeyEvent',{type:'keyUp',key:data[0],code,windowsVirtualKeyCode:data[1],nativeVirtualKeyCode:data[1]});await sleep(150);
 }
 async function gamepad(cdp,index){
-  await cdp.evaluate('window.__bh006Gamepad.buttons['+index+'].pressed=true');await sleep(120);
-  await cdp.evaluate('window.__bh006Gamepad.buttons['+index+'].pressed=false');await sleep(160);
+  const frames=()=>cdp.evaluate("new Promise(resolve=>{let left=3;const next=()=>{if(--left===0)resolve(true);else requestAnimationFrame(next);};requestAnimationFrame(next);})");
+  await cdp.evaluate('window.__bh006Gamepad.buttons['+index+'].pressed=true');await frames();
+  await cdp.evaluate('window.__bh006Gamepad.buttons['+index+'].pressed=false');await frames();
 }
 async function verifyVerticalBoundaries(cdp,v,expectedColumns,label,move,activate){
   await fresh(cdp,v);const columns=await cdp.evaluate('__pickerColumns()');
