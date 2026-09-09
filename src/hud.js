@@ -25,9 +25,9 @@ function updatePickerUI(pulse){
 }
 function pickerColumns(){
   const first=$('lvl0');
-  if(first&&typeof first.getBoundingClientRect==='function'){
-    const top=first.getBoundingClientRect().top;let cols=0;
-    for(let i=0;i<LEVELS.length;i++){const el=$('lvl'+i);if(!el||typeof el.getBoundingClientRect!=='function')break;if(Math.abs(el.getBoundingClientRect().top-top)>2)break;cols++;}
+  if(first&&(typeof first.offsetTop==='number'||typeof first.getBoundingClientRect==='function')){
+    const top=typeof first.offsetTop==='number'?first.offsetTop:first.getBoundingClientRect().top;let cols=0;
+    for(let i=0;i<LEVELS.length;i++){const el=$('lvl'+i);if(!el)break;const y=typeof el.offsetTop==='number'?el.offsetTop:(typeof el.getBoundingClientRect==='function'?el.getBoundingClientRect().top:NaN);if(!Number.isFinite(y)||Math.abs(y-top)>2)break;cols++;}
     if(cols>0)return cols;
   }
   return innerWidth<=500&&innerHeight>innerWidth?2:3;

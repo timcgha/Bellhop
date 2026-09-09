@@ -188,8 +188,8 @@ async function main(){
     await scenario('keyboard displayed-grid navigation and activation',async()=>{
       const desktop=matrix[5];await fresh(cdp,desktop);const columns=await cdp.evaluate('__pickerColumns()');
       await key(cdp,'ArrowRight');check('keyboard right follows order',await cdp.evaluate('__pickerIdx()===1'),{columns});
-      await key(cdp,'ArrowDown');check('keyboard down follows displayed column',await cdp.evaluate('__pickerIdx()==='+(1+columns)),{columns});
-      await key(cdp,'ArrowLeft');check('keyboard left follows order',await cdp.evaluate('__pickerIdx()==='+columns),{columns});
+      await key(cdp,'ArrowDown');let index=await cdp.evaluate('__pickerIdx()');check('keyboard down follows displayed column',index===1+columns,{columns,index});
+      await key(cdp,'ArrowLeft');index=await cdp.evaluate('__pickerIdx()');check('keyboard left follows order',index===columns,{columns,index});
       await key(cdp,'ArrowUp');check('keyboard up follows displayed column',await cdp.evaluate('__pickerIdx()===0'),{columns});
       await key(cdp,'Space');await waitFor(cdp,"__started()&&__LEVEL().id==='level1'",7000);await pauseToMenu(cdp,false);
     });
@@ -225,7 +225,10 @@ async function main(){
       const reduced=matrix[3];await fresh(cdp,reduced);await cdp.evaluate('__setPickerIdx(5)');await sleep(430);const selected=await snapshot(cdp);
       check('reduced-height selected card visible',within(selected.cards[5].card,{left:0,top:0,right:reduced.width,bottom:reduced.height},2),{start:selected.start,card:selected.cards[5].card});
       if(selected.start.scrollHeight>selected.start.clientHeight+1){
-        await cdp.send('Input.synthesizeScrollGesture',{x:30,y:Math.max(20,Math.min(reduced.height-20,selected.panel.top+40)),yDistance:-90,gestureSourceType:'touch',speed:300});await sleep(430);
+        const x=selected.panel.left+90,y0=reduced.height-24,y1=54;
+        await cdp.send('Input.dispatchTouchEvent',{type:'touchStart',touchPoints:[{x,y:y0,radiusX:5,radiusY:5,force:1,id:7}]});
+        for(let step=1;step<=5;step++){await cdp.send('Input.dispatchTouchEvent',{type:'touchMove',touchPoints:[{x,y:y0+(y1-y0)*step/5,radiusX:5,radiusY:5,force:1,id:7}]});await sleep(45);}
+        await cdp.send('Input.dispatchTouchEvent',{type:'touchEnd',touchPoints:[]});await sleep(430);
         const scrollTop=await cdp.evaluate("document.getElementById('start').scrollTop");check('reduced-height touch scroll works',scrollTop>0,{scrollTop});
       }else check('reduced-height menu fits without scroll',true,selected.start);
       await cdp.screenshot(label+'-740x280-selected-scroll.png');
