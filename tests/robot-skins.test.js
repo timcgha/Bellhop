@@ -1,4 +1,4 @@
-// Behavioral state, material ownership and identical-input gameplay regressions.
+// Behavioral state, material ownership and shared-input gameplay regressions.
 const fs=require('fs'),path=require('path'),vm=require('vm');
 const {ROBOT_SKINS,ROBOT_SKIN_KEY,robotSkin,createSkinSelection,applyRobotSkin}=require('../src/skin-state.js');
 let failures=0;
@@ -81,7 +81,7 @@ for(const skin of ROBOT_SKINS){
   H.kd('Space');for(let i=0;i<8;i++){H.frames(1);trajectory.push(sample(H));}H.ku('Space');
   H.tap('KeyK',2);H.tap('KeyJ',2);H.frames(16);trajectory.push(sample(H));
   if(!baseline){baseline=trajectory;physics=JSON.stringify(H.getPhys());}
-  ok(equal(trajectory,baseline),'identical movement/jump/ability input produces identical gameplay: '+skin.id);
+  ok(equal(trajectory,baseline),'movement and shared jump/gust/spin inputs remain identical: '+skin.id);
   ok(JSON.stringify(H.getPhys())===physics&&H.getPlayer().scale.x===.72,'same physics/collision/root dimensions: '+skin.id);
   H.P.dead=true;H.P.deadT=.001;H.frames(3);
   ok(!H.P.dead&&H.window.__SKINS().equipped===skin.id,'death/respawn preserves '+skin.id);

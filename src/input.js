@@ -1,4 +1,4 @@
-const IN={mx:0,mz:0,camDX:0,camDY:0,jump:false,jumpHeld:false,b:false,bHeld:false,y:false};
+const IN={mx:0,mz:0,camDX:0,camDY:0,jump:false,jumpHeld:false,b:false,bHeld:false,y:false,web:false};
 const keys={};
 function pickerMove(dx,dy){
   if(typeof movePicker==='function')movePicker(dx,dy);
@@ -7,7 +7,7 @@ function pickerMove(dx,dy){
 addEventListener('keydown',e=>{
   if(typeof isSkinPanelOpen==='function'&&isSkinPanelOpen()){handleSkinKey(e);return;}
   if(!started&&e.target===$('skinsOpen')&&(e.code==='Enter'||e.code==='Space'))return;
-  if(['Space','ArrowUp','ArrowDown','ArrowLeft','ArrowRight'].indexOf(e.code)>=0)e.preventDefault();
+  if(['Space','ArrowUp','ArrowDown','ArrowLeft','ArrowRight','KeyX'].indexOf(e.code)>=0)e.preventDefault();
   if(e.repeat)return;
   if(started&&(e.code==='Escape'||e.code==='KeyP')){e.preventDefault();togglePause();return;}
   if(started&&paused){e.preventDefault();return;}
@@ -23,6 +23,7 @@ addEventListener('keydown',e=>{
   if(e.code==='Space')IN.jump=true;
   if(e.code==='KeyJ'||e.code==='ShiftLeft'||e.code==='ShiftRight')IN.b=true;
   if(e.code==='KeyK'||e.code==='KeyF')IN.y=true;
+  if(e.code==='KeyX'&&typeof isWebHeroEquipped==='function'&&isWebHeroEquipped())IN.web=true;
   if(e.code==='KeyM')toggleMute();
 });
 addEventListener('keyup',e=>{keys[e.code]=false;});
@@ -64,7 +65,9 @@ function pollGamepad(dt){
   }
   if(lx||ly){IN.mx=lx;IN.mz=ly;}IN.camDX+=rx*2.8*dt;IN.camDY+=ry*1.8*dt;
   if(edge(0))IN.jump=true;if(b[0])IN.jumpHeld=true;
-  if(edge(1)||edge(2))IN.b=true;if(b[1]||b[2])IN.bHeld=true;
+  const webHero=typeof isWebHeroEquipped==='function'&&isWebHeroEquipped();
+  if(edge(1)||(!webHero&&edge(2)))IN.b=true;if(b[1]||(!webHero&&b[2]))IN.bHeld=true;
+  if(webHero&&edge(2))IN.web=true;
   if(edge(3))IN.y=true;
   GP.prev=b;
 }
@@ -74,12 +77,12 @@ const T={stickId:null,sx:0,sy:0,camId:null,cx:0,cy:0,jx:0,jy:0};
 const HELD={a:false,b:false};
 function clearGameplayInput(){
   for(const k in keys)keys[k]=false;
-  IN.mx=IN.mz=IN.camDX=IN.camDY=0;IN.jump=IN.jumpHeld=IN.b=IN.bHeld=IN.y=false;
+  IN.mx=IN.mz=IN.camDX=IN.camDY=0;IN.jump=IN.jumpHeld=IN.b=IN.bHeld=IN.y=IN.web=false;
   T.stickId=null;T.camId=null;T.jx=T.jy=0;HELD.a=HELD.b=false;
   stickEl.style.display='none';knobEl.style.left='35px';knobEl.style.top='35px';
   const gp=firstGamepad();GP.prev=gp?gp.buttons.map(x=>x.pressed):[];GP.blockUntilNeutral=true;
 }
-window.__INPUT_STATE=()=>({mx:IN.mx,mz:IN.mz,camDX:IN.camDX,camDY:IN.camDY,jump:IN.jump,jumpHeld:IN.jumpHeld,b:IN.b,bHeld:IN.bHeld,y:IN.y,touchStickId:T.stickId,touchCamId:T.camId,touchX:T.jx,touchY:T.jy,heldA:HELD.a,heldB:HELD.b,keysDown:Object.keys(keys).filter(k=>keys[k]),gamepadBlocked:GP.blockUntilNeutral});
+window.__INPUT_STATE=()=>({mx:IN.mx,mz:IN.mz,camDX:IN.camDX,camDY:IN.camDY,jump:IN.jump,jumpHeld:IN.jumpHeld,b:IN.b,bHeld:IN.bHeld,y:IN.y,web:IN.web,touchStickId:T.stickId,touchCamId:T.camId,touchX:T.jx,touchY:T.jy,heldA:HELD.a,heldB:HELD.b,keysDown:Object.keys(keys).filter(k=>keys[k]),gamepadBlocked:GP.blockUntilNeutral});
 ctl.addEventListener('pointerdown',e=>{
   if(paused)return;
   if(!started){initAudio();return;}
@@ -102,6 +105,7 @@ function bindBtn(id,down,up){const el=$(id);el.addEventListener('pointerdown',e=
 bindBtn('bA',()=>{IN.jump=true;HELD.a=true;},()=>{HELD.a=false;});
 bindBtn('bB',()=>{IN.b=true;HELD.b=true;},()=>{HELD.b=false;});
 bindBtn('bY',()=>{IN.y=true;},null);
+bindBtn('bX',()=>{if(typeof isWebHeroEquipped==='function'&&isWebHeroEquipped())IN.web=true;},null);
 function bindPauseTap(id,fn){const el=$(id);el.addEventListener('pointerdown',e=>{e.stopPropagation();e.preventDefault();fn();});}
 bindPauseTap('pauseBtn',()=>togglePause());
 bindPauseTap('pauseResume',()=>setPaused(false));

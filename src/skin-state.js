@@ -1,4 +1,5 @@
-// Cosmetic palettes and confirm/cancel state, independent of gameplay and the DOM.
+// Palette and confirm/cancel state. Six skins remain cosmetic; confirmed Web Hero
+// is the narrow gameplay exception consumed by web-shot.js.
 // Seams, visor and ability effects keep their existing signal colors; the
 // seventh skin alone gives the existing smiling-eye meshes a white material.
 const ROBOT_SKINS=Object.freeze([

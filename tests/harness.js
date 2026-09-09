@@ -156,6 +156,7 @@ module.exports = function boot(opts = {}) {
       addEventListener() {}
     },
     navigator: { getGamepads: () => gamepads },
+    localStorage: opts.localStorage,
     performance: { now: () => 0 },
     requestAnimationFrame(f) { rafs.push(f); },
     setInterval: () => 0,

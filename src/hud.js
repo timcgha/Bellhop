@@ -2,6 +2,7 @@ function updateHUD(){$('hp').textContent='❤️'.repeat(Math.max(P.hp,0))+'🤍
   const f=$('fire');f.style.display=P.fire?'':'none';f.textContent='🔥';
   const b=$('bubble');if(b){b.style.display=(P.bubble&&isUnderwater())?'':'none';b.textContent='🫧';}
   const sb=$('starbeam');if(sb){sb.style.display=(P.hasStarBeam&&isSpaceLevel())?'':'none';sb.textContent='⭐';}
+  if(typeof updateWebHeroTouchControl==='function')updateWebHeroTouchControl();
   updateTouchLabels();}
 function updateTouchLabels(){
   const lbl=$('bBLbl');if(!lbl)return;
@@ -9,7 +10,7 @@ function updateTouchLabels(){
   else lbl.textContent='slam · gust';
 }
 let toastTO=null;function showToast(t){const el=$('toast');el.textContent=t;el.style.opacity=1;clearTimeout(toastTO);toastTO=setTimeout(()=>{el.style.opacity=0;},2400);}
-const CTLTEXT=isTouch?'Left thumb moves · right thumb looks · A jump — blue jet burns anything under him (tap again in the air for an air-puff, hold to float) · B slam in the air, gust on the ground · Y spin':'WASD or arrows move · Space jumps — the blue jet burns anything under him (again in the air for an air-puff, hold to float) · J or Shift: slam in the air, gust on the ground · K spins · drag or Q/E turns the camera · M mutes';
+const CTLTEXT=isTouch?'Left thumb moves · right thumb looks · A jump — blue jet burns anything under him (tap again in the air for an air-puff, hold to float) · B slam in the air, gust on the ground · Y spin · Web Hero: X web':'WASD or arrows move · Space jumps — the blue jet burns anything under him (again in the air for an air-puff, hold to float) · J or Shift: slam in the air, gust on the ground · K spins · Web Hero: X fires a web · drag or Q/E turns the camera · M mutes';
 const PICKHINT=isTouch?'Tap a picture · tap it again to play':'Arrow keys choose a level · Space or A to start';
 $('ctlText').textContent=CTLTEXT;$('hint').textContent=CTLTEXT;$('pickHint').textContent=PICKHINT;
 
@@ -117,7 +118,7 @@ for(let i=0;i<LEVELS.length;i++){
   $('lvl'+i).addEventListener('pointerdown',e=>{e.stopPropagation();e.preventDefault();tapLevelCard(i);});
 }
 
-function startGame(){if(started||(typeof isSkinPanelOpen==='function'&&isSkinPanelOpen()))return;loadLevel(LEVELS[pickerIdx]);started=true;document.body.classList.add('playing');$('start').style.display='none';initAudio();IN.jump=false;IN.b=false;IN.y=false;updateHUD();
+function startGame(){if(started||(typeof isSkinPanelOpen==='function'&&isSkinPanelOpen()))return;loadLevel(LEVELS[pickerIdx]);started=true;document.body.classList.add('playing');$('start').style.display='none';initAudio();IN.jump=false;IN.b=false;IN.y=false;IN.web=false;updateHUD();
   const msg=pickerIdx===0?'Follow the path. Wake all four Snoozles!':(pickerIdx===1?'Dive in. Wake four Snoozles on the ocean floor!':(pickerIdx===2?'Try the long leap. Jump, then puff again!':(pickerIdx===3?'Hold jump to fly. Let go to glide.':'Try A or Space beside a camel. B hops off!')));
   setTimeout(()=>showToast(msg),600);setTimeout(()=>{$('hint').style.opacity=0;},12000);}
 window.__startGame=startGame;
