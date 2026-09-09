@@ -2,6 +2,7 @@
 // Eligibility comes only from the authoritative equipped-skin selection.
 const WEB_SHOT=Object.freeze({speed:18,lifetime:1,range:16,cooldown:0.45,wrapTime:0.8,coneDeg:30,radius:0.18,maxShots:4});
 const webShots=[],webCaptures=[],webEvents=[];
+const webResourceStats={visualsCreated:0,visualsReleased:0,resourcesCreated:0,resourcesDisposed:0};
 let webShotCooldown=0,webSerial=0;
 
 function isWebHeroEquipped(){return skinSelection.snapshot().equipped==='web-hero';}
@@ -41,17 +42,26 @@ function webAim(origin){
   if(best){const dx=best.pose.x-origin.x,dy=best.pose.y-origin.y,dz=best.pose.z-origin.z,l=Math.hypot(dx,dy,dz)||1;return {x:dx/l,y:dy/l,z:dz/l,target:best};}
   return {x:fx,y:0,z:fz,target:null};
 }
+function ownWebVisual(g,resources){
+  const owned=[...new Set(resources.filter(Boolean))];g.userData.webResources=owned;g.userData.webReleased=false;
+  webResourceStats.visualsCreated++;webResourceStats.resourcesCreated+=owned.length;return g;
+}
+function releaseWebVisual(g){
+  if(!g||!g.userData||g.userData.webReleased)return false;g.userData.webReleased=true;if(g.parent)g.parent.remove(g);
+  for(const resource of g.userData.webResources||[]){if(resource&&typeof resource.dispose==='function'){resource.dispose();webResourceStats.resourcesDisposed++;}}
+  g.userData.webResources=[];webResourceStats.visualsReleased++;return true;
+}
 function webProjectileVisual(){
   const g=new THREE.Group(),white=new THREE.MeshBasicMaterial({color:0xffffff,transparent:true,opacity:0.95,depthWrite:false}),blue=new THREE.MeshBasicMaterial({color:0xbdeaff,transparent:true,opacity:0.8,depthWrite:false});
   g.add(mesh(SPH,white,0,0,0,0.17));
-  const ring=new THREE.Mesh(new THREE.TorusGeometry(0.2,0.025,5,16),blue);ring.rotation.x=Math.PI/2;g.add(ring);g.userData.webProjectile=true;return g;
+  const ring=new THREE.Mesh(new THREE.TorusGeometry(0.2,0.025,5,16),blue);ring.rotation.x=Math.PI/2;g.add(ring);g.userData.webProjectile=true;return ownWebVisual(g,[white,blue,ring.geometry]);
 }
 function webWrapVisual(family,pose){
   const g=new THREE.Group(),mat=new THREE.MeshBasicMaterial({color:0xffffff,transparent:true,opacity:0.92,wireframe:true,depthWrite:false}),edge=new THREE.MeshBasicMaterial({color:0x246db5,transparent:true,opacity:0.42,wireframe:true,depthWrite:false});
-  const backing=new THREE.Mesh(new THREE.SphereGeometry(1.035,14,10),edge);g.add(backing);
-  const shell=new THREE.Mesh(new THREE.SphereGeometry(1,14,10),mat);g.add(shell);
-  for(let i=0;i<3;i++){const ring=new THREE.Mesh(new THREE.TorusGeometry(1.01,0.035,6,28),mat);if(i===0)ring.rotation.x=Math.PI/2;if(i===1)ring.rotation.y=Math.PI/2;g.add(ring);}
-  g.position.set(pose.x,pose.y,pose.z);g.scale.set(Math.max(pose.r,0.48),Math.max(pose.h*0.58,0.5),Math.max(pose.r,0.48));g.userData={webWrap:true,family};scene.add(g);return g;
+  const backing=new THREE.Mesh(new THREE.SphereGeometry(1.035,14,10),edge),resources=[mat,edge,backing.geometry];g.add(backing);
+  const shell=new THREE.Mesh(new THREE.SphereGeometry(1,14,10),mat);resources.push(shell.geometry);g.add(shell);
+  for(let i=0;i<3;i++){const ring=new THREE.Mesh(new THREE.TorusGeometry(1.01,0.035,6,28),mat);resources.push(ring.geometry);if(i===0)ring.rotation.x=Math.PI/2;if(i===1)ring.rotation.y=Math.PI/2;g.add(ring);}
+  g.position.set(pose.x,pose.y,pose.z);g.scale.set(Math.max(pose.r,0.48),Math.max(pose.h*0.58,0.5),Math.max(pose.r,0.48));g.userData.webWrap=true;g.userData.family=family;ownWebVisual(g,resources);scene.add(g);return g;
 }
 function fireWebShot(input){
   if(!started||paused||won||P.dead||!isWebHeroEquipped()||webShotCooldown>0||webShots.length>=WEB_SHOT.maxShots)return false;
@@ -59,7 +69,7 @@ function fireWebShot(input){
   webShots.push({g,pos:new THREE.Vector3(origin.x,origin.y,origin.z),dir:aim,life:WEB_SHOT.lifetime,travel:0,input:input||'unknown'});webShotCooldown=WEB_SHOT.cooldown;
   webRecord('shot',{input:input||'unknown',aimFamily:aim.target&&aim.target.family.kind||null});SFX.webShot();return true;
 }
-function removeWebShot(i,reason){const s=webShots[i];if(s&&s.g&&s.g.parent)s.g.parent.remove(s.g);webShots.splice(i,1);if(reason)webRecord('shot-ended',{reason});}
+function removeWebShot(i,reason){const s=webShots[i];if(s)releaseWebVisual(s.g);webShots.splice(i,1);if(reason)webRecord('shot-ended',{reason});}
 function captureEnemy(target){
   const e=target.e;if(!target.family.ok(e)||e.webCaptured)return false;const pose=webPose(target.family.kind,e);
   const saved={alive:e.alive,visible:e.g.visible,state:e.state,vx:e.vx,vy:e.vy,vz:e.vz,wind:e.wind,spitT:e.spitT};
@@ -72,7 +82,7 @@ function restoreCaptured(c){
   for(const k of['vx','vy','vz','wind','spitT'])if(s[k]!==undefined)e[k]=s[k];
 }
 function finishCapture(i){
-  const c=webCaptures[i];if(!c||c.done)return;c.done=true;if(c.wrap&&c.wrap.parent)c.wrap.parent.remove(c.wrap);
+  const c=webCaptures[i];if(!c||c.done)return;c.done=true;releaseWebVisual(c.wrap);
   const e=c.e;e.webCaptured=false;e.alive=true;e.g.visible=true;c.family.defeat(e);
   // Shared dissolve handlers already awarded/released exactly once. The web's
   // wrap owns the visible exit, so suppress their later duplicate visual phase.
@@ -81,8 +91,8 @@ function finishCapture(i){
 }
 function clearWebState(restore,reason){
   const had=webShots.length||webCaptures.length;
-  for(const s of webShots)if(s.g&&s.g.parent)s.g.parent.remove(s.g);webShots.length=0;
-  for(const c of webCaptures){if(c.wrap&&c.wrap.parent)c.wrap.parent.remove(c.wrap);if(restore)restoreCaptured(c);else{c.e.webCaptured=false;c.e.alive=false;c.e.g.visible=false;}}webCaptures.length=0;webShotCooldown=0;
+  for(const s of webShots)releaseWebVisual(s.g);webShots.length=0;
+  for(const c of webCaptures){releaseWebVisual(c.wrap);if(restore)restoreCaptured(c);else{c.e.webCaptured=false;c.e.alive=false;c.e.g.visible=false;}}webCaptures.length=0;webShotCooldown=0;
   if(had)webRecord('cleanup',{reason:reason||'state-change',restored:!!restore});
 }
 function webTargetHit(x,y,z){
@@ -116,7 +126,7 @@ const _webBaseRespawn=respawn;
 respawn=function(){clearWebState(true,'respawn');return _webBaseRespawn();};
 window.__WEB_SHOT={
   constants:WEB_SHOT,
-  snapshot:()=>({equipped:isWebHeroEquipped(),available:started&&!paused&&!won&&!P.dead&&isWebHeroEquipped(),cooldown:+webShotCooldown.toFixed(3),shots:webShots.map(s=>({input:s.input,life:+s.life.toFixed(3),travel:+s.travel.toFixed(3)})),captures:webCaptures.map(c=>({family:c.family.kind,index:c.index,left:+c.left.toFixed(3),visible:!!(c.wrap&&c.wrap.visible)})),events:webEvents.slice()}),
+  snapshot:()=>({equipped:isWebHeroEquipped(),available:started&&!paused&&!won&&!P.dead&&isWebHeroEquipped(),cooldown:+webShotCooldown.toFixed(3),shots:webShots.map(s=>({input:s.input,life:+s.life.toFixed(3),travel:+s.travel.toFixed(3)})),captures:webCaptures.map(c=>({family:c.family.kind,index:c.index,left:+c.left.toFixed(3),visible:!!(c.wrap&&c.wrap.visible)})),resources:{...webResourceStats,liveVisuals:webResourceStats.visualsCreated-webResourceStats.visualsReleased,liveResources:webResourceStats.resourcesCreated-webResourceStats.resourcesDisposed},events:webEvents.slice()}),
   eligible:()=>webEligibleTargets().map(t=>({family:t.family.kind,index:t.index,x:t.pose.x,y:t.pose.y,z:t.pose.z})),
   evidenceAimAt:webEvidenceAimAt,
   clear:()=>clearWebState(true,'evidence-clear')

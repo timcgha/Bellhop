@@ -13,7 +13,7 @@ The candidate is the head of `feature/bh-007-web-hero-persistent-web-shot`. Its 
 | Projectile | 18 units/s, 1.0 s, 16-unit cap, 0.45 s cooldown, one target, no homing/piercing/AOE |
 | Aim and blocking | nearest eligible visible hostile in a 30° facing cone; sampled solid geometry blocks before target collision |
 | Capture | enemy is immediately inactive/non-hostile; procedural white enclosing wire-web remains 0.8 s; family defeat adapter then runs once and the enemy/effect disappear |
-| Cleanup | bounded shots; pause freezes; death, respawn, restart, menu and level exit clear transients; confirmed eligibility persists |
+| Cleanup | bounded shots; each projectile/wrap owns and exactly-once disposes its transient materials/geometries while excluding shared `SPH`; pause freezes; death, respawn, restart, menu and level exit clear transients; confirmed eligibility persists |
 
 ## Level/enemy matrix
 
@@ -32,10 +32,10 @@ The candidate is the head of `feature/bh-007-web-hero-persistent-web-shot`. Its 
 | --- | --- | --- |
 | AC-01 | preview/cancel/confirm, other-skin negative, storage success/unavailable-session behavior | real skin UI confirmation, persisted reload, cancelled preview negative |
 | AC-02 | KeyX, touch pointer binding, gamepad X/B coexistence and non-Hero X-as-B regression | browser KeyX, visible-coordinate touch X, emulated standard Gamepad API button 2; ordinary KeyW journey |
-| AC-03 | timed inactive wrap, stationary targets, family adapters, held-note and heart reward once-only checks | projected ordinary-camera wire-wrap inspection plus timestamp-faithful ready/projectile/wrapped/disappeared frame sequence |
+| AC-03 | timed inactive wrap, stationary targets, family adapters, held-note and heart reward once-only checks | projected ordinary-camera wire-wrap inspection plus requestAnimationFrame-frozen ready/projectile/wrapped/disappeared captures whose source state is recorded before each screenshot and confirmed unchanged after it |
 | AC-04 | real shark, saucer and snowman contact plus real goo-projectile update; heart loss and shoot-again | actual shark contact update → one-heart loss → KeyX capture journey |
 | AC-05 | exact eligible-family inventory for all levels, every adapter, Desert negative, solid blocking and explicit non-enemies | each level/family through actual browser input; Desert finite miss |
-| AC-06 | pause freeze, stale-input neutralization, death/respawn restoration, menu cleanup, skin switch, reload, temporary powers, 8.33/16.67/33.33 ms schedules | pause/resume timer freeze, menu/reload and temporary-power coexistence |
+| AC-06 | pause freeze, stale-input neutralization, death/respawn restoration, menu cleanup, skin switch, reload, temporary powers, 8.33/16.67/33.33 ms schedules; repeated miss/capture and interrupted-cleanup resource accounting | pause/resume timer freeze, menu/reload and temporary-power coexistence; repeated rendered captures return Three.js geometry memory to its starting value and balance every owned resource creation/disposal |
 | AC-07 | full `tests/run.js`; narrowed shared-input skin invariant; unchanged physics/movement/menu suites | complete mandatory PR workflow, including existing browser, movement and phone-menu jobs |
 | AC-08 | pending sponsor gameplay/visual judgment | direct exact-candidate images/sequence and playable PR preview after QA |
 
@@ -44,7 +44,7 @@ The candidate is the head of `feature/bh-007-web-hero-persistent-web-shot`. Its 
 - Local/final gates: `node build.js`; `node build.js --check`; `node tests/run.js`; `git diff --check`.
 - Focused deterministic log: `node tests/web-hero-web-shot.test.js` (also retained in the focused artifact).
 - Focused browser gate: `node tools/browser-web-hero-web-shot-verify.js` under Node 22 and GitHub-hosted Chrome/CDP.
-- Artifact: `web-hero-web-shot-browser`, containing `report.json`, `sequence-manifest.json`, deterministic log, the hashed generated `candidate-index.html`, the four-frame 1280×720 sequence, and readable-wrap images at CSS viewports 390×844 and 844×390. Image pixel dimensions reflect recorded DPR.
+- Artifact: `web-hero-web-shot-browser`, containing `report.json`, `sequence-manifest.json`, deterministic log, the hashed generated `candidate-index.html`, the four-frame 1280×720 sequence, and readable-wrap images at CSS viewports 390×844 and 844×390. The sequence rows bind each image to source state held stable across capture. Image pixel dimensions reflect recorded DPR.
 - The complete PR workflow remains authoritative for all mandatory existing jobs and exact run/job/attempt outcomes.
 
 ## Evidence limits

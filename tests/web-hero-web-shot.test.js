@@ -70,6 +70,31 @@ for(const row of matrix){
   if(!row.families.length){H.tap('KeyX',1);H.frames(75);ok(events(H,'shot').length===1&&events(H,'wrapped').length===0&&events(H,'shot-ended').some(e=>e.reason==='lifetime'||e.reason==='range'),'Desert deliberately supports fire/miss/finite cleanup without adding enemies');}
 }
 
+// Transient projectile and wrap GPU resources have explicit ownership. Normal
+// completion and repeated finite misses release each owned resource once; the
+// shared SPH geometry is deliberately absent from a projectile's owned set.
+{
+  const H=boot({autostart:false});equip(H,'web-hero');start(H,4);const before=H.window.__WEB_SHOT.snapshot().resources;
+  for(let i=0;i<8;i++){H.tap('KeyX',1);H.frames(75);ok(H.window.__WEB_SHOT.snapshot().resources.liveResources===0,'Desert repeated miss '+(i+1)+' releases its transient resources');}
+  const after=H.window.__WEB_SHOT.snapshot().resources;
+  ok(after.visualsCreated-before.visualsCreated===8&&after.visualsReleased-before.visualsReleased===8,'eight repeated shots create and release eight projectile visuals');
+  ok(after.resourcesCreated-before.resourcesCreated===24&&after.resourcesDisposed-before.resourcesDisposed===24,'eight repeated shots dispose two materials and one owned ring geometry each, but not shared SPH');
+}
+{
+  const H=boot({autostart:false});equip(H,'web-hero');start(H,0);const before=H.window.__WEB_SHOT.snapshot().resources;
+  for(let i=0;i<3;i++){const t=H.window.__WEB_SHOT.eligible().find(x=>x.family==='gloop');H.window.__WEB_SHOT.evidenceAimAt('gloop',t.index,1.5);H.tap('KeyX',1);H.frames(8);ok(H.window.__WEB_SHOT.snapshot().captures.some(x=>x.family==='gloop'),'repeated resource test captures Gloop '+(i+1));H.frames(55);ok(H.window.__WEB_SHOT.snapshot().resources.liveResources===0,'completed Gloop capture '+(i+1)+' releases projectile and wrap resources');}
+  const after=H.window.__WEB_SHOT.snapshot().resources;
+  ok(after.visualsCreated-before.visualsCreated===6&&after.visualsReleased-before.visualsReleased===6,'three captures release all three projectile and three wrap visuals');
+  ok(after.resourcesCreated-before.resourcesCreated===30&&after.resourcesDisposed-before.resourcesDisposed===30,'three captures dispose every uniquely owned projectile and wrap resource once');
+}
+{
+  const H=boot({autostart:false});equip(H,'web-hero');start(H,4);const before=H.window.__WEB_SHOT.snapshot().resources;H.tap('KeyX',1);H.frames(2);
+  ok(H.window.__WEB_SHOT.snapshot().resources.liveResources===3,'active projectile reports its two materials and owned ring geometry');
+  H.window.__WEB_SHOT.clear();const once=H.window.__WEB_SHOT.snapshot().resources;H.window.__WEB_SHOT.clear();const twice=H.window.__WEB_SHOT.snapshot().resources;
+  ok(once.resourcesDisposed-before.resourcesDisposed===3&&once.liveResources===0,'explicit state cleanup disposes an in-flight projectile');
+  ok(JSON.stringify(once)===JSON.stringify(twice),'repeated cleanup cannot dispose an already released visual twice');
+}
+
 // Solid scenery blocks before capture; target dummies, trapped sharks and all
 // friendly/scenery arrays remain outside eligibility.
 {
@@ -130,8 +155,9 @@ for(const held of[
   H.tapBtn('pauseResume');H.frames(55);ok(H.P.fire&&H.P.bubble&&H.P.hasSkyBlast&&H.P.hasStarBeam,'distinct web action does not consume temporary powers');
 }
 {
-  const H=boot({autostart:false});equip(H,'web-hero');start(H,0);const target=H.W.gloops[0];keyFireAt(H,'gloop');H.P.dead=true;H.P.deadT=.2;H.frames(2);
+  const H=boot({autostart:false});equip(H,'web-hero');start(H,0);const target=H.W.gloops[0],before=H.window.__WEB_SHOT.snapshot().resources;keyFireAt(H,'gloop');H.P.dead=true;H.P.deadT=.2;H.frames(2);
   ok(H.window.__WEB_SHOT.snapshot().captures.length===0&&target.alive&&target.g.visible,'death clears wrap and restores an unfinished captured enemy');
+  const deathResources=H.window.__WEB_SHOT.snapshot().resources;ok(deathResources.resourcesCreated-before.resourcesCreated===10&&deathResources.resourcesDisposed-before.resourcesDisposed===10&&deathResources.liveResources===0,'death releases one projectile and one active wrap without touching shared geometry');
   H.frames(15);ok(!H.P.dead&&H.window.__WEB_SHOT.snapshot().available,'respawn restores immediate Web Hero availability');
   keyFireAt(H,'gloop');H.tapBtn('pauseBtn');H.tapBtn('pauseMenu');
   ok(!H.isStarted()&&H.window.__WEB_SHOT.snapshot().shots.length===0&&H.window.__WEB_SHOT.snapshot().captures.length===0,'return to menu clears all transient web state');
