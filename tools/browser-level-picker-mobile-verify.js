@@ -130,6 +130,26 @@ async function gamepad(cdp,index){
   await cdp.evaluate('window.__bh006Gamepad.buttons['+index+'].pressed=true');await sleep(120);
   await cdp.evaluate('window.__bh006Gamepad.buttons['+index+'].pressed=false');await sleep(160);
 }
+async function verifyVerticalBoundaries(cdp,v,expectedColumns,label,move,activate){
+  await fresh(cdp,v);const columns=await cdp.evaluate('__pickerColumns()');
+  check(label+' uses displayed column count',columns===expectedColumns,{expected:expectedColumns,actual:columns});
+  for(let i=0;i<columns;i++){
+    await cdp.evaluate('__setPickerIdx('+i+')');await move('up');
+    check(label+' Up holds top-row column '+i,await cdp.evaluate('__pickerIdx()==='+i));
+  }
+  for(let i=6-columns;i<6;i++){
+    await cdp.evaluate('__setPickerIdx('+i+')');await move('down');
+    check(label+' Down holds bottom-row column '+(i-(6-columns)),await cdp.evaluate('__pickerIdx()==='+i));
+  }
+  for(let i=0;i<6-columns;i++){
+    await cdp.evaluate('__setPickerIdx('+i+')');await move('down');
+    check(label+' valid Down preserves column from '+i,await cdp.evaluate('__pickerIdx()==='+(i+columns)),{columns});
+    await move('up');check(label+' valid Up preserves column from '+(i+columns),await cdp.evaluate('__pickerIdx()==='+i),{columns});
+  }
+  await cdp.evaluate('__setPickerIdx('+(5-columns)+')');await move('down');await activate();
+  await waitFor(cdp,"__started()&&__LEVEL().id==='level6'",7000);
+  check(label+' vertical move retains activation mapping',true,{level:'level6'});
+}
 async function pauseToMenu(cdp,touchMode){
   if(touchMode)await touch(cdp,'pauseBtn');else await key(cdp,'Escape');
   await waitFor(cdp,"__paused()&&getComputedStyle(document.getElementById('pauseOverlay')).display==='flex'",5000);
@@ -201,6 +221,11 @@ async function main(){
       await gamepad(cdp,12);check('gamepad up follows displayed column',await cdp.evaluate('__pickerIdx()===0'),{columns});
       await gamepad(cdp,0);await waitFor(cdp,"__started()&&__LEVEL().id==='level1'",7000);await pauseToMenu(cdp,true);
     });
+    const portrait=matrix[4];
+    await scenario('keyboard three-column vertical boundaries',()=>verifyVerticalBoundaries(cdp,phone,3,'three-column landscape keyboard',direction=>key(cdp,direction==='up'?'ArrowUp':'ArrowDown'),()=>key(cdp,'Space')));
+    await scenario('keyboard two-column vertical boundaries',()=>verifyVerticalBoundaries(cdp,portrait,2,'two-column portrait keyboard',direction=>key(cdp,direction==='up'?'ArrowUp':'ArrowDown'),()=>key(cdp,'Space')));
+    await scenario('Gamepad three-column vertical boundaries',()=>verifyVerticalBoundaries(cdp,phone,3,'three-column landscape Gamepad',direction=>gamepad(cdp,direction==='up'?12:13),()=>gamepad(cdp,0)));
+    await scenario('Gamepad two-column vertical boundaries',()=>verifyVerticalBoundaries(cdp,portrait,2,'two-column portrait Gamepad',direction=>gamepad(cdp,direction==='up'?12:13),()=>gamepad(cdp,0)));
     await scenario('Skins confirmation/cancellation/persistence and sound control',async()=>{
       await fresh(cdp,phone);check('seven skin choices present',await cdp.evaluate("document.querySelectorAll('.skin-card').length===7"));
       await mouse(cdp,'skinsOpen');await waitFor(cdp,'__SKINS().open');await mouse(cdp,'skin-red');await mouse(cdp,'skinUse');

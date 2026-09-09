@@ -27,5 +27,48 @@ ok(/scale\(1\.035\)/.test(html)&&!/scale\(1\.12\)/.test(html),'selection pulse s
   press(12);ok(H.pickerIdx()===1,'gamepad Up follows the displayed column');
   press(0);ok(H.isStarted()&&H.getLevel().id==='level2','gamepad A activates the selected card');
 }
+function checkKeyboardVerticalBoundaries(width,height,columns,label){
+  const H=boot({innerWidth:width,innerHeight:height});
+  ok(H.window.__pickerColumns()===columns,label+' keyboard uses '+columns+' displayed columns');
+  for(let i=0;i<columns;i++){
+    H.window.__setPickerIdx(i);H.tap('ArrowUp');
+    ok(H.pickerIdx()===i,label+' keyboard Up holds top-row column '+i);
+  }
+  for(let i=6-columns;i<6;i++){
+    H.window.__setPickerIdx(i);H.tap('ArrowDown');
+    ok(H.pickerIdx()===i,label+' keyboard Down holds bottom-row column '+(i-(6-columns)));
+  }
+  for(let i=0;i<columns;i++){
+    H.window.__setPickerIdx(i);H.tap('ArrowDown');
+    ok(H.pickerIdx()===i+columns,label+' keyboard valid Down preserves column '+i);
+    H.tap('ArrowUp');ok(H.pickerIdx()===i,label+' keyboard valid Up preserves column '+i);
+  }
+  H.window.__setPickerIdx(columns-1);H.tap('ArrowDown');H.confirmStart();
+  ok(H.isStarted()&&H.getLevel().id==='level'+(columns*2),label+' keyboard vertical move retains activation mapping');
+}
+function checkGamepadVerticalBoundaries(width,height,columns,label){
+  const H=boot({innerWidth:width,innerHeight:height}),idle=Array(18).fill(false),press=index=>{const buttons=idle.slice();buttons[index]=true;H.gamepadTick(buttons);H.gamepadTick(idle);};
+  H.setGamepad(H.mkGamepad(idle));H.frames(1);
+  ok(H.window.__pickerColumns()===columns,label+' gamepad uses '+columns+' displayed columns');
+  for(let i=0;i<columns;i++){
+    H.window.__setPickerIdx(i);press(12);
+    ok(H.pickerIdx()===i,label+' gamepad Up holds top-row column '+i);
+  }
+  for(let i=6-columns;i<6;i++){
+    H.window.__setPickerIdx(i);press(13);
+    ok(H.pickerIdx()===i,label+' gamepad Down holds bottom-row column '+(i-(6-columns)));
+  }
+  for(let i=0;i<columns;i++){
+    H.window.__setPickerIdx(i);press(13);
+    ok(H.pickerIdx()===i+columns,label+' gamepad valid Down preserves column '+i);
+    press(12);ok(H.pickerIdx()===i,label+' gamepad valid Up preserves column '+i);
+  }
+  H.window.__setPickerIdx(columns-1);press(13);press(0);
+  ok(H.isStarted()&&H.getLevel().id==='level'+(columns*2),label+' gamepad vertical move retains activation mapping');
+}
+checkKeyboardVerticalBoundaries(844,390,3,'three-column landscape');
+checkKeyboardVerticalBoundaries(390,844,2,'two-column portrait');
+checkGamepadVerticalBoundaries(844,390,3,'three-column landscape');
+checkGamepadVerticalBoundaries(390,844,2,'two-column portrait');
 if(failures){console.log('\n'+failures+' FAILED');process.exit(1);}
 console.log('\nall passed');

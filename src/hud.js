@@ -44,7 +44,10 @@ function setPickerIdx(i){
   if(changed)touchArmed=false;
   updatePickerUI(changed);ensurePickerVisible();
 }
-function movePicker(dx,dy){setPickerIdx(pickerIdx+dx+dy*pickerColumns());}
+function movePicker(dx,dy){
+  if(dy){const next=pickerIdx+dy*pickerColumns();if(next<0||next>=LEVELS.length)return;setPickerIdx(next);return;}
+  setPickerIdx(pickerIdx+dx);
+}
 function tapLevelCard(i){
   if(started||(typeof isSkinPanelOpen==='function'&&isSkinPanelOpen()))return;
   // Touch needs two physical taps on the same card. Default Meadow highlight does not count.
