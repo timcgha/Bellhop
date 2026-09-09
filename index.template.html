@@ -93,7 +93,7 @@ body:not(.playing) #hint{opacity:0!important;pointer-events:none}
 #skinPreviewHost canvas{width:100%;height:100%}
 #skinName{text-align:center;font-size:21px;font-weight:900;line-height:1.3;padding:0 6px 10px;min-height:28px}
 .skin-options{display:flex;flex-direction:column;gap:12px;min-width:0}
-#skinCards{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px}
+#skinCards{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:8px}
 .skin-card{position:relative;min-width:0;min-height:100px;padding:4px;border:3px solid #aac6ce;border-radius:14px;background:#e9f6f7;cursor:pointer;color:#183e50;font:800 14px system-ui;touch-action:manipulation}
 .skin-card canvas{width:100%;height:62px;object-fit:contain;pointer-events:none}
 .skin-card.sel{border-color:#b17a00;background:#fff0b9;box-shadow:inset 0 0 0 1px #b17a00}
@@ -159,6 +159,7 @@ body:not(.playing) #hint{opacity:0!important;pointer-events:none}
 <button class="skin-card" id="skin-green" aria-pressed="false"><canvas id="skin-art-green" width="128" height="96" aria-hidden="true"></canvas><span>Green</span><span class="skin-check" id="skin-check-green" aria-hidden="true"></span></button>
 <button class="skin-card" id="skin-yellow" aria-pressed="false"><canvas id="skin-art-yellow" width="128" height="96" aria-hidden="true"></canvas><span>Yellow</span><span class="skin-check" id="skin-check-yellow" aria-hidden="true"></span></button>
 <button class="skin-card" id="skin-purple" aria-pressed="false"><canvas id="skin-art-purple" width="128" height="96" aria-hidden="true"></canvas><span>Purple</span><span class="skin-check" id="skin-check-purple" aria-hidden="true"></span></button>
+<button class="skin-card" id="skin-web-hero" aria-pressed="false"><canvas id="skin-art-web-hero" width="128" height="96" aria-hidden="true"></canvas><span>Web Hero</span><span class="skin-check" id="skin-check-web-hero" aria-hidden="true"></span></button>
 </div><p class="skin-help">Same robot. Your favorite colors.<br>Gamepad: Y opens Skins · B goes back</p>
 <div class="skin-actions"><button id="skinUse">Use Skin</button><button id="skinBack">Back</button></div>
 </div></div></div>

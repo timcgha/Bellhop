@@ -32,11 +32,12 @@ const sphere=new Sphere(points),original=Array.from(sphere.attributes.position.a
 const root=new O();root.scale.setScalar(.72);
 const jet=new O(new G(),new M({color:0x28d7ff})),flame=new O(new G(),new M({color:0xff7a1f}));
 root.add(jet);root.userData={jet,flame};
-const context={THREE:{Group:O,Mesh:O,TorusGeometry:G,MeshBasicMaterial:M},player:root,window:{},SPH:sphere,CYL:new G(),BOXG:new G(),pho:(c,s,sp)=>new M({color:c,shininess:s,specular:sp})};
+const context={THREE:{Group:O,Mesh:O,TorusGeometry:G,CircleGeometry:G,RingGeometry:G,MeshBasicMaterial:M},player:root,window:{},SPH:sphere,CYL:new G(),BOXG:new G(),pho:(c,s,sp)=>new M({color:c,shininess:s,specular:sp})};
 context.mesh=(g,m,x,y,z,sx,sy,sz)=>{const o=new O(g,m);o.position.set(x,y,z);o.scale.set(sx,sy??sx,sz??sx);return o;};
 vm.createContext(context);vm.runInContext(fs.readFileSync(path.join(__dirname,'../src/player-visual.js'),'utf8'),context);
 const preview=context.buildRobotVisual(new O());preview.scale.setScalar(.72);
 function eyeData(robot){return robot.userData.eyes.map(e=>({position:e.position,parts:e.children.map(m=>({position:m.position,scale:m.scale,color:m.material.color.getHex(),points:Array.from(m.geometry.attributes.position.array)}))}));}
+function eyeGeometry(robot){return robot.userData.eyes.map(e=>({position:e.position,parts:e.children.map(m=>({position:m.position,scale:m.scale,points:Array.from(m.geometry.attributes.position.array)}))}));}
 function inspect(robot,label){
   ok(robot.userData.eyes.length===2,label+' has two eyes');
   robot.userData.eyes.forEach((e,index)=>{
@@ -76,11 +77,12 @@ ok(sphere.normalUpdates===0,'shared world sphere normals are untouched');
 ok(root.userData.jet===jet&&jet.parent===root&&root.userData.flame===flame&&flame.parent===root.userData.head,'existing jet/flame identity and attachment survive');
 ok(root.userData.mouth.geometry===context.BOXG&&same(root.userData.mouth.position,new V(0,-.065,.455)),'existing mouth is preserved without adding or redesigning it');
 ok(same(root.scale,new V(.72,.72,.72))&&root.userData.visualStyle==='rounded-white-cyan-v57','robot identity and gameplay root scale remain unchanged');
-const before=eyeData(root);
+const before=eyeGeometry(root);
 for(const skin of ROBOT_SKINS){
   applyRobotSkin(root,skin.id);applyRobotSkin(preview,skin.id);
-  ok(same(eyeData(root),before),skin.id+' keeps the same static expression and contrast');
+  ok(same(eyeGeometry(root),before),skin.id+' keeps the same static smiling-eye geometry and expression');
   ok(same(eyeData(root),eyeData(preview)),skin.id+' matches preview and gameplay');
+  ok(root.userData.eyes.every(e=>e.children[0].material.color.getHex()===skin.eye&&e.children[1].material.color.getHex()===skin.eyeGlow),skin.id+' uses its authored high-contrast eye colors');
   ok(Object.entries(root.userData.skinMaterials).every(([role,mat])=>mat.color.getHex()===skin[role]),skin.id+' retains the authored palette');
   ok(root.userData.eyes.every((e,i)=>e.children.every((m,j)=>m.material!==preview.userData.eyes[i].children[j].material)),skin.id+' preview cannot mutate gameplay eye materials');
 }
