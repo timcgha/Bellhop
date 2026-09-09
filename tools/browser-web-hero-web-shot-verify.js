@@ -30,11 +30,25 @@ function waitForExit(proc,timeout){
   if(exited(proc))return Promise.resolve(true);
   return new Promise(resolve=>{let timer;const done=()=>{clearTimeout(timer);resolve(true);};proc.once('exit',done);timer=setTimeout(()=>{proc.removeListener('exit',done);resolve(exited(proc));},timeout);});
 }
-async function stopProcess(proc,name){
-  const row={name,pid:proc&&proc.pid||null,termSent:false,exitedAfterTerm:exited(proc),killSent:false,exitedAfterKill:false};
-  if(!row.exitedAfterTerm){try{row.termSent=proc.kill('SIGTERM');}catch(error){row.termError=error.message;}row.exitedAfterTerm=await waitForExit(proc,2000);}
-  if(!row.exitedAfterTerm){try{row.killSent=proc.kill('SIGKILL');}catch(error){row.killError=error.message;}row.exitedAfterKill=await waitForExit(proc,2000);}
-  row.exitCode=proc&&proc.exitCode;row.signalCode=proc&&proc.signalCode;row.ok=exited(proc);return row;
+function groupAlive(proc){
+  if(!proc||!proc.pid||process.platform==='win32')return false;
+  try{process.kill(-proc.pid,0);return true;}catch(error){if(error.code==='ESRCH')return false;throw error;}
+}
+async function waitForGroupExit(proc,timeout){const at=Date.now();while(groupAlive(proc)&&Date.now()-at<timeout)await sleep(50);return !groupAlive(proc);}
+function signalProcess(proc,signal,group){
+  if(group&&process.platform!=='win32'){try{process.kill(-proc.pid,signal);return true;}catch(error){if(error.code==='ESRCH')return false;throw error;}}
+  return proc.kill(signal);
+}
+async function stopProcess(proc,name,group=false){
+  const row={name,pid:proc&&proc.pid||null,group,termSent:false,exitedAfterTerm:false,killSent:false,exitedAfterKill:false};
+  try{
+    const complete=()=>exited(proc)&&(!group||!groupAlive(proc));row.exitedAfterTerm=complete();
+    if(!row.exitedAfterTerm){try{row.termSent=signalProcess(proc,'SIGTERM',group);}catch(error){row.termError=error.message;}await Promise.all([waitForExit(proc,2500),group?waitForGroupExit(proc,2500):Promise.resolve(true)]);row.exitedAfterTerm=complete();}
+    if(!row.exitedAfterTerm){try{row.killSent=signalProcess(proc,'SIGKILL',group);}catch(error){row.killError=error.message;}await Promise.all([waitForExit(proc,2500),group?waitForGroupExit(proc,2500):Promise.resolve(true)]);row.exitedAfterKill=complete();}
+  }catch(error){row.stopError=error.stack||String(error);}
+  row.exitCode=proc&&proc.exitCode;row.signalCode=proc&&proc.signalCode;
+  try{row.groupAlive=group?groupAlive(proc):false;}catch(error){row.groupAlive=null;row.groupProbeError=error.stack||String(error);}
+  row.ok=exited(proc)&&row.groupAlive===false&&!row.stopError&&!row.groupProbeError;return row;
 }
 async function connect(){
   const pages=await json('http://127.0.0.1:'+debugPort+'/json/list'),page=pages.find(p=>p.type==='page')||pages[0];if(!page)throw Error('no CDP page');
@@ -58,7 +72,7 @@ async function equip(c,id,touch=false){await click(c,'skinsOpen',touch);await wa
 async function startLevel(c,index,touch=false){await click(c,'lvl'+index,touch);if(!await c.ev('__started()'))await click(c,'lvl'+index,touch);await wait(c,"__started()&&__LEVEL().id==='level"+(index+1)+"'");}
 async function pauseMenu(c){await tapKey(c,'Escape');await wait(c,'__paused()');await click(c,'pauseMenu');await wait(c,'!__started()&&!__paused()');}
 async function wrapPixels(c){return c.ev("(()=>{const root=__PLAYER().parent,w=root.children.find(o=>o.userData&&o.userData.webWrap);if(!w)return null;const box=new THREE.Box3().setFromObject(w),center=box.getCenter(new THREE.Vector3()),size=box.getSize(new THREE.Vector3()),cam=new THREE.PerspectiveCamera(__CAM.fov||60,innerWidth/innerHeight,.1,220);cam.position.copy(__CAM.pos);cam.lookAt(__CAM.look);cam.updateMatrixWorld(true);cam.updateProjectionMatrix();const p=center.clone().project(cam),px=center.clone().add(new THREE.Vector3(size.x/2,0,0)).project(cam),py=center.clone().add(new THREE.Vector3(0,size.y/2,0)).project(cam);let meshes=0,wireframes=0;w.traverse(o=>{if(o.isMesh){meshes++;if(o.material&&o.material.wireframe)wireframes++;}});return {center:p,widthPx:Math.abs(px.x-p.x)*innerWidth,heightPx:Math.abs(py.y-p.y)*innerHeight,meshes,wireframes,visible:w.visible!==false};})()");}
-async function touchLayout(c,label){const state=await c.ev("(()=>{const ids=['bA','bB','bY','bX'],boxes=ids.map(id=>{const e=document.getElementById(id),r=e.getBoundingClientRect();return {id,left:r.left,top:r.top,right:r.right,bottom:r.bottom,width:r.width,height:r.height,display:getComputedStyle(e).display}}),hits=[];for(let i=0;i<boxes.length;i++)for(let j=i+1;j<boxes.length;j++){const a=boxes[i],b=boxes[j],area=Math.max(0,Math.min(a.right,b.right)-Math.max(a.left,b.left))*Math.max(0,Math.min(a.bottom,b.bottom)-Math.max(a.top,b.top));if(area>.5)hits.push({a:a.id,b:b.id,area});}return {viewport:{width:innerWidth,height:innerHeight},boxes,hits};})()");assert(state.boxes.every(b=>b.display!=='none'&&b.width>=60&&b.height>=60&&b.left>=0&&b.top>=0&&b.right<=state.viewport.width&&b.bottom<=state.viewport.height)&&state.hits.length===0,label+' touch actions visible, in bounds and separated',state);return state;}
+async function touchLayout(c,label){const state=await c.ev("(()=>{const ids=['bA','bB','bY','bX'],boxes=ids.map(id=>{const e=document.getElementById(id),r=e.getBoundingClientRect();return {id,left:r.left,top:r.top,right:r.right,bottom:r.bottom,width:r.width,height:r.height,display:getComputedStyle(e).display}}),hits=[];for(let i=0;i<boxes.length;i++)for(let j=i+1;j<boxes.length;j++){const a=boxes[i],b=boxes[j],area=Math.max(0,Math.min(a.right,b.right)-Math.max(a.left,b.left))*Math.max(0,Math.min(a.bottom,b.bottom)-Math.max(a.top,b.top));if(area>.5)hits.push({a:a.id,b:b.id,area});}return {viewport:{width:innerWidth,height:innerHeight},boxes,hits,newActionHits:hits.filter(x=>x.a==='bX'||x.b==='bX')};})()");assert(state.boxes.every(b=>b.display!=='none'&&b.width>=60&&b.height>=60&&b.left>=0&&b.top>=0&&b.right<=state.viewport.width&&b.bottom<=state.viewport.height)&&state.newActionHits.length===0,label+' touch actions visible/in bounds and new X separated',state);return state;}
 async function captureFamily(c,family,input,label,screenshot){
   const target=await c.ev('__WEB_SHOT.eligible().find(t=>t.family==='+JSON.stringify(family)+')');assert(target,'eligible '+family,target);
   const aimed=await c.ev('__WEB_SHOT.evidenceAimAt('+JSON.stringify(family)+','+target.index+',4.5)');assert(aimed,'positioning fixture aimed '+family,aimed);await sleep(260);
@@ -79,7 +93,7 @@ async function sequence(c){
   const types=report.sequence.flatMap(x=>x.eventTail.map(e=>e.type));assert(types.includes('shot')&&types.includes('wrapped')&&types.includes('disappeared'),'timestamp-faithful sequence includes shot → wrap → disappearance',report.sequence);return {target:t,pixels};
 }
 async function main(){
-  fs.rmSync(profile,{recursive:true,force:true,maxRetries:5,retryDelay:200});let chromeError='';const server=spawn('python3',['-m','http.server',String(port),'--bind','127.0.0.1'],{cwd:dist,stdio:'ignore'}),browser=spawn(chrome,['--headless=new','--remote-debugging-address=127.0.0.1','--remote-debugging-port='+debugPort,'--user-data-dir='+profile,'--no-sandbox','--disable-dev-shm-usage','--no-first-run','--no-default-browser-check','--disable-background-networking','--enable-webgl','--ignore-gpu-blocklist','--use-angle=swiftshader','about:blank'],{stdio:['ignore','ignore','pipe']});if(browser.stderr)browser.stderr.on('data',d=>chromeError=(chromeError+d).slice(-12000));let c;
+  fs.rmSync(profile,{recursive:true,force:true,maxRetries:10,retryDelay:250});let chromeError='';const server=spawn('python3',['-m','http.server',String(port),'--bind','127.0.0.1'],{cwd:dist,stdio:'ignore'}),browser=spawn(chrome,['--headless=new','--remote-debugging-address=127.0.0.1','--remote-debugging-port='+debugPort,'--user-data-dir='+profile,'--no-sandbox','--disable-dev-shm-usage','--no-first-run','--no-default-browser-check','--disable-background-networking','--enable-webgl','--ignore-gpu-blocklist','--use-angle=swiftshader','about:blank'],{stdio:['ignore','ignore','pipe'],detached:process.platform!=='win32'});if(browser.stderr)browser.stderr.on('data',d=>chromeError=(chromeError+d).slice(-12000));let c;
   try{
     let version;for(let i=0;i<100&&!version;i++){if(browser.exitCode!==null)throw Error('Chrome exited '+browser.exitCode+' '+chromeError);try{version=await json('http://127.0.0.1:'+debugPort+'/json/version');}catch(error){await sleep(160);}}if(!version)throw Error('Chrome CDP not ready '+chromeError);report.runtime.protocol=version;c=await connect();
     await c.send('Page.addScriptToEvaluateOnNewDocument',{source:"(()=>{const buttons=Array.from({length:18},()=>({pressed:false,touched:false,value:0}));window.__bh007Pad={id:'BH-007 virtual standard gamepad',index:0,connected:true,mapping:'standard',timestamp:0,axes:[0,0,0,0],buttons};Object.defineProperty(navigator,'getGamepads',{configurable:true,value:()=>[window.__bh007Pad]});})();"});
@@ -100,8 +114,8 @@ async function main(){
   finally{
     report.evidenceCheckpointAt=new Date().toISOString();
     try{writeEvidence();}catch(error){report.preCleanupWriteError=error.stack||String(error);}
-    if(c)c.close();report.teardown=await Promise.all([stopProcess(browser,'chrome'),stopProcess(server,'http-server')]);
-    try{fs.rmSync(profile,{recursive:true,force:true,maxRetries:5,retryDelay:200});report.teardown.push({name:'profile',path:profile,ok:true});}
+    if(c)c.close();report.teardown=await Promise.all([stopProcess(browser,'chrome',true),stopProcess(server,'http-server')]);await sleep(500);
+    try{fs.rmSync(profile,{recursive:true,force:true,maxRetries:10,retryDelay:250});report.teardown.push({name:'profile',path:profile,ok:true});}
     catch(error){report.teardown.push({name:'profile',path:profile,ok:false,error:error.stack||String(error)});}
     for(const row of report.teardown)if(!row.ok)check('browser teardown '+row.name,false,row);
     report.finishedAt=new Date().toISOString();if(report.failures.length)report.status='FAIL';
