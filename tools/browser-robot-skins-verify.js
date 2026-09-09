@@ -85,9 +85,11 @@ async function eyeProof(c,gameplayId,previewRequired=false,previewId=gameplayId)
   return {...stats,previewMatches:previewRequired,neutralRejected};
 }
 async function faceForward(c){
-  // Real controls move clear of the checkpoint; no player/camera teleport or zoom.
-  await hold(c,['KeyD'],550);await hold(c,['KeyS'],450);
+  // Real controls move beyond the entrance hedge, then briefly face the ordinary
+  // follow camera; no player/camera teleport, zoom, or acceptance-state injection.
+  await hold(c,['KeyW'],1250);await wait(c,'__P.pos.z<8');await hold(c,['KeyS'],180);await sleep(350);
   await wait(c,'__PLAYER().visible&&__PLAYER().userData.eyes.every(e=>e.scale.y>.99)');
+  return {method:'real KeyW movement beyond the entrance hedge, then real KeyS turn toward the ordinary follow camera',forwardMs:1250,faceCameraMs:180};
 }
 
 async function connect(){
@@ -212,8 +214,8 @@ async function selector(c,w,h,result){
   await open(c,touch);await tap(c,'skin-red',touch);await tapKey(c,'Escape');await checkClosed(c);await appearance(c,original);
   let gamepad=null;if(!touch)gamepad=await browserGamepad(c);else await equip(c,'web-hero',touch);
   assert(await c.ev(`localStorage.getItem(${JSON.stringify(ROBOT_SKIN_KEY)})==='web-hero'`),'confirm did not persist Web Hero');await navigate(c);await appearance(c,'web-hero');await open(c,touch);await checkPreview(c,'web-hero','web-hero');await tap(c,'skinBack',touch);
-  await start(c,0,touch);await appearance(c,'web-hero');const active=await movement(c);await faceForward(c);const gameplayFrame=await gameplayFraming(c);assert(gameplayFrame.visible&&Math.abs(gameplayFrame.x)<.9&&Math.abs(gameplayFrame.y)<.9&&gameplayFrame.z>0&&gameplayFrame.z<1,'ordinary gameplay framing failed '+JSON.stringify(gameplayFrame));await c.shot('web-hero-gameplay-'+w+'x'+h);const deathRespawn=!touch?await naturalDeathRespawn(c):null;await menu(c,touch);
-  result.viewports.push({viewport:w+'x'+h,status:'PASS',interaction:touch?'CDP touch emulation':'CDP mouse, keyboard and Gamepad API emulation',invalidStorageFallback:true,confirmCancel:true,reload:true,keyboardBothDirections:true,visibleFocus:focus,gamepad,targets:geometry.controls,menuPreviewFraming:framed,gameplayFraming:gameplayFrame,movement:active,deathRespawn,previewSceneUnchanged:true});
+  await start(c,0,touch);await appearance(c,'web-hero');const active=await movement(c),ordinaryViewRoute=await faceForward(c);const gameplayFrame=await gameplayFraming(c);assert(gameplayFrame.visible&&Math.abs(gameplayFrame.x)<.9&&Math.abs(gameplayFrame.y)<.9&&gameplayFrame.z>0&&gameplayFrame.z<1,'ordinary gameplay framing failed '+JSON.stringify(gameplayFrame));await c.shot('web-hero-gameplay-'+w+'x'+h);const deathRespawn=!touch?await naturalDeathRespawn(c):null;await menu(c,touch);
+  result.viewports.push({viewport:w+'x'+h,status:'PASS',interaction:touch?'CDP touch emulation':'CDP mouse, keyboard and Gamepad API emulation',invalidStorageFallback:true,confirmCancel:true,reload:true,keyboardBothDirections:true,visibleFocus:focus,gamepad,targets:geometry.controls,menuPreviewFraming:framed,gameplayFraming:gameplayFrame,ordinaryViewRoute,movement:active,deathRespawn,previewSceneUnchanged:true});
 }
 async function main(){
   fs.rmSync(profile,{recursive:true,force:true});
