@@ -106,7 +106,9 @@ const keyMap={Space:[' ',32],Enter:['Enter',13],Escape:['Escape',27],Tab:['Tab',
 async function key(c,code,down,modifiers=0){const [k,v]=keyMap[code];await c.send('Input.dispatchKeyEvent',{type:down?'keyDown':'keyUp',key:k,code,modifiers,windowsVirtualKeyCode:v,nativeVirtualKeyCode:v,text:down&&k.length===1?k:undefined});}
 async function tapKey(c,code,ms=60,modifiers=0){await key(c,code,true,modifiers);await sleep(ms);await key(c,code,false,modifiers);await sleep(100);}
 async function hold(c,codes,ms){for(const code of codes)await key(c,code,true);await sleep(ms);for(const code of codes.reverse())await key(c,code,false);await sleep(80);}
-async function padTap(c,index,ms=130){await c.ev(`__BH005PadButton(${index},true)`);await sleep(ms);await c.ev(`__BH005PadButton(${index},false)`);await sleep(ms);}
+async function padUntil(c,index,expr,ms=1800){
+  await c.ev(`__BH005PadButton(${index},true)`);try{await wait(c,expr,ms);}finally{await c.ev(`__BH005PadButton(${index},false)`);}await sleep(160);
+}
 async function tap(c,id,touch=false){
   const r=await c.ev(`(()=>{const el=document.getElementById(${JSON.stringify(id)});el.scrollIntoView({block:'center',inline:'nearest'});const r=el.getBoundingClientRect();return {x:r.left+r.width/2,y:r.top+r.height/2,w:r.width,h:r.height};})()`);
   assert(r.w>0&&r.h>0,'hidden control '+id);
@@ -136,11 +138,11 @@ async function previewFraming(c){return c.ev('__BH005PreviewFraming()');}
 async function gameplayFraming(c){return c.ev(`(()=>{const p=__PLAYER(),cam=new THREE.PerspectiveCamera(__CAM.fov||60,innerWidth/innerHeight,.1,220);cam.position.copy(__CAM.pos);cam.lookAt(__CAM.look);cam.updateMatrixWorld(true);cam.updateProjectionMatrix();const v=new THREE.Vector3(p.position.x,p.position.y+.58,p.position.z).project(cam);return {x:v.x,y:v.y,z:v.z,visible:p.visible,mode:__CAM.mode,w:innerWidth,h:innerHeight};})()`);}
 async function focusState(c){return c.ev(`(()=>{const e=document.activeElement,s=e&&getComputedStyle(e);return {id:e&&e.id,outline:s&&s.outline,outlineWidth:s&&s.outlineWidth,outlineStyle:s&&s.outlineStyle};})()`);}
 async function browserGamepad(c){
-  assert(!await c.ev('__started()'),'gamepad route began during gameplay');await padTap(c,3);await wait(c,'__SKINS().open');
-  for(let i=0;i<6;i++)await padTap(c,15);
+  assert(!await c.ev('__started()'),'gamepad route began during gameplay');await padUntil(c,3,'__SKINS().open');
+  for(const id of ['red','blue','green','yellow','purple','web-hero'])await padUntil(c,15,`document.activeElement.id==='skin-${id}'`);
   let s=await skins(c),focus=await focusState(c);assert(s.pending==='web-hero'&&focus.id==='skin-web-hero','emulated gamepad did not reach seventh skin '+JSON.stringify({s,focus}));
-  await padTap(c,14);s=await skins(c);focus=await focusState(c);assert(s.pending==='purple'&&focus.id==='skin-purple','emulated gamepad reverse traversal failed');
-  await padTap(c,15);await padTap(c,15);focus=await focusState(c);assert(focus.id==='skinUse','emulated gamepad did not reach Use Skin');await padTap(c,0);await wait(c,'!__SKINS().open');await appearance(c,'web-hero');
+  await padUntil(c,14,`document.activeElement.id==='skin-purple'`);s=await skins(c);focus=await focusState(c);assert(s.pending==='purple'&&focus.id==='skin-purple','emulated gamepad reverse traversal failed');
+  await padUntil(c,15,`document.activeElement.id==='skin-web-hero'`);await padUntil(c,15,`document.activeElement.id==='skinUse'`);focus=await focusState(c);assert(focus.id==='skinUse','emulated gamepad did not reach Use Skin');await padUntil(c,0,'!__SKINS().open');await appearance(c,'web-hero');
   return {method:'browser-level emulated standard Gamepad API; real application requestAnimationFrame polling/input path',forward:6,reverse:1,activation:'A',status:'PASS'};
 }
 async function open(c,touch=false){await tap(c,'skinsOpen',touch);await wait(c,'__SKINS().open&&!!__SKINS().preview');}
