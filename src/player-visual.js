@@ -16,6 +16,16 @@ function buildRobotVisual(player){
   const blue=pho(0x168cff,165,0x9bdfff);
   const visorMat=pho(0x071723,190,0x3d718d);
   const joint=pho(0x263746,90,0x7c9aaa);
+  // These owned materials normally match the established palette. Keeping
+  // them separate lets Web Hero use a red mask and white eyes without
+  // recoloring cuffs, ability signals, or any world material.
+  const headPanel=pho(0xf7fbff,170,0xffffff);
+  const headSoft=pho(0xdceaf3,125,0xffffff);
+  const headAccent=pho(0x168cff,165,0x9bdfff);
+  const eye=pho(0x28d7ff,180,0xc8f8ff);
+  const eyeGlow=new THREE.MeshBasicMaterial({color:0xbaf7ff});
+  const badgeBack=pho(0x1253a4,120,0x85c9ff);
+  const badgeMark=new THREE.MeshBasicMaterial({color:0xffffff});
   const seamSilver=0xc9ced4;
 
   const legL=new THREE.Group(),legR=new THREE.Group();
@@ -37,6 +47,19 @@ function buildRobotVisual(player){
   bel.add(mesh(SPH,white,0,0.50,0,0.33,0.09,0.33));
   const chest=mesh(SPH,blue,0,0.31,0.315,0.17,0.14,0.055);bel.add(chest);
   const chestGlow=mesh(SPH,new THREE.MeshBasicMaterial({color:0x6be8ff}),0,0.31,0.357,0.075,0.055,0.018);bel.add(chestGlow);
+  // Original Bellhop arachnid badge: a project-owned circle plus a simple,
+  // deliberately generic eight-legged silhouette assembled from primitives.
+  const badge=new THREE.Group();badge.position.set(0,0.31,0.376);
+  const badgeCircle=new THREE.Mesh(new THREE.CircleGeometry(0.155,32),badgeBack);badge.add(badgeCircle);
+  const badgeRing=new THREE.Mesh(new THREE.RingGeometry(0.137,0.155,32),badgeMark);badgeRing.position.z=0.003;badge.add(badgeRing);
+  const spiderBody=mesh(SPH,badgeMark,0,-0.008,0.010,0.027,0.059,0.012);
+  const spiderHead=mesh(SPH,badgeMark,0,0.058,0.010,0.025,0.025,0.012);badge.add(spiderBody);badge.add(spiderHead);
+  const spiderLegs=[];
+  [[-0.066,0.050,-0.62],[0.066,0.050,0.62],[-0.073,0.020,-0.25],[0.073,0.020,0.25],
+    [-0.073,-0.018,0.25],[0.073,-0.018,-0.25],[-0.062,-0.052,0.62],[0.062,-0.052,-0.62]].forEach(a=>{
+    const leg=mesh(BOXG,badgeMark,a[0],a[1],0.010,0.078,0.014,0.010);leg.rotation.z=a[2];badge.add(leg);spiderLegs.push(leg);
+  });
+  badge.visible=false;bel.add(badge);
   const seams=[];
   [0.14,0.29,0.44].forEach(y=>{
     const r=new THREE.Mesh(new THREE.TorusGeometry(0.337,0.014,7,24),pho(seamSilver,100,0xffffff));
@@ -44,10 +67,10 @@ function buildRobotVisual(player){
   });
 
   const head=new THREE.Group();head.position.y=0.87;player.add(head);
-  head.add(mesh(SPH,white,0,0.15,0,0.46,0.37,0.41));
-  head.add(mesh(SPH,whiteSoft,0,-0.09,-0.005,0.39,0.20,0.35));
-  const sideL=mesh(SPH,blue,-0.425,0.13,0,0.065,0.145,0.17);
-  const sideR=mesh(SPH,blue,0.425,0.13,0,0.065,0.145,0.17);
+  head.add(mesh(SPH,headPanel,0,0.15,0,0.46,0.37,0.41));
+  head.add(mesh(SPH,headSoft,0,-0.09,-0.005,0.39,0.20,0.35));
+  const sideL=mesh(SPH,headAccent,-0.425,0.13,0,0.065,0.145,0.17);
+  const sideR=mesh(SPH,headAccent,0.425,0.13,0,0.065,0.145,0.17);
   head.add(sideL);head.add(sideR);
 
   const visor=mesh(SPH,visorMat,0,0.14,0.39,0.365,0.205,0.075);head.add(visor);
@@ -64,8 +87,8 @@ function buildRobotVisual(player){
   const eyes=[];
   [-0.14,0.14].forEach(x=>{
     const e=new THREE.Group();e.position.set(x,0.17,0.472);
-    e.add(mesh(eyeShape,cyan,0,0,0,0.066,0.041,0.024));
-    e.add(mesh(eyeShape,new THREE.MeshBasicMaterial({color:0xbaf7ff}),0,0,0.018,0.032,0.020,0.010));
+    e.add(mesh(eyeShape,eye,0,0,0,0.066,0.041,0.024));
+    e.add(mesh(eyeShape,eyeGlow,0,0,0.018,0.032,0.020,0.010));
     head.add(e);eyes.push(e);
   });
   const mouth=mesh(BOXG,joint,0,-0.065,0.455,0.16,0.05,0.03);head.add(mouth);
@@ -106,9 +129,11 @@ function buildRobotVisual(player){
   if(flame){head.add(flame);flame.position.y=0.92;}
   player.userData={
     legL,legR,bel,head,eyes,mouth,armL,armR,seams,wings,
-    jet,flame,visor,antenna,antennaTip,chest,
+    jet,flame,visor,antenna,antennaTip,chest,chestGlow,badge,
     visualStyle:'rounded-white-cyan-v57',
-    skinMaterials:{panel:white,soft:whiteSoft,accent:blue,joint}
+    skinMaterials:{panel:white,soft:whiteSoft,accent:blue,joint},
+    skinSpecialMaterials:{headPanel,headSoft,headAccent,eye,eyeGlow,badgeBack,badgeMark},
+    skinSpecialParts:{chest,chestGlow,badge,badgeCircle,badgeRing,spiderBody,spiderHead,spiderLegs}
   };
 
   return player;

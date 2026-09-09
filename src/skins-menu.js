@@ -7,8 +7,15 @@ function skinMaterialColors(root){
   const mats=root&&root.userData.skinMaterials;if(!mats)return null;
   const out={};for(const role of Object.keys(mats))out[role]=mats[role].color.getHex();return out;
 }
+function skinSpecialState(root){
+  const u=root&&root.userData,m=u&&u.skinSpecialMaterials,p=u&&u.skinSpecialParts;if(!m||!p)return null;
+  const colors={};for(const role of Object.keys(m))colors[role]=m[role].color.getHex();
+  return {colors,badgeVisible:p.badge.visible,chestVisible:p.chest.visible,chestGlowVisible:p.chestGlow.visible,
+    badge:{circle:p.badgeCircle.geometry&&p.badgeCircle.geometry.uuid||null,ring:p.badgeRing.geometry&&p.badgeRing.geometry.uuid||null,legs:p.spiderLegs.length,
+      construction:'bellhop-simple-geometry-v1'}};
+}
 function skinButtons(){return ROBOT_SKINS.map(s=>$('skin-'+s.id)).concat([$('skinUse'),$('skinBack')]);}
-function focusSkinButton(index){const b=skinButtons()[clamp(index,0,7)];if(b&&b.focus)b.focus();}
+function focusSkinButton(index){const buttons=skinButtons(),b=buttons[clamp(index,0,buttons.length-1)];if(b&&b.focus)b.focus();}
 function updateSkinCards(){
   const state=skinSelection.snapshot();
   for(const skin of ROBOT_SKINS){
@@ -45,7 +52,7 @@ function createSkinPreview(){
   const materials=new Set(),geometries=new Set(),shared=new Set([BOXG,SPH,CYL,CONE]);
   robot.traverse(o=>{if(o.material)materials.add(o.material);if(o.geometry&&!shared.has(o.geometry))geometries.add(o.geometry);});
   skinPreview={renderer:r,scene:world,robot,camera,center,size,materials,geometries,renders:0};
-  // All six illustrations are renders of the same robot and material definitions.
+  // All seven illustrations are renders of the same robot and owned materials.
   r.setSize(128,96,false);camera.aspect=128/96;
   const distance=Math.max(size.y,size.x/camera.aspect)/(2*Math.tan(camera.fov*Math.PI/360))*1.18;
   camera.position.set(center.x+distance*0.28,center.y+distance*0.12,center.z+distance);camera.lookAt(center);camera.updateProjectionMatrix();
@@ -84,16 +91,16 @@ function handleSkinKey(e){
   if(e.code==='Tab'){
     e.preventDefault();focusSkinButton((at+(e.shiftKey?-1:1)+buttons.length)%buttons.length);return;
   }
-  const delta={ArrowLeft:-1,ArrowRight:1,ArrowUp:-3,ArrowDown:3}[e.code];
-  if(delta){e.preventDefault();const next=clamp(Math.max(at,0)+delta,0,7);focusSkinButton(next);if(next<6)chooseSkin(ROBOT_SKINS[next].id);}
+  const delta={ArrowLeft:-1,ArrowRight:1,ArrowUp:-4,ArrowDown:4}[e.code];
+  if(delta){e.preventDefault();const next=clamp(Math.max(at,0)+delta,0,buttons.length-1);focusSkinButton(next);if(next<ROBOT_SKINS.length)chooseSkin(ROBOT_SKINS[next].id);}
   // Enter and Space retain the focused button's native activation behavior.
 }
 function handleSkinGamepad(b,axes,edge){
   if(edge(1)){closeSkins(false);return;}
-  const direction=b[14]?-1:b[15]?1:b[12]?-3:b[13]?3:Math.abs(axes[0]||0)>0.55?Math.sign(axes[0]):Math.abs(axes[1]||0)>0.55?Math.sign(axes[1])*3:0;
+  const direction=b[14]?-1:b[15]?1:b[12]?-4:b[13]?4:Math.abs(axes[0]||0)>0.55?Math.sign(axes[0]):Math.abs(axes[1]||0)>0.55?Math.sign(axes[1])*4:0;
   if(direction&&direction!==skinPadDirection){
-    const at=skinButtons().indexOf(document.activeElement),next=clamp(Math.max(at,0)+direction,0,7);
-    focusSkinButton(next);if(next<6)chooseSkin(ROBOT_SKINS[next].id);
+    const buttons=skinButtons(),at=buttons.indexOf(document.activeElement),next=clamp(Math.max(at,0)+direction,0,buttons.length-1);
+    focusSkinButton(next);if(next<ROBOT_SKINS.length)chooseSkin(ROBOT_SKINS[next].id);
   }
   skinPadDirection=direction;
   if(edge(0)){const el=document.activeElement;if(skinButtons().includes(el)&&el.click)el.click();}
@@ -107,6 +114,6 @@ for(const skin of ROBOT_SKINS)bindSkinButton('skin-'+skin.id,()=>chooseSkin(skin
 bindSkinButton('skinUse',()=>closeSkins(true));bindSkinButton('skinBack',()=>closeSkins(false));
 $('skinsOverlay').addEventListener('pointerdown',e=>e.stopPropagation());
 addEventListener('resize',renderSkinPreview);
-window.__SKINS=()=>({...skinSelection.snapshot(),gameplay:skinMaterialColors(player),
-  preview:skinPreview?{colors:skinMaterialColors(skinPreview.robot),roots:skinPreview.scene.children.length,materials:skinPreview.materials.size,geometries:skinPreview.geometries.size,renders:skinPreview.renders}:null,
+window.__SKINS=()=>({...skinSelection.snapshot(),gameplay:skinMaterialColors(player),gameplaySpecial:skinSpecialState(player),
+  preview:skinPreview?{colors:skinMaterialColors(skinPreview.robot),special:skinSpecialState(skinPreview.robot),roots:skinPreview.scene.children.length,materials:skinPreview.materials.size,geometries:skinPreview.geometries.size,renders:skinPreview.renders}:null,
   renderLoops:0,lastDisposal:lastSkinDisposal});

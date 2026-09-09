@@ -97,6 +97,7 @@ module.exports = function boot(opts = {}) {
   }
 
   const els = {};
+  let activeElement = null;
   function canvasStub() {
     return {
       width: 160, height: 100, style: {},
@@ -116,6 +117,8 @@ module.exports = function boot(opts = {}) {
         id, listeners: {}, style: {}, textContent: '',
         classList: { add() {}, remove() {}, toggle() {} },
         addEventListener(t, f) { (this.listeners[t] = this.listeners[t] || []).push(f); },
+        focus() { activeElement = this; },
+        click() { for (const f of this.listeners.click || []) f({ stopPropagation() {}, preventDefault() {} }); },
         setPointerCapture() {},
         querySelector(sel) {
           if (sel === '.lvl-art') return canvasStub();
@@ -147,6 +150,7 @@ module.exports = function boot(opts = {}) {
     addEventListener(t, f) { (winListeners[t] = winListeners[t] || []).push(f); },
     document: {
       getElementById: el,
+      get activeElement() { return activeElement; },
       body: { classList: { add() {}, remove() {}, toggle() {} }, appendChild() {} },
       createElement() { return pf(); },
       addEventListener() {}
@@ -169,12 +173,13 @@ module.exports = function boot(opts = {}) {
   vm.runInContext(src, ctx);
 
   const P = window.__P, W = window.__W, CAM = window.__CAM;
-  function fireKey(type, code) {
+  function fireKey(type, event) {
     const list = winListeners[type] || [];
-    for (const f of list) f({ code, preventDefault() {}, repeat: false });
+    const supplied = typeof event === 'string' ? { code: event } : event;
+    for (const f of list) f({ ...supplied, preventDefault() {}, repeat: false });
   }
-  const kd = (e) => fireKey('keydown', e.code || e);
-  const ku = (e) => fireKey('keyup', e.code || e);
+  const kd = (e) => fireKey('keydown', e);
+  const ku = (e) => fireKey('keyup', e);
   let now = 0;
 
   function step(ms) {

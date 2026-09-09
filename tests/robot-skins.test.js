@@ -5,7 +5,12 @@ let failures=0;
 function ok(c,m){console.log((c?'PASS ':'FAIL ')+m);if(!c)failures++;}
 const equal=(a,b)=>JSON.stringify(a)===JSON.stringify(b);
 const memory=initial=>{const values={...initial},writes=[];return {values,writes,getItem:k=>values[k]??null,setItem(k,v){values[k]=v;writes.push([k,v]);}};};
-ok(equal(ROBOT_SKINS.map(s=>s.name),['Classic','Red','Blue','Green','Yellow','Purple']),'exactly six authored palettes');
+ok(equal(ROBOT_SKINS.map(s=>[s.id,s.name]),[['classic','Classic'],['red','Red'],['blue','Blue'],['green','Green'],['yellow','Yellow'],['purple','Purple'],['web-hero','Web Hero']]),'exactly seven stable authored choices including Web Hero');
+ok(equal(ROBOT_SKINS.slice(0,6).map(s=>[s.panel,s.soft,s.accent,s.joint]),[
+  [0xf7fbff,0xdceaf3,0x168cff,0x263746],[0xe8424d,0xffeee9,0xffffff,0x263746],
+  [0x267fe0,0xc9d7e6,0xe7eff7,0x263746],[0x96cf38,0xfff0ce,0xf8e5b5,0x263746],
+  [0xffd139,0xffe996,0xf08025,0x263746],[0x9255dc,0xeee4ff,0xffd7f4,0x263746]
+]),'original six palette values are unchanged');
 for(const value of [undefined,null,'','obsolete','RED','"red"','{}',{},17])ok(robotSkin(value).id==='classic','invalid palette falls back: '+String(value));
 for(const skin of ROBOT_SKINS){
   const store=memory({unrelated:'keep',[ROBOT_SKIN_KEY]:skin.id});const s=createSkinSelection(()=>store);
@@ -22,7 +27,7 @@ for(const initial of ['obsolete','"blue"','{oops',null]){
   const s=createSkinSelection(()=>memory({[ROBOT_SKIN_KEY]:initial}));ok(s.snapshot().equipped==='classic','malformed storage fallback '+initial);
 }
 for(const store of [()=>{throw Error('denied');},()=>null,()=>({getItem(){throw Error('denied');},setItem(){throw Error('denied');}})]){
-  const s=createSkinSelection(store);s.open();s.choose('green');s.confirm();ok(s.snapshot().equipped==='green','storage failure does not prevent session equip');
+  const s=createSkinSelection(store);s.open();s.choose('web-hero');s.confirm();ok(s.snapshot().equipped==='web-hero','storage failure does not prevent Web Hero session equip');
 }
 // Exercise the actual visual builder with small observable THREE fixtures.
 class V{constructor(x=0,y=0,z=0){Object.assign(this,{x,y,z});}set(x,y,z){Object.assign(this,{x,y,z});return this;}setScalar(s){return this.set(s,s,s);}}
@@ -33,21 +38,33 @@ class M{constructor(o){Object.assign(this,o);this.color=new C(o.color);}}
 class G{constructor(...args){this.args=args;this.attributes={position:{count:0}};}clone(){return new G(...this.args);}computeVertexNormals(){}computeBoundingBox(){}computeBoundingSphere(){}}
 const root=new O();root.scale.setScalar(.72);
 const fxMat=new M({color:0xff7a1f}),jet=new O(new G(),fxMat),flame=new O(new G(),fxMat);root.add(jet);root.userData={jet,flame};
-const context={THREE:{Group:O,Mesh:O,TorusGeometry:G,MeshBasicMaterial:M},player:root,window:{},SPH:new G(),CYL:new G(),BOXG:new G(),pho:(c,s,sp)=>new M({color:c,shininess:s,specular:sp})};
+const context={THREE:{Group:O,Mesh:O,TorusGeometry:G,CircleGeometry:G,RingGeometry:G,MeshBasicMaterial:M},player:root,window:{},SPH:new G(),CYL:new G(),BOXG:new G(),pho:(c,s,sp)=>new M({color:c,shininess:s,specular:sp})};
 context.mesh=(g,m,x,y,z,sx,sy,sz)=>{const o=new O(g,m);o.position.set(x,y,z);o.scale.set(sx,sy??sx,sz??sx);return o;};
 vm.createContext(context);vm.runInContext(fs.readFileSync(path.join(__dirname,'../src/player-visual.js'),'utf8'),context);
 function shape(o){return {p:o.position,r:o.rotation,s:o.scale,g:o.geometry&&o.geometry.args,c:o.children.map(shape)};}
 const originalShape=JSON.stringify(shape(root)),seams=root.userData.seams.map(s=>s.material.color.getHex()),outsider=new M({color:0xf7fbff});
 const preview=context.buildRobotVisual(new O());preview.scale.setScalar(.72);
+const specialColors=o=>Object.fromEntries(Object.entries(o.userData.skinSpecialMaterials).map(([r,m])=>[r,m.color.getHex()]));
+const badge=root.userData.skinSpecialParts,previewBadge=preview.userData.skinSpecialParts;
+ok(badge.spiderLegs.length===8&&badge.badge.children.length===12,'badge is a circle containing an original body, head and eight-leg silhouette');
+ok(badge.badgeCircle.geometry!==previewBadge.badgeCircle.geometry&&badge.badgeRing.geometry!==previewBadge.badgeRing.geometry,'preview owns independent badge circle/ring geometry for disposal');
+ok(badge.spiderLegs.every(l=>Math.abs(l.position.x)+l.scale.x/2<.155&&Math.abs(l.position.y)+l.scale.x/2<.155),'arachnid silhouette remains contained by its circular badge');
 for(const skin of ROBOT_SKINS){
   applyRobotSkin(root,skin.id);
   ok(Object.keys(root.userData.skinMaterials).every(r=>root.userData.skinMaterials[r].color.getHex()===skin[r]),skin.id+' uses robot-owned palette materials');
+  ok(Object.entries(specialColors(root)).every(([r,v])=>v===skin[r]),skin.id+' uses owned head/eye/badge special materials');
+  ok(badge.badge.visible===skin.badge&&badge.chest.visible!==skin.badge&&badge.chestGlow.visible!==skin.badge,skin.id+' selects exactly one chest treatment');
   ok(JSON.stringify(shape(root))===originalShape,skin.id+' preserves geometry, dimensions, transforms');
   ok(outsider.color.getHex()===0xf7fbff&&fxMat.color.getHex()===0xff7a1f,skin.id+' leaves world/effect materials unchanged');
   ok(equal(root.userData.seams.map(s=>s.material.color.getHex()),seams),skin.id+' preserves temporary ability-signal base colors');
-  const before=Object.fromEntries(Object.entries(root.userData.skinMaterials).map(([r,m])=>[r,m.color.getHex()]));applyRobotSkin(preview,skin.id==='red'?'blue':'red');
-  ok(Object.keys(before).every(r=>root.userData.skinMaterials[r].color.getHex()===before[r]&&root.userData.skinMaterials[r]!==preview.userData.skinMaterials[r]),skin.id+' preview materials cannot recolor gameplay');
+  const before=Object.fromEntries(Object.entries(root.userData.skinMaterials).map(([r,m])=>[r,m.color.getHex()])),beforeSpecial=specialColors(root);applyRobotSkin(preview,skin.id==='red'?'blue':'red');
+  ok(Object.keys(before).every(r=>root.userData.skinMaterials[r].color.getHex()===before[r]&&root.userData.skinMaterials[r]!==preview.userData.skinMaterials[r]),skin.id+' preview palette materials cannot recolor gameplay');
+  ok(equal(specialColors(root),beforeSpecial)&&Object.keys(root.userData.skinSpecialMaterials).every(r=>root.userData.skinSpecialMaterials[r]!==preview.userData.skinSpecialMaterials[r]),skin.id+' preview special materials cannot recolor gameplay');
 }
+const hero=ROBOT_SKINS.find(s=>s.id==='web-hero');applyRobotSkin(root,hero.id);
+ok(hero.panel===0xe52b3f&&hero.soft===0x1769d1&&hero.accent===0x1676d2,'Web Hero has a saturated red/blue body mapping');
+ok(hero.headPanel===hero.panel&&hero.headSoft===hero.panel&&hero.headAccent===hero.panel,'Web Hero head shell is dominantly red without blue side panels');
+ok(hero.eye===0xffffff&&hero.eyeGlow===0xffffff&&hero.badge&&hero.badgeMark===0xffffff,'Web Hero has white eyes and an enabled white arachnid badge');
 applyRobotSkin(root,'classic');ok(root.userData.skinMaterials.panel.color.getHex()===0xf7fbff&&root.userData.skinMaterials.soft.color.getHex()===0xdceaf3&&root.userData.skinMaterials.accent.color.getHex()===0x168cff,'Classic preserves original appearance');
 // Actual generated game with the unchanged repository physics harness.
 const boot=require('./harness.js');
@@ -73,17 +90,26 @@ const H=boot({autostart:false});H.selectLevel(2);const idx=H.pickerIdx();click(H
 H.tap('ArrowRight');H.tap('Space');H.tapCard(4);H.window.__startGame();
 ok(!H.isStarted()&&H.pickerIdx()===idx,'open panel blocks underlying keyboard/card/start routes');
 H.tap('Escape');ok(!H.window.__SKINS().open&&H.window.__SKINS().equipped==='classic'&&H.pickerIdx()===idx,'Escape cancels without pause or selection drift');
-equip(H,'purple');
+equip(H,'web-hero');
 for(let i=0;i<6;i++){
   H.window.__setPickerIdx(i);H.confirmStart();H.frames(8);
-  ok(H.isStarted()&&H.getLevel().id==='level'+(i+1)&&H.window.__SKINS().equipped==='purple','non-Classic start in level '+(i+1));
+  ok(H.isStarted()&&H.getLevel().id==='level'+(i+1)&&H.window.__SKINS().equipped==='web-hero','Web Hero start in level '+(i+1));
   H.tapBtn('pauseBtn');const p=sample(H);H.frames(5);ok(equal(sample(H),p),'equipped skin retains true pause in level '+(i+1));
-  H.tapBtn('pauseResume');H.frames(3);ok(H.window.__SKINS().equipped==='purple','Resume preserves skin level '+(i+1));
-  H.tapBtn('pauseBtn');H.tapBtn('pauseMenu');ok(!H.isStarted()&&!H.W.won&&H.window.__SKINS().equipped==='purple','nonwinning menu retains skin level '+(i+1));
+  H.tapBtn('pauseResume');H.frames(3);ok(H.window.__SKINS().equipped==='web-hero','Resume preserves Web Hero level '+(i+1));
+  H.tapBtn('pauseBtn');H.tapBtn('pauseMenu');ok(!H.isStarted()&&!H.W.won&&H.window.__SKINS().equipped==='web-hero','nonwinning menu retains Web Hero level '+(i+1));
 }
-H.confirmStart();ok(H.isStarted()&&H.window.__SKINS().equipped==='purple','clean subsequent restart keeps equipped skin');
+H.confirmStart();ok(H.isStarted()&&H.window.__SKINS().equipped==='web-hero','clean subsequent restart keeps Web Hero equipped');
 const I=boot({autostart:false});for(let i=0;i<10;i++){click(I,'skinsOpen');click(I,'skin-yellow');click(I,'skinBack');}
 ok(I.window.__SKINS().equipped==='classic'&&!I.window.__SKINS().open,'repeated cancel leaves equipped state intact');
 ok(I.el('skinUse').listeners.click.length===1&&I.el('skinsOpen').listeners.click.length===1,'repeated opening does not add interaction handlers');
 const buttons=Array(16).fill(false);buttons[3]=true;I.gamepadTick(buttons);ok(I.window.__SKINS().open&&!I.isStarted(),'gamepad Y opens Skins without launching');I.gamepadTick(Array(16).fill(false));buttons[3]=false;buttons[1]=true;I.gamepadTick(buttons);ok(!I.window.__SKINS().open&&!I.isStarted(),'gamepad B cancels without launching');
+const Gp=boot({autostart:false}),idle=Array(16).fill(false),press=i=>{const b=idle.slice();b[i]=true;Gp.gamepadTick(b);Gp.gamepadTick(idle);};
+press(3);for(let i=0;i<6;i++)press(15);
+ok(Gp.window.document.activeElement.id==='skin-web-hero'&&Gp.window.__SKINS().pending==='web-hero','gamepad reaches seventh skin through real polling path');
+press(14);ok(Gp.window.document.activeElement.id==='skin-purple'&&Gp.window.__SKINS().pending==='purple','gamepad traverses seven choices in reverse');
+press(15);press(15);ok(Gp.window.document.activeElement.id==='skinUse','gamepad reaches Use Skin after seventh card');press(0);
+ok(!Gp.window.__SKINS().open&&Gp.window.__SKINS().equipped==='web-hero','gamepad A confirms Web Hero without starting gameplay');
+const K=boot({autostart:false});click(K,'skinsOpen');K.kd({code:'Tab',shiftKey:true});K.ku({code:'Tab',shiftKey:true});
+ok(K.window.document.activeElement.id==='skinBack','Shift+Tab wraps backward across all nine controls');K.tap('Tab');
+ok(K.window.document.activeElement.id==='skin-classic','Tab wraps forward across all nine controls');
 if(failures){console.error(failures+' failed');process.exit(1);}console.log('all passed');
