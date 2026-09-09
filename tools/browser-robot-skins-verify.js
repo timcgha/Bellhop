@@ -36,6 +36,13 @@ function readEyeState(robot){
     normals:Array.from(m.geometry.attributes.normal.array)
   }))})):null;
 }
+function readPreviewFraming(){
+  if(!skinPreview)return null;
+  const v=skinPreview,box=new THREE.Box3().setFromObject(v.robot),min=box.min,max=box.max,points=[];v.camera.updateMatrixWorld(true);
+  for(const x of [min.x,max.x])for(const y of [min.y,max.y])for(const z of [min.z,max.z]){const p=new THREE.Vector3(x,y,z).project(v.camera);points.push({x:p.x,y:p.y,z:p.z});}
+  const host=document.getElementById('skinPreviewHost').getBoundingClientRect();
+  return {minX:Math.min(...points.map(p=>p.x)),maxX:Math.max(...points.map(p=>p.x)),minY:Math.min(...points.map(p=>p.y)),maxY:Math.max(...points.map(p=>p.y)),host:{x:host.x,y:host.y,w:host.width,h:host.height},canvas:{w:v.renderer.domElement.width,h:v.renderer.domElement.height}};
+}
 function eyeShapeStats(vertices){
   assert(vertices.length===390&&vertices.every(Number.isFinite),'invalid eye vertex buffer');
   const middle=[],ends=[];let sphereError=0;
@@ -125,7 +132,7 @@ async function checkPreview(c,id,equipped){
   assert(s.preview.special.badge.circle!==s.gameplaySpecial.badge.circle&&s.preview.special.badge.ring!==s.gameplaySpecial.badge.ring,'preview shares disposable badge geometry');
   await eyeProof(c,equipped,true,id);
 }
-async function previewFraming(c){return c.ev(`(()=>{if(!skinPreview)return null;const v=skinPreview,box=new THREE.Box3().setFromObject(v.robot),min=box.min,max=box.max,points=[];v.camera.updateMatrixWorld(true);for(const x of [min.x,max.x])for(const y of [min.y,max.y])for(const z of [min.z,max.z]){const p=new THREE.Vector3(x,y,z).project(v.camera);points.push({x:p.x,y:p.y,z:p.z});}const host=document.getElementById('skinPreviewHost').getBoundingClientRect();return {minX:Math.min(...points.map(p=>p.x)),maxX:Math.max(...points.map(p=>p.x)),minY:Math.min(...points.map(p=>p.y)),maxY:Math.max(...points.map(p=>p.y)),host:{x:host.x,y:host.y,w:host.width,h:host.height},canvas:{w:v.renderer.domElement.width,h:v.renderer.domElement.height}};})()`);}
+async function previewFraming(c){return c.ev('__BH005PreviewFraming()');}
 async function gameplayFraming(c){return c.ev(`(()=>{const p=__PLAYER(),cam=new THREE.PerspectiveCamera(__CAM.fov||60,innerWidth/innerHeight,.1,220);cam.position.copy(__CAM.pos);cam.lookAt(__CAM.look);cam.updateMatrixWorld(true);cam.updateProjectionMatrix();const v=new THREE.Vector3(p.position.x,p.position.y+.58,p.position.z).project(cam);return {x:v.x,y:v.y,z:v.z,visible:p.visible,mode:__CAM.mode,w:innerWidth,h:innerHeight};})()`);}
 async function focusState(c){return c.ev(`(()=>{const e=document.activeElement,s=e&&getComputedStyle(e);return {id:e&&e.id,outline:s&&s.outline,outlineWidth:s&&s.outlineWidth,outlineStyle:s&&s.outlineStyle};})()`);}
 async function browserGamepad(c){
@@ -210,7 +217,7 @@ async function main(){
   fs.rmSync(profile,{recursive:true,force:true});
   const served=profile+'-page',html=fs.readFileSync(path.join(__dirname,'..','dist','index.html'),'utf8'),marker='// ---- BUILD:END ----';
   assert(html.split(marker).length===2,'missing/ambiguous test observation insertion point');
-  const probe=`window.__BH003Eyes=()=>({gameplay:(${readEyeState.toString()})(player),preview:(${readEyeState.toString()})(skinPreview&&skinPreview.robot),shared:Array.from(SPH.attributes.position.array)});\n`+
+  const probe=`window.__BH003Eyes=()=>({gameplay:(${readEyeState.toString()})(player),preview:(${readEyeState.toString()})(skinPreview&&skinPreview.robot),shared:Array.from(SPH.attributes.position.array)});window.__BH005PreviewFraming=(${readPreviewFraming.toString()});\n`+
     `const __bh005Buttons=Array.from({length:16},()=>({pressed:false,value:0}));window.__BH005Pad={connected:true,id:'BH-005 browser-emulated standard gamepad',mapping:'standard',axes:[0,0,0,0],buttons:__bh005Buttons,timestamp:0};Object.defineProperty(navigator,'getGamepads',{configurable:true,value:()=>[window.__BH005Pad]});window.__BH005PadButton=(i,on)=>{__bh005Buttons[i].pressed=!!on;__bh005Buttons[i].value=on?1:0;window.__BH005Pad.timestamp=performance.now();return true;};\n`;
   fs.mkdirSync(served,{recursive:true});fs.writeFileSync(path.join(served,'index.html'),html.replace(marker,probe+marker));
   const server=spawn('python3',['-m','http.server',String(port),'--bind','127.0.0.1'],{cwd:served,stdio:'ignore'});
