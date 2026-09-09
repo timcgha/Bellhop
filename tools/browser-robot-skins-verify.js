@@ -18,6 +18,13 @@ const expected=id=>{const s=ROBOT_SKINS.find(s=>s.id===id);return {panel:s.panel
 const expectedSpecial=id=>{const s=ROBOT_SKINS.find(s=>s.id===id);return {colors:{headPanel:s.headPanel,headSoft:s.headSoft,headAccent:s.headAccent,eye:s.eye,eyeGlow:s.eyeGlow,badgeBack:s.badgeBack,badgeMark:s.badgeMark},badgeVisible:s.badge,chestVisible:!s.badge,chestGlowVisible:!s.badge};};
 const hash=b=>crypto.createHash('sha256').update(b).digest('hex');
 const git=(...args)=>execFileSync('git',args,{cwd:path.join(__dirname,'..'),encoding:'utf8'}).trim();
+function sourceIdentity(){
+  let event=null;try{if(process.env.GITHUB_EVENT_PATH)event=JSON.parse(fs.readFileSync(process.env.GITHUB_EVENT_PATH,'utf8'));}catch(e){}
+  const pr=event&&event.pull_request,checkout=git('rev-parse','HEAD');
+  return {checkout,tree:git('rev-parse','HEAD^{tree}'),locallyVisibleParents:git('show','-s','--format=%P','HEAD').split(/\s+/).filter(Boolean),
+    eventBase:pr&&pr.base&&pr.base.sha||null,eventHead:pr&&pr.head&&pr.head.sha||null,
+    syntheticMerge:!!(pr&&checkout!==pr.head.sha),githubSha:process.env.GITHUB_SHA||null,githubHeadRef:process.env.GITHUB_HEAD_REF||null};
+}
 function json(url){return new Promise((resolve,reject)=>http.get(url,res=>{let s='';res.on('data',c=>s+=c);res.on('end',()=>{try{resolve(JSON.parse(s));}catch(e){reject(e);}});}).on('error',reject));}
 
 // BH-003 read-only inspection, injected only into the temporary served test page.
@@ -56,15 +63,15 @@ function assertEyeState(eyes,label,id){
   }
   return stats;
 }
-async function eyeProof(c,id,previewRequired=false){
-  const state=await c.ev('__BH003Eyes()'),stats=assertEyeState(state.gameplay,'gameplay',id);
+async function eyeProof(c,gameplayId,previewRequired=false,previewId=gameplayId){
+  const state=await c.ev('__BH003Eyes()'),stats=assertEyeState(state.gameplay,'gameplay',gameplayId);
   assert(eyeShapeStats(state.shared).rise<.01,'shared world sphere was bent');
   const neutral=state.gameplay.map(e=>({...e,parts:e.parts.map(m=>({...m,vertices:state.shared}))}));
   let neutralRejected=false;
-  try{assertEyeState(neutral,'neutral control',id);}catch(error){neutralRejected=error.message.includes('not an open smiling lens');}
+  try{assertEyeState(neutral,'neutral control',gameplayId);}catch(error){neutralRejected=error.message.includes('not an open smiling lens');}
   assert(neutralRejected,'neutral eye geometry incorrectly passed the smiling-eye gate');
   if(previewRequired){
-    assertEyeState(state.preview,'preview',id);
+    assertEyeState(state.preview,'preview',previewId);
     assert(same(state.gameplay[0].parts[0].vertices,state.preview[0].parts[0].vertices),'preview/gameplay shape mismatch');
     assert(state.gameplay[0].parts[0].geometry!==state.preview[0].parts[0].geometry,'preview shares disposable gameplay geometry');
   }
@@ -116,7 +123,7 @@ async function checkPreview(c,id,equipped){
   const s=await skins(c);assert(s.open&&s.pending===id&&s.equipped===equipped,'pending/equipped separation');assert(s.preview&&same(s.preview.colors,expected(id)),'preview actual material mismatch '+id);assertSpecial(s.preview.special,id,'preview');
   assert(same(s.gameplay,expected(equipped)),'preview recolored gameplay');assertSpecial(s.gameplaySpecial,equipped,'gameplay after preview');
   assert(s.preview.special.badge.circle!==s.gameplaySpecial.badge.circle&&s.preview.special.badge.ring!==s.gameplaySpecial.badge.ring,'preview shares disposable badge geometry');
-  await eyeProof(c,id,true);
+  await eyeProof(c,equipped,true,id);
 }
 async function previewFraming(c){return c.ev(`(()=>{if(!skinPreview)return null;const v=skinPreview,box=new THREE.Box3().setFromObject(v.robot),min=box.min,max=box.max,points=[];v.camera.updateMatrixWorld(true);for(const x of [min.x,max.x])for(const y of [min.y,max.y])for(const z of [min.z,max.z]){const p=new THREE.Vector3(x,y,z).project(v.camera);points.push({x:p.x,y:p.y,z:p.z});}const host=document.getElementById('skinPreviewHost').getBoundingClientRect();return {minX:Math.min(...points.map(p=>p.x)),maxX:Math.max(...points.map(p=>p.x)),minY:Math.min(...points.map(p=>p.y)),maxY:Math.max(...points.map(p=>p.y)),host:{x:host.x,y:host.y,w:host.width,h:host.height},canvas:{w:v.renderer.domElement.width,h:v.renderer.domElement.height}};})()`);}
 async function gameplayFraming(c){return c.ev(`(()=>{const p=__PLAYER(),cam=new THREE.PerspectiveCamera(__CAM.fov||60,innerWidth/innerHeight,.1,220);cam.position.copy(__CAM.pos);cam.lookAt(__CAM.look);cam.updateMatrixWorld(true);cam.updateProjectionMatrix();const v=new THREE.Vector3(p.position.x,p.position.y+.58,p.position.z).project(cam);return {x:v.x,y:v.y,z:v.z,visible:p.visible,mode:__CAM.mode,w:innerWidth,h:innerHeight};})()`);}
@@ -208,7 +215,7 @@ async function main(){
   fs.mkdirSync(served,{recursive:true});fs.writeFileSync(path.join(served,'index.html'),html.replace(marker,probe+marker));
   const server=spawn('python3',['-m','http.server',String(port),'--bind','127.0.0.1'],{cwd:served,stdio:'ignore'});
   let err='';const browser=spawn(chrome,['--headless=new',`--remote-debugging-port=${debugPort}`,'--remote-debugging-address=127.0.0.1',`--user-data-dir=${profile}`,'--no-sandbox','--disable-dev-shm-usage','--no-first-run','--no-default-browser-check','--enable-webgl','--ignore-gpu-blocklist','--use-angle=swiftshader','--window-size=1280,720','about:blank'],{stdio:['ignore','ignore','pipe']});browser.stderr.on('data',d=>err=(err+d).slice(-8000));
-  let c;const result={status:'RUNNING',source:{checkout:git('rev-parse','HEAD'),tree:git('rev-parse','HEAD^{tree}'),parents:git('show','-s','--format=%P','HEAD').split(/\s+/).filter(Boolean),githubSha:process.env.GITHUB_SHA||null,githubHeadRef:process.env.GITHUB_HEAD_REF||null},browser:{executable:chrome,route:'headless Chromium via CDP',physicalDevice:false},viewports:[],skins:[],transients:[],levels:[],errors:[]};
+  let c;const result={status:'RUNNING',source:sourceIdentity(),browser:{executable:chrome,route:'headless Chromium via CDP',physicalDevice:false},viewports:[],skins:[],transients:[],levels:[],errors:[]};
   try{
     let ready=false;for(let i=0;i<75;i++){if(browser.exitCode!==null)throw Error('Chrome exited '+err);try{await json(`http://127.0.0.1:${debugPort}/json/version`);ready=true;break;}catch(e){await sleep(200);}}assert(ready,'Chrome initialization failed '+err);c=await connect();await viewport(c,1280,720,false);await navigate(c);await appearance(c,'classic');
     for(const [w,h] of [[1280,720],[390,844],[844,390]]){console.log('SKINS selector '+w+'x'+h);await selector(c,w,h,result);}
