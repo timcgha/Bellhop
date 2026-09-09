@@ -17,10 +17,25 @@ let event=null;try{if(process.env.GITHUB_EVENT_PATH)event=JSON.parse(fs.readFile
 const eventHead=event&&event.pull_request&&event.pull_request.head.sha||null,checkout=git(['rev-parse','HEAD']),checkoutTree=git(['rev-parse','HEAD^{tree}']);
 const candidateHead=eventHead||checkout,candidateTree=git(['rev-parse',candidateHead+'^{tree}']);
 const builtHtml=fs.readFileSync(path.join(dist,'index.html'));
-const report={source:{checkout,checkoutTree,candidateHead,candidateTree,eventBase:event&&event.pull_request&&event.pull_request.base.sha||null,githubSha:process.env.GITHUB_SHA||null,syntheticMerge:!!(eventHead&&checkout!==eventHead),status:git(['status','--short']),generatedHtmlSha256:createHash('sha256').update(builtHtml).digest('hex')},runtime:{node:process.version,chrome,method:'Chrome CDP with browser-level keyboard, touch and emulated standard Gamepad API; no physical device or WebKit'},viewports:[],journeys:[],levelMatrix:[],sequence:[],screenshots:[],checks:[],failures:[],status:'RUNNING'};
+const report={startedAt:new Date().toISOString(),source:{checkout,checkoutTree,candidateHead,candidateTree,eventBase:event&&event.pull_request&&event.pull_request.base.sha||null,githubSha:process.env.GITHUB_SHA||null,syntheticMerge:!!(eventHead&&checkout!==eventHead),status:git(['status','--short']),generatedHtmlSha256:createHash('sha256').update(builtHtml).digest('hex')},runtime:{node:process.version,chrome,method:'Chrome CDP with browser-level keyboard, touch and emulated standard Gamepad API; no physical device or WebKit'},viewports:[],journeys:[],levelMatrix:[],sequence:[],screenshots:[],checks:[],failures:[],teardown:[],status:'RUNNING'};
 function check(name,ok,details){const row={name,ok:!!ok,details:details===undefined?null:details};report.checks.push(row);if(!row.ok)report.failures.push(row);return row.ok;}
 function assert(ok,name,details){if(!check(name,ok,details))throw Error(name);}
 function json(uri){return new Promise((resolve,reject)=>http.get(uri,res=>{let s='';res.on('data',c=>s+=c);res.on('end',()=>{try{resolve(JSON.parse(s));}catch(e){reject(e);}});}).on('error',reject));}
+function writeEvidence(){
+  fs.writeFileSync(path.join(out,'report.json'),JSON.stringify(report,null,2));
+  fs.writeFileSync(path.join(out,'sequence-manifest.json'),JSON.stringify({status:report.status,source:report.source,runtime:report.runtime,sequence:report.sequence,failures:report.failures},null,2));
+}
+function exited(proc){return !proc||proc.exitCode!==null||proc.signalCode!==null;}
+function waitForExit(proc,timeout){
+  if(exited(proc))return Promise.resolve(true);
+  return new Promise(resolve=>{let timer;const done=()=>{clearTimeout(timer);resolve(true);};proc.once('exit',done);timer=setTimeout(()=>{proc.removeListener('exit',done);resolve(exited(proc));},timeout);});
+}
+async function stopProcess(proc,name){
+  const row={name,pid:proc&&proc.pid||null,termSent:false,exitedAfterTerm:exited(proc),killSent:false,exitedAfterKill:false};
+  if(!row.exitedAfterTerm){try{row.termSent=proc.kill('SIGTERM');}catch(error){row.termError=error.message;}row.exitedAfterTerm=await waitForExit(proc,2000);}
+  if(!row.exitedAfterTerm){try{row.killSent=proc.kill('SIGKILL');}catch(error){row.killError=error.message;}row.exitedAfterKill=await waitForExit(proc,2000);}
+  row.exitCode=proc&&proc.exitCode;row.signalCode=proc&&proc.signalCode;row.ok=exited(proc);return row;
+}
 async function connect(){
   const pages=await json('http://127.0.0.1:'+debugPort+'/json/list'),page=pages.find(p=>p.type==='page')||pages[0];if(!page)throw Error('no CDP page');
   const ws=new WebSocket(page.webSocketDebuggerUrl);await new Promise((r,j)=>{ws.addEventListener('open',r,{once:true});ws.addEventListener('error',j,{once:true});});
@@ -64,7 +79,7 @@ async function sequence(c){
   const types=report.sequence.flatMap(x=>x.eventTail.map(e=>e.type));assert(types.includes('shot')&&types.includes('wrapped')&&types.includes('disappeared'),'timestamp-faithful sequence includes shot → wrap → disappearance',report.sequence);return {target:t,pixels};
 }
 async function main(){
-  fs.rmSync(profile,{recursive:true,force:true});let chromeError='';const server=spawn('python3',['-m','http.server',String(port),'--bind','127.0.0.1'],{cwd:dist,stdio:'ignore'}),browser=spawn(chrome,['--headless=new','--remote-debugging-address=127.0.0.1','--remote-debugging-port='+debugPort,'--user-data-dir='+profile,'--no-sandbox','--disable-dev-shm-usage','--no-first-run','--no-default-browser-check','--disable-background-networking','--enable-webgl','--ignore-gpu-blocklist','--use-angle=swiftshader','about:blank'],{stdio:['ignore','ignore','pipe']});if(browser.stderr)browser.stderr.on('data',d=>chromeError=(chromeError+d).slice(-12000));let c;
+  fs.rmSync(profile,{recursive:true,force:true,maxRetries:5,retryDelay:200});let chromeError='';const server=spawn('python3',['-m','http.server',String(port),'--bind','127.0.0.1'],{cwd:dist,stdio:'ignore'}),browser=spawn(chrome,['--headless=new','--remote-debugging-address=127.0.0.1','--remote-debugging-port='+debugPort,'--user-data-dir='+profile,'--no-sandbox','--disable-dev-shm-usage','--no-first-run','--no-default-browser-check','--disable-background-networking','--enable-webgl','--ignore-gpu-blocklist','--use-angle=swiftshader','about:blank'],{stdio:['ignore','ignore','pipe']});if(browser.stderr)browser.stderr.on('data',d=>chromeError=(chromeError+d).slice(-12000));let c;
   try{
     let version;for(let i=0;i<100&&!version;i++){if(browser.exitCode!==null)throw Error('Chrome exited '+browser.exitCode+' '+chromeError);try{version=await json('http://127.0.0.1:'+debugPort+'/json/version');}catch(error){await sleep(160);}}if(!version)throw Error('Chrome CDP not ready '+chromeError);report.runtime.protocol=version;c=await connect();
     await c.send('Page.addScriptToEvaluateOnNewDocument',{source:"(()=>{const buttons=Array.from({length:18},()=>({pressed:false,touched:false,value:0}));window.__bh007Pad={id:'BH-007 virtual standard gamepad',index:0,connected:true,mapping:'standard',timestamp:0,axes:[0,0,0,0],buttons};Object.defineProperty(navigator,'getGamepads',{configurable:true,value:()=>[window.__bh007Pad]});})();"});
@@ -82,7 +97,16 @@ async function main(){
     await scenario('pause and temporary-power coexistence',async()=>{await fresh(c,'pause');await startLevel(c,0);await c.ev("__P.fire=true;__P.bubble=true;__P.hasSkyBlast=true;__P.hasStarBeam=true;__WEB_SHOT.evidenceAimAt('gloop',0,5)");await tapKey(c,'KeyX');await wait(c,'__WEB_SHOT.snapshot().captures.length===1');await tapKey(c,'Escape');const left=await c.ev('__WEB_SHOT.snapshot().captures[0].left');await sleep(500);assert(Math.abs((await c.ev('__WEB_SHOT.snapshot().captures[0].left'))-left)<.001,'pause freezes wrap timer',{left});await tapKey(c,'Escape');await wait(c,"__WEB_SHOT.snapshot().events.some(e=>e.type==='disappeared')",3000);assert(await c.ev('__P.fire&&__P.bubble&&__P.hasSkyBlast&&__P.hasStarBeam'),'web does not consume temporary powers');return {left};});
     assert(c.errors.length===0,'no uncaught browser exceptions',c.errors);report.status=report.failures.length?'FAIL':'PASS';
   }catch(error){check('browser verifier completed',false,error.stack||String(error));report.status='FAIL';}
-  finally{if(c)c.close();browser.kill('SIGTERM');server.kill('SIGTERM');fs.rmSync(profile,{recursive:true,force:true});report.finishedAt=new Date().toISOString();fs.writeFileSync(path.join(out,'report.json'),JSON.stringify(report,null,2));fs.writeFileSync(path.join(out,'sequence-manifest.json'),JSON.stringify({source:report.source,runtime:report.runtime,sequence:report.sequence},null,2));}
+  finally{
+    report.evidenceCheckpointAt=new Date().toISOString();
+    try{writeEvidence();}catch(error){report.preCleanupWriteError=error.stack||String(error);}
+    if(c)c.close();report.teardown=await Promise.all([stopProcess(browser,'chrome'),stopProcess(server,'http-server')]);
+    try{fs.rmSync(profile,{recursive:true,force:true,maxRetries:5,retryDelay:200});report.teardown.push({name:'profile',path:profile,ok:true});}
+    catch(error){report.teardown.push({name:'profile',path:profile,ok:false,error:error.stack||String(error)});}
+    for(const row of report.teardown)if(!row.ok)check('browser teardown '+row.name,false,row);
+    report.finishedAt=new Date().toISOString();if(report.failures.length)report.status='FAIL';
+    try{writeEvidence();}catch(error){report.status='FAIL';report.finalWriteError=error.stack||String(error);console.error('Evidence write failed:',error.stack||error);process.exitCode=1;}
+  }
   console.log(JSON.stringify({status:report.status,checks:report.checks.length,failures:report.failures.length,journeys:report.journeys.length,matrix:report.levelMatrix.length,screenshots:report.screenshots.length,source:report.source},null,2));if(report.status!=='PASS')process.exit(1);
 }
 main();
