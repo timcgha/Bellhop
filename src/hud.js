@@ -10,7 +10,7 @@ function updateTouchLabels(){
 }
 let toastTO=null;function showToast(t){const el=$('toast');el.textContent=t;el.style.opacity=1;clearTimeout(toastTO);toastTO=setTimeout(()=>{el.style.opacity=0;},2400);}
 const CTLTEXT=isTouch?'Left thumb moves · right thumb looks · A jump — blue jet burns anything under him (tap again in the air for an air-puff, hold to float) · B slam in the air, gust on the ground · Y spin':'WASD or arrows move · Space jumps — the blue jet burns anything under him (again in the air for an air-puff, hold to float) · J or Shift: slam in the air, gust on the ground · K spins · drag or Q/E turns the camera · M mutes';
-const PICKHINT=isTouch?'Tap a picture · tap it again to play':'← → choose a level · Space or A to start';
+const PICKHINT=isTouch?'Tap a picture · tap it again to play':'Arrow keys choose a level · Space or A to start';
 $('ctlText').textContent=CTLTEXT;$('hint').textContent=CTLTEXT;$('pickHint').textContent=PICKHINT;
 
 let pickerIdx=0,touchArmed=false;
@@ -23,6 +23,18 @@ function updatePickerUI(pulse){
     else if(!on)el.classList.remove('pulse');
   }
 }
+function pickerColumns(){
+  const first=$('lvl0');
+  if(first&&(typeof first.offsetTop==='number'||typeof first.getBoundingClientRect==='function')){
+    const top=typeof first.offsetTop==='number'?first.offsetTop:first.getBoundingClientRect().top;let cols=0;
+    for(let i=0;i<LEVELS.length;i++){const el=$('lvl'+i);if(!el)break;const y=typeof el.offsetTop==='number'?el.offsetTop:(typeof el.getBoundingClientRect==='function'?el.getBoundingClientRect().top:NaN);if(!Number.isFinite(y)||Math.abs(y-top)>2)break;cols++;}
+    if(cols>0)return cols;
+  }
+  return innerWidth<=500&&innerHeight>innerWidth?2:3;
+}
+function ensurePickerVisible(){
+  const el=$('lvl'+pickerIdx);if(el&&typeof el.scrollIntoView==='function')el.scrollIntoView({block:'nearest',inline:'nearest'});
+}
 function setPickerIdx(i){
   if(typeof isSkinPanelOpen==='function'&&isSkinPanelOpen())return;
   const next=clamp(i,0,LEVELS.length-1);
@@ -30,7 +42,11 @@ function setPickerIdx(i){
   pickerIdx=next;
   // Keyboard/gamepad navigation is not a touch arm — first card tap still only selects.
   if(changed)touchArmed=false;
-  updatePickerUI(changed);
+  updatePickerUI(changed);ensurePickerVisible();
+}
+function movePicker(dx,dy){
+  if(dy){const next=pickerIdx+dy*pickerColumns();if(next<0||next>=LEVELS.length)return;setPickerIdx(next);return;}
+  setPickerIdx(pickerIdx+dx);
 }
 function tapLevelCard(i){
   if(started||(typeof isSkinPanelOpen==='function'&&isSkinPanelOpen()))return;
@@ -38,11 +54,14 @@ function tapLevelCard(i){
   if(i===pickerIdx&&touchArmed){startGame();return;}
   pickerIdx=clamp(i,0,LEVELS.length-1);
   touchArmed=true;
-  updatePickerUI(true);
+  updatePickerUI(true);ensurePickerVisible();
 }
 window.__pickerIdx=()=>pickerIdx;
 window.__touchArmed=()=>touchArmed;
 window.__setPickerIdx=setPickerIdx;
+window.__pickerColumns=pickerColumns;
+window.__movePicker=movePicker;
+addEventListener('resize',ensurePickerVisible);
 
 function drawLevelArt(){
   [[$('art0'),'meadow'],[$('art1'),'deep'],[$('art2'),'peak'],[$('art3'),'space'],[$('art4'),'desert']].forEach(([cv,kind])=>{
@@ -50,7 +69,7 @@ function drawLevelArt(){
     const w=160,h=100;
     const g=cv.getContext('2d');if(!g)return;
     const dpr=Math.min(window.devicePixelRatio||1,2);
-    cv.width=w*dpr;cv.height=h*dpr;if(cv.style){cv.style.width=w+'px';cv.style.height=h+'px';}
+    cv.width=w*dpr;cv.height=h*dpr;
     g.scale(dpr,dpr);
     if(kind==='meadow'){
       const sky=g.createLinearGradient(0,0,0,h);sky.addColorStop(0,'#87ceeb');sky.addColorStop(1,'#c8e6a0');g.fillStyle=sky;g.fillRect(0,0,w,h);
