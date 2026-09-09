@@ -152,7 +152,7 @@ function assertSpecial(actual,id,label){
   assert(actual.badge&&actual.badge.legs===8&&actual.badge.construction==='bellhop-simple-geometry-v1',label+' missing original eight-leg badge construction');
 }
 async function appearance(c,id){const s=await skins(c);assert(s.equipped===id&&same(s.gameplay,expected(id)),'equipped/rendered palette mismatch '+id+' '+JSON.stringify(s));assertSpecial(s.gameplaySpecial,id,'gameplay');await eyeProof(c,id);return s;}
-async function sim(c){return c.ev(`({started:__started(),paused:__paused(),won:__W.won,time:__gameTime(),x:__P.pos.x,y:__P.pos.y,z:__P.pos.z,hp:__P.hp,maxHp:__P.maxHp,dead:__P.dead,grounded:__P.grounded,camel:!!__P.camel,sled:!!__P.sled,thrust:__P.spaceThrust,zone:__P.moveZone,physics:__PHYS(),skin:__PLAYER().userData.skinId,level:__LEVEL()&&__LEVEL().id})`);}
+async function sim(c){return c.ev(`({started:__started(),paused:__paused(),won:__W.won,time:__gameTime(),x:__P.pos.x,y:__P.pos.y,z:__P.pos.z,hp:__P.hp,maxHp:__P.maxHp,dead:__P.dead,deadT:__P.deadT,grounded:__P.grounded,camel:!!__P.camel,sled:!!__P.sled,thrust:__P.spaceThrust,zone:__P.moveZone,physics:__PHYS(),skin:__PLAYER().userData.skinId,level:__LEVEL()&&__LEVEL().id})`);}
 async function sceneRoots(c){return c.ev(`__PLAYER().parent.children.map(o=>o.uuid).sort()`);}
 async function nonRobotMaterials(c){return c.ev(`(()=>{const root=__PLAYER(),items={};root.parent.traverse(o=>{let p=o;while(p){if(p===root)return;p=p.parent;}if(o.material&&o.material.color)items[o.material.uuid]=o.material.color.getHex();});return items;})()`);}
 async function checkPreview(c,id,equipped){
@@ -213,8 +213,20 @@ async function naturalDeathRespawn(c){
     const after=await sim(c);hits.push({before:before.hp,after:after.hp,source:'real Gloop projectile/contact simulation'});if(!after.dead)await wait(c,'__P.inv<=0',5000);
   }
   const dead=await sim(c);assert(dead.dead&&dead.hp<=0,'real enemy route did not reach death '+JSON.stringify({dead,hits}));assert(dead.skin==='web-hero','death changed equipped skin');
-  await c.shot('web-hero-real-death');await wait(c,'!__P.dead&&__P.hp===__P.maxHp',5000);const respawned=await sim(c);await appearance(c,'web-hero');
-  return {startHp:startState.hp,hits,dead:{hp:dead.hp,skin:dead.skin},respawn:{hp:respawned.hp,skin:respawned.skin},status:'PASS'};
+  await c.shot('web-hero-real-death');
+  // Product time advances in clamped animation-frame steps, so a busy CI browser can
+  // take more than five wall seconds to complete the fixed 1.8 game-second timer.
+  // Allow wall-clock scheduling slack, but fail as soon as the still-dead state is
+  // observed beyond a strict game-time bound; this does not relax respawn behavior.
+  const respawnGameDeadline=dead.time+2.4,respawnWallStart=Date.now();let respawned=dead;
+  while(Date.now()-respawnWallStart<15000){
+    respawned=await sim(c);if(!respawned.dead&&respawned.hp===respawned.maxHp)break;
+    assert(respawned.time<=respawnGameDeadline,'natural respawn exceeded 2.4 game seconds '+JSON.stringify({dead,respawned}));await sleep(100);
+  }
+  assert(!respawned.dead&&respawned.hp===respawned.maxHp,'natural respawn browser scheduling timeout '+JSON.stringify({dead,respawned,wallMs:Date.now()-respawnWallStart}));
+  assert(respawned.time-dead.time<=2.4,'natural respawn completed beyond 2.4 game seconds '+JSON.stringify({dead,respawned}));
+  const respawnTiming={gameSeconds:respawned.time-dead.time,wallMs:Date.now()-respawnWallStart,gameLimit:2.4};await appearance(c,'web-hero');
+  return {startHp:startState.hp,hits,dead:{hp:dead.hp,skin:dead.skin,deadT:dead.deadT},respawn:{hp:respawned.hp,skin:respawned.skin,timing:respawnTiming},status:'PASS'};
 }
 async function transients(c,index,result){
   if(index===3){await key(c,'Space',true);await wait(c,`__P.moveZone==='openSpace'&&__P.spaceThrust`,3500);await sleep(180);await appearance(c,'web-hero');await c.shot('web-hero-space-thrust');await key(c,'Space',false);result.transients.push({level:4,state:'real open-space thrust',skin:'web-hero',status:'PASS'});}
