@@ -101,3 +101,50 @@ jobs:
           name: movement-jump-browser
           path: artifacts/browser-movement-jump/
           if-no-files-found: error
+  phone-landscape-menu:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
+      - uses: actions/setup-node@v7
+        with:
+          node-version: '22'
+      - name: Build candidate and exact authorized base
+        run: |
+          node build.js
+          git worktree add --detach "$RUNNER_TEMP/bellhop-bh006-base" 186372621d00b56dd1e3c51db79b33a9a124acdf
+          node "$RUNNER_TEMP/bellhop-bh006-base/build.js"
+      - name: Confirm focused deterministic regression on base and candidate
+        run: |
+          mkdir -p artifacts/browser-level-picker-mobile
+          set +e
+          BELLHOP_HTML="$RUNNER_TEMP/bellhop-bh006-base/dist/index.html" node tests/phone-landscape-menu.test.js > artifacts/browser-level-picker-mobile/baseline-deterministic.log 2>&1
+          baseline_status=$?
+          set -e
+          sed -n '1,160p' artifacts/browser-level-picker-mobile/baseline-deterministic.log
+          if [ "$baseline_status" -eq 0 ]; then
+            echo "Exact authorized base unexpectedly passed the focused regression"
+            exit 1
+          fi
+          node tests/phone-landscape-menu.test.js 2>&1 | tee artifacts/browser-level-picker-mobile/candidate-deterministic.log
+      - name: Capture exact-base expected failure in Chrome
+        env:
+          CHROME_BIN: /usr/bin/google-chrome
+          BELLHOP_EXPECT: fail
+          BELLHOP_EVIDENCE_LABEL: baseline
+          BELLHOP_EVIDENCE_DIR: artifacts/browser-level-picker-mobile
+        run: BELLHOP_DIST="$RUNNER_TEMP/bellhop-bh006-base/dist" node tools/browser-level-picker-mobile-verify.js
+      - name: Verify candidate in Chrome
+        env:
+          CHROME_BIN: /usr/bin/google-chrome
+          BELLHOP_EVIDENCE_LABEL: candidate
+          BELLHOP_EVIDENCE_DIR: artifacts/browser-level-picker-mobile
+        run: node tools/browser-level-picker-mobile-verify.js
+      - name: Upload phone landscape menu evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: phone-landscape-menu-browser
+          path: artifacts/browser-level-picker-mobile/
+          if-no-files-found: error

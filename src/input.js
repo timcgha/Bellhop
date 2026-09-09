@@ -1,5 +1,9 @@
 const IN={mx:0,mz:0,camDX:0,camDY:0,jump:false,jumpHeld:false,b:false,bHeld:false,y:false};
 const keys={};
+function pickerMove(dx,dy){
+  if(typeof movePicker==='function')movePicker(dx,dy);
+  else setPickerIdx(pickerIdx+dx+dy*3);
+}
 addEventListener('keydown',e=>{
   if(typeof isSkinPanelOpen==='function'&&isSkinPanelOpen()){handleSkinKey(e);return;}
   if(!started&&e.target===$('skinsOpen')&&(e.code==='Enter'||e.code==='Space'))return;
@@ -9,8 +13,10 @@ addEventListener('keydown',e=>{
   if(started&&paused){e.preventDefault();return;}
   keys[e.code]=true;
   if(!started){
-    if(e.code==='ArrowLeft'||e.code==='KeyA'){setPickerIdx(pickerIdx-1);return;}
-    if(e.code==='ArrowRight'||e.code==='KeyD'){setPickerIdx(pickerIdx+1);return;}
+    if(e.code==='ArrowLeft'||e.code==='KeyA'){pickerMove(-1,0);return;}
+    if(e.code==='ArrowRight'||e.code==='KeyD'){pickerMove(1,0);return;}
+    if(e.code==='ArrowUp'){pickerMove(0,-1);return;}
+    if(e.code==='ArrowDown'){pickerMove(0,1);return;}
     if(e.code==='Space'||e.code==='Enter'){startGame();keys.Space=false;keys.Enter=false;return;}
     return;
   }
@@ -43,8 +49,10 @@ function pollGamepad(dt){
   if(started&&edge(9)){togglePause();GP.prev=b;return;}
   if(started&&paused){GP.prev=b;return;}
   if(!started){
-    if(edge(14)||lx<-0.55)setPickerIdx(pickerIdx-1);
-    if(edge(15)||lx>0.55)setPickerIdx(pickerIdx+1);
+    if(edge(14)||lx<-0.55)pickerMove(-1,0);
+    if(edge(15)||lx>0.55)pickerMove(1,0);
+    if(edge(12)||ly<-0.55)pickerMove(0,-1);
+    if(edge(13)||ly>0.55)pickerMove(0,1);
     if(edge(0))startGame();
     GP.prev=b;return;
   }
