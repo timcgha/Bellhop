@@ -87,9 +87,10 @@ async function eyeProof(c,gameplayId,previewRequired=false,previewId=gameplayId)
 async function faceForward(c){
   // Real controls move beyond the entrance hedge, then briefly face the ordinary
   // follow camera; no player/camera teleport, zoom, or acceptance-state injection.
-  await hold(c,['KeyW'],1250);await wait(c,'__P.pos.z<8');await hold(c,['KeyS'],180);await sleep(350);
+  await key(c,'KeyW',true);try{await wait(c,'__P.pos.z<3',8000);}finally{await key(c,'KeyW',false);}await sleep(100);
+  await hold(c,['KeyS'],180);await sleep(350);
   await wait(c,'__PLAYER().visible&&__PLAYER().userData.eyes.every(e=>e.scale.y>.99)');
-  return {method:'real KeyW movement beyond the entrance hedge, then real KeyS turn toward the ordinary follow camera',forwardMs:1250,faceCameraMs:180};
+  return {method:'real KeyW movement until beyond the entrance hedge, then real KeyS turn toward the ordinary follow camera',targetZ:'<3',faceCameraMs:180};
 }
 
 async function connect(){
