@@ -43,6 +43,24 @@ function readPreviewFraming(){
   const host=document.getElementById('skinPreviewHost').getBoundingClientRect();
   return {minX:Math.min(...points.map(p=>p.x)),maxX:Math.max(...points.map(p=>p.x)),minY:Math.min(...points.map(p=>p.y)),maxY:Math.max(...points.map(p=>p.y)),host:{x:host.x,y:host.y,w:host.width,h:host.height},canvas:{w:v.renderer.domElement.width,h:v.renderer.domElement.height}};
 }
+function readGameplayReadability(){
+  const p=player,u=p&&p.userData,parts=u&&u.skinSpecialParts;
+  if(!p||!u||!u.eyes||u.eyes.length!==2||!parts||!parts.badge)return null;
+  p.updateMatrixWorld(true);
+  const cam=new THREE.PerspectiveCamera(CAM.fov||60,innerWidth/innerHeight,.1,220);
+  cam.position.copy(CAM.pos);cam.lookAt(CAM.look);cam.updateMatrixWorld(true);cam.updateProjectionMatrix();
+  const project=v=>{const n=v.clone().project(cam);return {x:n.x,y:n.y,z:n.z,px:(n.x+1)*innerWidth/2,py:(1-n.y)*innerHeight/2};};
+  const world=o=>{const v=new THREE.Vector3();o.getWorldPosition(v);return v;};
+  const eyes=u.eyes.map(e=>project(world(e))),badge=project(world(parts.badge));
+  const left=project(parts.badge.localToWorld(new THREE.Vector3(-.155,0,0))),right=project(parts.badge.localToWorld(new THREE.Vector3(.155,0,0)));
+  const q=new THREE.Quaternion();p.getWorldQuaternion(q);
+  const front=new THREE.Vector3(0,0,1).applyQuaternion(q);front.y=0;front.normalize();
+  const playerWorld=world(p),toCamera=new THREE.Vector3(CAM.pos.x-playerWorld.x,0,CAM.pos.z-playerWorld.z).normalize();
+  const inFrame=v=>Math.abs(v.x)<1&&Math.abs(v.y)<1&&v.z>0&&v.z<1;
+  return {facingDot:front.dot(toCamera),eyes,eyeSeparationPx:Math.hypot(eyes[0].px-eyes[1].px,eyes[0].py-eyes[1].py),eyesInFrame:eyes.every(inFrame),
+    badge,badgeDiameterPx:Math.hypot(left.px-right.px,left.py-right.py),badgeInFrame:inFrame(badge),badgeVisible:parts.badge.visible,
+    viewport:innerWidth+'x'+innerHeight,playerYaw:p.rotation.y,cameraYaw:CAM.yaw};
+}
 function eyeShapeStats(vertices){
   assert(vertices.length===390&&vertices.every(Number.isFinite),'invalid eye vertex buffer');
   const middle=[],ends=[];let sphereError=0;
@@ -85,12 +103,18 @@ async function eyeProof(c,gameplayId,previewRequired=false,previewId=gameplayId)
   return {...stats,previewMatches:previewRequired,neutralRejected};
 }
 async function faceForward(c){
-  // Real controls move beyond the entrance hedge, then briefly face the ordinary
-  // follow camera; no player/camera teleport, zoom, or acceptance-state injection.
+  // Real controls move beyond the entrance hedge, then turn toward the ordinary
+  // follow camera. A read-only projected-pixel check prevents a rear/side-facing
+  // evidence image from passing; no player/camera state or zoom is assigned.
   await key(c,'KeyW',true);try{await wait(c,'__P.pos.z<3',8000);}finally{await key(c,'KeyW',false);}await sleep(100);
-  await hold(c,['KeyS'],180);await sleep(350);
+  await key(c,'KeyS',true);try{await wait(c,'(()=>{const p=__BH005GameplayReadability();return p&&p.facingDot>.9;})()',3000);}finally{await key(c,'KeyS',false);}await sleep(300);
   await wait(c,'__PLAYER().visible&&__PLAYER().userData.eyes.every(e=>e.scale.y>.99)');
-  return {method:'real KeyW movement until beyond the entrance hedge, then real KeyS turn toward the ordinary follow camera',targetZ:'<3',faceCameraMs:180};
+  const readability=await c.ev('__BH005GameplayReadability()');
+  assert(readability&&readability.facingDot>.72&&readability.eyesInFrame&&readability.eyeSeparationPx>=2,
+    'front-facing eye readability evidence failed '+JSON.stringify(readability));
+  if(readability.badgeVisible)assert(readability.badgeInFrame&&readability.badgeDiameterPx>=3,
+    'front-facing badge readability evidence failed '+JSON.stringify(readability));
+  return {method:'real KeyW movement until beyond the entrance hedge, then real KeyS until the rendered front faces the ordinary follow camera',targetZ:'<3',readability};
 }
 
 async function connect(){
@@ -222,7 +246,7 @@ async function main(){
   fs.rmSync(profile,{recursive:true,force:true});
   const served=profile+'-page',html=fs.readFileSync(path.join(__dirname,'..','dist','index.html'),'utf8'),marker='// ---- BUILD:END ----';
   assert(html.split(marker).length===2,'missing/ambiguous test observation insertion point');
-  const probe=`window.__BH003Eyes=()=>({gameplay:(${readEyeState.toString()})(player),preview:(${readEyeState.toString()})(skinPreview&&skinPreview.robot),shared:Array.from(SPH.attributes.position.array)});window.__BH005PreviewFraming=(${readPreviewFraming.toString()});\n`+
+  const probe=`window.__BH003Eyes=()=>({gameplay:(${readEyeState.toString()})(player),preview:(${readEyeState.toString()})(skinPreview&&skinPreview.robot),shared:Array.from(SPH.attributes.position.array)});window.__BH005PreviewFraming=(${readPreviewFraming.toString()});window.__BH005GameplayReadability=(${readGameplayReadability.toString()});\n`+
     `const __bh005Buttons=Array.from({length:16},()=>({pressed:false,value:0}));window.__BH005Pad={connected:true,id:'BH-005 browser-emulated standard gamepad',mapping:'standard',axes:[0,0,0,0],buttons:__bh005Buttons,timestamp:0};Object.defineProperty(navigator,'getGamepads',{configurable:true,value:()=>[window.__BH005Pad]});window.__BH005PadButton=(i,on)=>{__bh005Buttons[i].pressed=!!on;__bh005Buttons[i].value=on?1:0;window.__BH005Pad.timestamp=performance.now();return true;};\n`;
   fs.mkdirSync(served,{recursive:true});fs.writeFileSync(path.join(served,'index.html'),html.replace(marker,probe+marker));
   const server=spawn('python3',['-m','http.server',String(port),'--bind','127.0.0.1'],{cwd:served,stdio:'ignore'});
