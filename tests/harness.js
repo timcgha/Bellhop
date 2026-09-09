@@ -89,7 +89,7 @@ function resolveLevelIdx(level) {
 }
 
 module.exports = function boot(opts = {}) {
-  const html = fs.readFileSync(GAME_HTML, 'utf8');
+  const html = opts.html !== undefined ? opts.html : fs.readFileSync(GAME_HTML, 'utf8');
   let src = loadGameScript(html);
   for (const [from, to] of HOOKS) {
     if (!src.includes(from)) throw new Error(`test hook not found in source: ${from}`);
@@ -159,7 +159,10 @@ module.exports = function boot(opts = {}) {
     clearTimeout() {}
   };
 
-  const ctx = vm.createContext(Object.assign({}, window, { window, console, Math }));
+  let seed = opts.randomSeed >>> 0;
+  const math = opts.randomSeed === undefined ? Math : Object.create(Math);
+  if (opts.randomSeed !== undefined) math.random = () => { seed = (Math.imul(seed, 1664525) + 1013904223) >>> 0; return seed / 4294967296; };
+  const ctx = vm.createContext(Object.assign({}, window, { window, console, Math: math }));
   Object.defineProperty(ctx, 'innerWidth', { get() { return viewW; }, set(v) { viewW = v; }, configurable: true });
   Object.defineProperty(ctx, 'innerHeight', { get() { return viewH; }, set(v) { viewH = v; }, configurable: true });
   Object.defineProperty(ctx, 'location', { value: location, configurable: true, writable: true });
@@ -174,7 +177,11 @@ module.exports = function boot(opts = {}) {
   const ku = (e) => fireKey('keyup', e.code || e);
   let now = 0;
 
-  function frames(n) { for (let i = 0; i < n; i++) { now += 16.67; rafs.shift()(now); } }
+  function step(ms) {
+    if (!Number.isFinite(ms) || ms <= 0) throw new Error('frame interval must be finite and positive');
+    now += ms; rafs.shift()(now);
+  }
+  function frames(n) { for (let i = 0; i < n; i++) step(16.67); }
   function tap(code, n = 2) { kd({ code }); frames(n); ku({ code }); }
 
   let failures = 0;
@@ -227,7 +234,7 @@ module.exports = function boot(opts = {}) {
   }
 
   return {
-    P, W, CAM, els, el, frames, tap, ok, report, kd, ku, timeouts, window,
+    P, W, CAM, els, el, frames, step, tap, ok, report, kd, ku, timeouts, window,
     selectLevel, confirmStart, startLevel, tapCard, tapBtn, setGamepad, gamepadTick, mkGamepad,
     getLevel: () => window.__LEVEL && window.__LEVEL(),
     getPhys: () => window.__PHYS && window.__PHYS(),
