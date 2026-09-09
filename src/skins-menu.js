@@ -32,7 +32,7 @@ function renderSkinPreview(){
   if(r.width<1||r.height<1)return;
   v.renderer.setSize(Math.round(r.width),Math.round(r.height),false);
   v.camera.aspect=r.width/r.height;
-  const distance=Math.max(v.size.y,v.size.x/v.camera.aspect)/(2*Math.tan(v.camera.fov*Math.PI/360))*1.22;
+  const distance=Math.max(v.size.y,v.size.x/v.camera.aspect)/(2*Math.tan(v.camera.fov*Math.PI/360))*1.32;
   v.camera.position.set(v.center.x+distance*0.28,v.center.y+distance*0.12,v.center.z+distance);
   v.camera.lookAt(v.center);v.camera.updateProjectionMatrix();
   applyRobotSkin(v.robot,skinSelection.snapshot().pending);v.renderer.render(v.scene,v.camera);v.renders++;
