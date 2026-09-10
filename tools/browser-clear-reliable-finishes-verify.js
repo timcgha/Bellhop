@@ -186,7 +186,7 @@ async function candidateRun(cdp,result){
   await key(cdp,'Escape',true);await key(cdp,'Escape',false);await sleep(120);assert(!(await cdp.evaluate('__paused()')),'pause opened over active finish');
 
   result.returns={};
-  async function freshMeadow(){await navigate(cdp,844,390,true,false);await startLevel(cdp,0);await installFanfareCounter(cdp);await wakeAll(cdp);await waitEval(cdp,'__W.won',5000);await sleep(3700);}
+  async function freshMeadow(){await navigate(cdp,844,390,true,false);await startLevel(cdp,0);await installFanfareCounter(cdp);await wakeAll(cdp);await waitEval(cdp,'__W.won',5000);const observed=await cdp.evaluate('__gameTime()');await waitEval(cdp,'__gameTime()>'+JSON.stringify(observed+3.67),10000);}
   const clean="!__started()&&!__W.won&&getComputedStyle(document.getElementById('win')).display==='none'&&!__INPUT_STATE().jump&&!__INPUT_STATE().jumpHeld&&!__INPUT_STATE().keysDown.length";
   await freshMeadow();await tapKey(cdp,'Space');await waitEval(cdp,clean,3000);result.returns.keyboard=await cdp.evaluate('({clean:'+clean+',input:__INPUT_STATE()})');
   await cdp.evaluate('(()=>{__setPickerIdx(1);__startGame();return true;})()');await waitEval(cdp,'__started()&&__LEVEL().id==="level2"',4000);result.returns.restart=await cdp.evaluate("({level:__LEVEL().id,won:__W.won,overlay:getComputedStyle(document.getElementById('win')).display,input:__INPUT_STATE(),subtitle:__W.FINISH.winMsg})");assert(!result.returns.restart.won&&result.returns.restart.overlay==='none','restart/level-switch retained finish state');
