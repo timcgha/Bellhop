@@ -192,6 +192,8 @@ const SFX={
   bubblePop(){noise(0.1,{type:'highpass',freq:2000,gain:0.14});tone(880,0.08,{type:'sine',gain:0.06,slide:520});},
   bubblePower(){if(!AU.ctx)return;[0,3,7,12].forEach((n,i)=>tone(hz(n,523.25),0.35,{at:AU.ctx.currentTime+i*0.07,type:'sine',gain:0.11}));},
   bubbleOut(){noise(0.35,{type:'lowpass',freq:1800,fslide:400,gain:0.1});tone(640,0.3,{type:'triangle',gain:0.07,slide:220});},
+  webShot(){tone(920,0.11,{type:'triangle',gain:0.08,slide:1480});noise(0.1,{type:'highpass',freq:2600,gain:0.07});},
+  webWrap(){if(!AU.ctx)return;const t=AU.ctx.currentTime;tone(1180,0.18,{at:t,type:'sine',gain:0.08,slide:820});tone(1560,0.22,{at:t+0.06,type:'triangle',gain:0.06,slide:1040});},
   lavaYeouch(){noise(0.28,{type:'bandpass',freq:1800,fslide:500,gain:0.2,q:0.6});tone(720,0.22,{type:'square',gain:0.1,slide:180});tone(980,0.18,{type:'sine',gain:0.08,slide:1400});noise(0.2,{type:'highpass',freq:2400,gain:0.08});},
   emberLob(){tone(320,0.14,{type:'triangle',gain:0.08,slide:180});noise(0.1,{type:'bandpass',freq:900,gain:0.08});},
   emberHit(){noise(0.12,{type:'highpass',freq:1600,gain:0.12});tone(260,0.1,{type:'square',gain:0.07,slide:140});},

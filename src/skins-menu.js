@@ -83,7 +83,7 @@ function closeSkins(confirm){
   if(confirm){skinSelection.confirm();applyRobotSkin(player,skinSelection.snapshot().equipped);}else skinSelection.cancel();
   disposeSkinPreview();$('skinsOverlay').style.display='none';
   const menu=$('start');menu.inert=false;if(menu.removeAttribute)menu.removeAttribute('aria-hidden');
-  clearGameplayInput();skinPadDirection=0;if($('skinsOpen').focus)$('skinsOpen').focus();
+  clearGameplayInput();skinPadDirection=0;if(typeof updateWebHeroTouchControl==='function')updateWebHeroTouchControl();if($('skinsOpen').focus)$('skinsOpen').focus();
 }
 function handleSkinKey(e){
   if(e.code==='Escape'){e.preventDefault();closeSkins(false);return;}

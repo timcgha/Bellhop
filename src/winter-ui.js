@@ -9,7 +9,7 @@ updateTouchLabels=function(){
 const _winterBaseStartGame=startGame;
 startGame=function(){
   if(pickerIdx!==5)return _winterBaseStartGame();
-  if(started)return;loadLevel(LEVELS[pickerIdx]);started=true;document.body.classList.add('playing');$('start').style.display='none';initAudio();IN.jump=false;IN.b=false;IN.y=false;updateHUD();
+  if(started)return;loadLevel(LEVELS[pickerIdx]);started=true;document.body.classList.add('playing');$('start').style.display='none';initAudio();IN.jump=false;IN.b=false;IN.y=false;IN.web=false;updateHUD();
   setTimeout(()=>showToast('Find the snowflake, wake every Snoozle, and ride the sled to the Christmas tree!'),600);setTimeout(()=>{$('hint').style.opacity=0;},12000);
 };
 window.__startGame=startGame;

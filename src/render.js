@@ -1,6 +1,7 @@
 const renderer=new THREE.WebGLRenderer({antialias:true,powerPreference:'high-performance'});
 renderer.setPixelRatio(Math.min(window.devicePixelRatio||1,2));renderer.setSize(innerWidth,innerHeight);
 renderer.outputEncoding=THREE.sRGBEncoding;document.body.appendChild(renderer.domElement);
+window.__RENDER_MEMORY=()=>({geometries:renderer.info.memory.geometries,textures:renderer.info.memory.textures});
 const scene=new THREE.Scene();scene.background=new THREE.Color(0x9fdcff);scene.fog=new THREE.Fog(0x9fdcff,45,120);
 const camera=new THREE.PerspectiveCamera(60,innerWidth/innerHeight,0.1,220);
 addEventListener('resize',()=>{renderer.setSize(innerWidth,innerHeight);camera.aspect=innerWidth/innerHeight;camera.updateProjectionMatrix();});
@@ -13,4 +14,3 @@ const CUPG=new THREE.CylinderGeometry(0.22,0.28,0.36,12);CUPG.translate(0,0.18,0
 const DUSTG=new THREE.CylinderGeometry(0.9,1.15,0.26,14);DUSTG.translate(0,0.13,0);
 function mesh(geo,mat,x,y,z,sx,sy,sz){const m=new THREE.Mesh(geo,mat);m.position.set(x,y,z);m.scale.set(sx,sy!=null?sy:sx,sz!=null?sz:sx);return m;}
 const tmpV=new THREE.Vector3();
-

@@ -63,10 +63,14 @@ body.paused .tbtn{pointer-events:none}
 .tbtn{position:fixed;width:66px;height:66px;border-radius:50%;background:rgba(255,255,255,.28);border:3px solid rgba(255,255,255,.75);color:#fff;font-weight:900;font-size:22px;display:none;align-items:center;justify-content:center;flex-direction:column;line-height:1;touch-action:none;text-shadow:0 1px 0 rgba(0,0,0,.3);z-index:6}
 .tbtn small{font-size:9px;font-weight:700;opacity:.95;margin-top:2px}
 body.touch.playing .tbtn{display:flex}
+body.touch.playing #bX{display:none}
+body.touch.playing.web-hero-equipped #bX{display:flex}
 body:not(.playing) #hint{opacity:0!important;pointer-events:none}
 #bA{right:max(22px,env(safe-area-inset-right));bottom:max(30px,env(safe-area-inset-bottom));background:rgba(70,190,120,.5)}
 #bB{right:max(104px,calc(22px + env(safe-area-inset-right) + 66px));bottom:max(64px,env(safe-area-inset-bottom));background:rgba(235,85,85,.5)}
 #bY{right:max(44px,calc(22px + env(safe-area-inset-right) + 22px));bottom:max(114px,env(safe-area-inset-bottom));background:rgba(245,180,0,.55)}
+#bX{right:max(186px,calc(22px + env(safe-area-inset-right) + 164px));bottom:max(64px,env(safe-area-inset-bottom));background:rgba(40,135,225,.58)}
+@media (orientation:portrait) and (max-width:500px){#bX{right:max(126px,calc(22px + env(safe-area-inset-right) + 104px));bottom:max(144px,env(safe-area-inset-bottom))}}
 #stick{position:fixed;width:120px;height:120px;border-radius:50%;border:3px solid rgba(255,255,255,.55);background:rgba(255,255,255,.12);display:none;pointer-events:none}
 #knob{position:absolute;left:35px;top:35px;width:50px;height:50px;border-radius:50%;background:rgba(255,255,255,.65)}
 @media (max-height:520px){
@@ -126,6 +130,7 @@ body:not(.playing) #hint{opacity:0!important;pointer-events:none}
 <div id="bA" class="tbtn">A<small>jump</small></div>
 <div id="bB" class="tbtn">B<small id="bBLbl">slam · gust</small></div>
 <div id="bY" class="tbtn">Y<small>spin</small></div>
+<div id="bX" class="tbtn" aria-label="Shoot web">X<small>web</small></div>
 <div id="hud"><span class="pill" id="hp">❤️❤️❤️❤️</span><span class="pill" id="snz">😴 0/4</span><span class="pill" id="nts">♪ 0/12</span><span class="pill" id="fire" style="display:none">🔥 0</span><span class="pill" id="bubble" style="display:none">🫧</span><span class="pill" id="starbeam" style="display:none">⭐</span></div>
 <button id="mute">🔊</button>
 <button id="pauseBtn" aria-label="Pause game" aria-pressed="false">⏸</button>
@@ -165,7 +170,7 @@ body:not(.playing) #hint{opacity:0!important;pointer-events:none}
 <button class="skin-card" id="skin-yellow" aria-pressed="false"><canvas id="skin-art-yellow" width="128" height="96" aria-hidden="true"></canvas><span>Yellow</span><span class="skin-check" id="skin-check-yellow" aria-hidden="true"></span></button>
 <button class="skin-card" id="skin-purple" aria-pressed="false"><canvas id="skin-art-purple" width="128" height="96" aria-hidden="true"></canvas><span>Purple</span><span class="skin-check" id="skin-check-purple" aria-hidden="true"></span></button>
 <button class="skin-card" id="skin-web-hero" aria-pressed="false"><canvas id="skin-art-web-hero" width="128" height="96" aria-hidden="true"></canvas><span>Web Hero</span><span class="skin-check" id="skin-check-web-hero" aria-hidden="true"></span></button>
-</div><p class="skin-help">Same robot. Your favorite colors.<br>Gamepad: Y opens Skins · B goes back</p>
+</div><p class="skin-help">Six color skins play the same. Web Hero can shoot webs after you equip it.<br>Gamepad: Y opens Skins · B goes back</p>
 <div class="skin-actions"><button id="skinUse">Use Skin</button><button id="skinBack">Back</button></div>
 </div></div></div>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>

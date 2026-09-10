@@ -64,12 +64,18 @@ class Obj {
   }
   lookAt() {} updateProjectionMatrix() {}
 }
+class Mesh extends Obj {
+  constructor(geometry, material) {
+    super(); this.geometry = geometry || null; if (material) this.material = material; this.isMesh = true;
+  }
+}
 class Cam extends Obj { constructor() { super(); this.fov = 60; } }
 
 const THREE = new Proxy({}, {
   get(t, k) {
     if (k === 'Vector3') return V3;
-    if (['Group', 'Mesh', 'Sprite', 'Scene'].includes(k)) return Obj;
+    if (k === 'Mesh') return Mesh;
+    if (['Group', 'Sprite', 'Scene'].includes(k)) return Obj;
     if (k === 'PerspectiveCamera') return Cam;
     if (k === 'Shape' || k === 'Path') return class { constructor() { this.holes = []; } moveTo() {} lineTo() {} };
     if (k === 'Color' || k === 'Fog') return class {};
@@ -156,6 +162,7 @@ module.exports = function boot(opts = {}) {
       addEventListener() {}
     },
     navigator: { getGamepads: () => gamepads },
+    localStorage: opts.localStorage,
     performance: { now: () => 0 },
     requestAnimationFrame(f) { rafs.push(f); },
     setInterval: () => 0,
