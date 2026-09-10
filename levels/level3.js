@@ -542,7 +542,7 @@ steps:[
   ['lava',0,36.0,-652,14,0.45,10],
   // Short forgiving victory walk from Snoozle 4 to the keyboard.
   ['solid',0,44.0,-608,14,0.4,12,0x3a3538,{surf:'stone'}],
-  ['solid',0,44.0,-620,14,0.4,10,0x4a3a32,{surf:'stone'}],
+  ['solid',0,44.0,-620,14,0.4,16,0x4a3a32,{surf:'stone'}],
   ['solid',0,44.2,-614,5,0.06,8,0x5a4030,{surf:'stone'}],
   ['basaltRock',-6,44.0,-612,0.9],['basaltRock',7,44.0,-618,1.0],
   // Great Steam Organ + keyboard finish (registers FINISH).

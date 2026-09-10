@@ -11,7 +11,7 @@ const chrome = '/usr/local/bin/google-chrome';
 const port = 8797;
 const cdpPort = 9237;
 const userData = '/tmp/level4-iphone-polish-chrome';
-const base = `http://127.0.0.1:${port}/index.html`;
+const base = `http://127.0.0.1:${port}/dist/index.html`;
 
 function sleep(ms){return new Promise(r=>setTimeout(r,ms));}
 function getJSON(url){return new Promise((resolve,reject)=>{
@@ -323,13 +323,13 @@ async function main(){
     if(!(r.nearReveal&&r.nearReveal.rockAlpha>=0.99)){console.error('FAIL near visible',r.label);fails++;}
     if(r.height>r.width){ // portrait
       const w=r.win;
-      if(!(w&&w.firstLetterVisible&&w.lastLetterVisible&&w.centered&&w.overflowX&&/CONGRATULATIONS/.test(w.title)&&/YOU WIN!/.test(w.title))){
+      if(!(w&&w.firstLetterVisible&&w.lastLetterVisible&&w.centered&&w.overflowX&&w.title==='You did it!')){
         console.error('FAIL portrait win',r.label,w);fails++;
       }
       if(!(w&&w.subtitle==='The stars are singing!')){console.error('FAIL subtitle',r.label);fails++;}
     }else{
       const w=r.win;
-      if(!(w&&w.firstLetterVisible&&w.lastLetterVisible&&/CONGRATULATIONS/.test(w.title))){
+      if(!(w&&w.firstLetterVisible&&w.lastLetterVisible&&w.title==='You did it!')){
         console.error('FAIL landscape/desktop win',r.label,w);fails++;
       }
     }

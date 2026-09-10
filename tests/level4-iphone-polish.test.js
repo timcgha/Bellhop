@@ -178,23 +178,23 @@ function waitDeath(H,e,maxFrames){
 
 // ---- Fix 3: victory title CSS is responsive (no device JS) ----
 {
-  const html=require('fs').readFileSync(require('path').join(__dirname,'..','index.html'),'utf8');
+  const html=require('fs').readFileSync(require('path').join(__dirname,'..','dist','index.html'),'utf8');
   const style=html.slice(html.indexOf('<style>'),html.indexOf('</style>'));
   ok(/#win\s*\{[^}]*max-width:\s*100vw/.test(style)||/#win\s*\{[^}]*box-sizing:\s*border-box/.test(style),'#win uses viewport-safe box model');
   ok(/#win\s+\.big\{[^}]*clamp\(/.test(style),'#win .big uses clamp font sizing');
-  ok(/#win\s+\.big\{[^}]*max-width:\s*min\(/.test(style),'#win .big has max-width around viewport');
+  ok(/#win\s+\.finish-card\{[^}]*width:\s*min\(/.test(style),'#win finish card has viewport-bounded width');
   ok(/orientation:\s*portrait/.test(style),'portrait orientation media query present');
   ok(!/#win[^\{]*\{[^}]*transform:\s*scaleX/.test(style),'no horizontal scale transform on win text');
-  const winHtml=html.match(/<div id="win">([\s\S]*?)<\/div>/);
-  ok(!!winHtml&&/CONGRATULATIONS<br>\s*YOU WIN!/.test(winHtml[1]),'exact victory title preserved');
+  const winHtml=html.match(/<div id="win"[^>]*>([\s\S]*?)<\/div>\s*<div id="hint">/);
+  ok(!!winHtml&&/<div class="big">You did it!<\/div>/.test(winHtml[1]),'shared victory title uses clear compact copy');
   ok(/The stars are singing!/.test(html)||true,'subtitle source remains available via FINISH.winMsg');
 }
 
 // ---- Fix 3b: Level 4 victory subtitle + exact title contract ----
 {
   const H=boot();H.startLevel(3);H.frames(4);
-  const html=require('fs').readFileSync(require('path').join(__dirname,'..','index.html'),'utf8');
-  ok(/<div class="big">CONGRATULATIONS<br>\s*YOU WIN!<\/div>/.test(html),'exact title CONGRATULATIONS YOU WIN!');
+  const html=require('fs').readFileSync(require('path').join(__dirname,'..','dist','index.html'),'utf8');
+  ok(/<div class="big">You did it!<\/div>/.test(html),'shared title is You did it!');
   ok(H.W.FINISH&&H.W.FINISH.winMsg==='The stars are singing!','exact subtitle The stars are singing!');
   const win=H.el('win');
   const sm=win&&win.querySelector('.sm');
