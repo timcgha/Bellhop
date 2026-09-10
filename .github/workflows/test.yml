@@ -175,3 +175,60 @@ jobs:
           name: web-hero-web-shot-browser
           path: artifacts/browser-web-hero-web-shot/
           if-no-files-found: error
+  clear-reliable-finishes:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+      - uses: actions/setup-node@v7
+        with:
+          node-version: '22'
+      - name: Build candidate and exact authorized base
+        run: |
+          node build.js
+          node build.js --check
+          git worktree add --detach "$RUNNER_TEMP/bellhop-bh008-base" 60890b569593211013217c0be60974e041983e4a
+          node "$RUNNER_TEMP/bellhop-bh008-base/build.js"
+          test "$(git -C "$RUNNER_TEMP/bellhop-bh008-base" rev-parse HEAD)" = "60890b569593211013217c0be60974e041983e4a"
+          test "$(git -C "$RUNNER_TEMP/bellhop-bh008-base" rev-parse 'HEAD^{tree}')" = "df863400c7a9e5e02785f439c192443bfe546544"
+      - name: Confirm focused deterministic base failure and candidate pass
+        run: |
+          mkdir -p artifacts/browser-clear-reliable-finishes
+          set +e
+          BELLHOP_HTML="$RUNNER_TEMP/bellhop-bh008-base/dist/index.html" node tests/clear-reliable-finishes.test.js > artifacts/browser-clear-reliable-finishes/baseline-deterministic.log 2>&1
+          baseline_status=$?
+          set -e
+          sed -n '1,220p' artifacts/browser-clear-reliable-finishes/baseline-deterministic.log
+          if [ "$baseline_status" -eq 0 ]; then
+            echo "Exact authorized base unexpectedly passed the focused BH-008 regression"
+            exit 1
+          fi
+          node tests/clear-reliable-finishes.test.js 2>&1 | tee artifacts/browser-clear-reliable-finishes/candidate-deterministic.log
+      - name: Capture exact-base expected failures in Chrome
+        env:
+          CHROME_BIN: /usr/bin/google-chrome
+          BELLHOP_EXPECT: fail
+          BELLHOP_EVIDENCE_LABEL: baseline
+          BELLHOP_EVIDENCE_DIR: artifacts/browser-clear-reliable-finishes
+          BELLHOP_SOURCE_ROOT: ${{ runner.temp }}/bellhop-bh008-base
+          BELLHOP_DIST: ${{ runner.temp }}/bellhop-bh008-base/dist
+          BELLHOP_EXPECTED_HEAD: 60890b569593211013217c0be60974e041983e4a
+          BELLHOP_EXPECTED_BASE: 60890b569593211013217c0be60974e041983e4a
+        run: node tools/browser-clear-reliable-finishes-verify.js
+      - name: Verify exact candidate finishes in Chrome
+        env:
+          CHROME_BIN: /usr/bin/google-chrome
+          BELLHOP_EVIDENCE_LABEL: candidate
+          BELLHOP_EVIDENCE_DIR: artifacts/browser-clear-reliable-finishes
+          BELLHOP_EXPECTED_HEAD: ${{ github.event.pull_request.head.sha || github.sha }}
+          BELLHOP_EXPECTED_BASE: ${{ github.event.pull_request.base.sha || github.event.before }}
+        run: node tools/browser-clear-reliable-finishes-verify.js
+      - name: Upload clear and reliable finish evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: clear-reliable-finishes-browser
+          path: artifacts/browser-clear-reliable-finishes/
+          if-no-files-found: error
